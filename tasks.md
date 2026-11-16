@@ -333,9 +333,9 @@ Status: -1
 
 ## Task 27: Deploy e operação
 Nível: 3
-Status: -1
+Status: 0
 
-- Subtask 27.1: Interface na Vercel (`app.py` + `vercel.json`) e variáveis de ambiente.
+- Subtask 27.1: Interface na Vercel (`app.py` + `vercel.json`) e variáveis de ambiente. Feito: projeto `fea` (time OHalla) com preview da branch no ar; produção sai quando a branch entrar no `main`.
 - Subtask 27.2: Banco Neon pelo Marketplace da Vercel; migrações aplicadas pelo CI ou manualmente.
 - Subtask 27.3: Workers na VPS com Docker Compose (Buscador, Editor, Postador, Limpeza).
 - Subtask 27.4: Bucket no Cloudflare R2 com URLs assinadas.
