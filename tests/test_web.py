@@ -1,4 +1,7 @@
+import os
+
 import httpx
+import pytest
 
 from tests.conftest import fake_github, github_login
 from web.main import MENU
@@ -91,10 +94,14 @@ def test_login_disabled_when_not_configured(settings):
     assert client.get("/auth/github", follow_redirects=False).status_code == 503
 
 
-def test_placeholder_pages_name_their_task(logged_client):
-    response = logged_client.get("/fila")
-    assert response.status_code == 200
-    assert "Task 8" in response.text
+@pytest.mark.skipif(not os.environ.get("TEST_DATABASE_URL"), reason="precisa do banco")
+def test_every_menu_page_loads(logged_client):
+    from web.common import MENU
+
+    for item in MENU:
+        response = logged_client.get(item["href"])
+        assert response.status_code == 200, item["href"]
+        assert item["label"] in response.text
 
 
 def test_logout_ends_session(logged_client):

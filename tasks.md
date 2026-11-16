@@ -144,7 +144,7 @@ Status: 1
 
 ## Task 8: Filas
 Nível: 4
-Status: 0
+Status: 1
 
 - Subtask 8.1: Fila geral com colunas: item, operação, execução, etapa/estado, prioridade, score, data, erro, ação.
 - Subtask 8.2: Fila da operação é a mesma tela com filtro `operation_id` (REQ-QUEUE-003).
@@ -316,7 +316,7 @@ Status: 1
 
 ## Task 25: Dashboard e navegação
 Nível: 3
-Status: -1
+Status: 1
 
 - Subtask 25.1: Menu com 6 itens: Dashboard, Operações, Fila, Aprovação, Publicações, Contas.
 - Subtask 25.2: Cards clicáveis que abrem a fila filtrada (REQ-UI-001), incluindo estoque de editados.

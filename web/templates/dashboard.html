@@ -2,10 +2,24 @@
 {% block title %}Dashboard{% endblock %}
 {% block content %}
 <h1>Dashboard</h1>
-<p class="sub">Visão operacional. Os cards abrem a fila já filtrada (Task 25).</p>
+<p class="sub">Visão operacional. Cada card abre a fila já filtrada.</p>
+{% if kpis is none %}<p class="error" role="alert">Banco de dados indisponível: confira o DATABASE_URL.</p>{% endif %}
 <div class="grid">
-  {% for label in ["Operações ativas", "Execuções rodando", "Estoque de editados", "Aguardando aprovação", "Planejados hoje", "Publicados hoje", "Falhas", "Contas com erro"] %}
-  <div class="card kpi"><span class="lbl">{{ label }}</span><span class="num">—</span></div>
+  {% for k in kpis or [] %}
+  <a class="card kpi{% if k.alert and k.value %} alert{% endif %}" href="{{ k.href }}"><span class="lbl">{{ k.label }}</span><span class="num">{{ k.value }}</span></a>
   {% endfor %}
 </div>
+<section class="card" style="margin-top:16px">
+  <h2>Erros recentes</h2>
+  {% if errors %}
+  <div class="tbl"><table>
+    <thead><tr><th>Quando</th><th>Onde</th><th>O quê</th><th>Detalhe</th></tr></thead>
+    <tbody>
+    {% for e in errors %}
+    <tr><td>{{ e.at.strftime('%d/%m %H:%M') }}</td><td><a href="{{ link_for(e) }}">{{ e.entity }} #{{ e.entity_id }}</a></td><td>{{ e.action }}</td><td><small>{{ (e.detail or {}).get('reason', '') }}</small></td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% else %}<p class="sub">Nenhum erro registrado.</p>{% endif %}
+</section>
 {% endblock %}

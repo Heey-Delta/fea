@@ -13,7 +13,8 @@ Critérios:
 
 import logging
 import tempfile
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
+from datetime import datetime
 from pathlib import Path
 
 from sqlalchemy import select
@@ -24,7 +25,7 @@ from core import executions, fishing, queue, watermark
 from core.config import Settings, get_settings
 from core.connectors import RawItem, SourceRef, make_connector
 from core.connectors.base import SourceError
-from core.models import Execution, Item, Source
+from core.models import Event, Execution, Item, Source
 from core.queue import RetryableError
 from core.storage import Storage, get_storage
 from worker.handlers import register
@@ -114,10 +115,50 @@ def process_raw(
             set_status(
                 session, item_id, "pending_permission", "fonte sem permissão", score=text.score
             )
+            # Guarda o post para baixar depois, se a permissão for liberada na fila (Task 8).
+            session.add(
+                Event(
+                    entity="item",
+                    entity_id=item_id,
+                    operation_id=ex.operation_id,
+                    action="pending_permission",
+                    detail={"raw": raw_to_dict(raw)},
+                )
+            )
             session.commit()
             return item_id, "pending_permission"
         session.commit()
+    return fetch_and_check(
+        factory, ex.operation_id, item_id, raw, rules, connector, storage, text.score
+    )
 
+
+def raw_to_dict(raw: RawItem) -> dict:
+    data = asdict(raw)
+    data["published_at"] = raw.published_at.isoformat() if raw.published_at else None
+    data["audio_urls"] = list(raw.audio_urls)
+    return data
+
+
+def raw_from_dict(data: dict) -> RawItem:
+    data = dict(data)
+    if data.get("published_at"):
+        data["published_at"] = datetime.fromisoformat(data["published_at"])
+    data["audio_urls"] = tuple(data.get("audio_urls") or ())
+    return RawItem(**data)
+
+
+def fetch_and_check(
+    factory: sessionmaker,
+    operation_id: int,
+    item_id: int,
+    raw: RawItem,
+    rules: dict,
+    connector,
+    storage: Storage,
+    score: int,
+) -> tuple[int | None, str]:
+    """Baixa, valida, confere marca d'água e duplicidade e guarda o original."""
     with tempfile.TemporaryDirectory() as tmp:
         path = Path(tmp) / f"original{EXTENSIONS[raw.media_type]}"
         try:
@@ -164,14 +205,14 @@ def process_raw(
                 )
                 session.commit()
                 return item_id, "duplicate"
-            key = original_key(ex.operation_id, item_id, raw.media_type)
+            key = original_key(operation_id, item_id, raw.media_type)
             storage.put_file(key, path)
             set_status(
                 session,
                 item_id,
                 "eligible",
                 None,
-                score=text.score,
+                score=score,
                 sha256=sha256,
                 phash=phash,
                 original_file=key,
@@ -292,6 +333,68 @@ def finish_collect(factory: sessionmaker, execution_id: int, progress: Progress)
         session.commit()
 
 
+def run_release(
+    factory: sessionmaker,
+    item_id: int,
+    settings: Settings,
+    storage: Storage,
+    connector_kwargs: dict | None = None,
+) -> str:
+    """Permissão liberada na fila: baixa o post guardado e segue a pesca (Task 8)."""
+    with factory() as session:
+        item = session.get(Item, item_id)
+        if item is None or item.status != "discovered":
+            return "ignorado"
+        source = session.get(Source, item.source_id)
+        event = session.scalar(
+            select(Event)
+            .where(
+                Event.entity == "item",
+                Event.entity_id == item_id,
+                Event.action == "pending_permission",
+            )
+            .order_by(Event.id.desc())
+            .limit(1)
+        )
+        ex = session.get(Execution, item.execution_id) if item.execution_id else None
+        if event is None or ex is None or not source.permission_note:
+            set_status(session, item_id, "pending_permission", "post sem dados para baixar")
+            session.commit()
+            return "pending_permission"
+        raw = raw_from_dict(event.detail["raw"])
+        rules = executions.fishing_config(executions.config_of(session, ex))
+        operation_id, config_id, priority, score = (
+            ex.operation_id,
+            ex.config_id,
+            item.priority,
+            item.score,
+        )
+        source_type, execution_id = source.type, ex.id
+        session.commit()
+    connector = make_connector(
+        source_type, settings, storage, operation_id, **(connector_kwargs or {})
+    )
+    _, status = fetch_and_check(
+        factory, operation_id, item_id, raw, rules, connector, storage, score
+    )
+    if status == "eligible":
+        with factory() as session:
+            queue.enqueue(
+                session,
+                "render",
+                f"render:{item_id}:{config_id}",
+                ref_id=item_id,
+                operation_id=operation_id,
+                execution_id=execution_id,
+                priority=priority,
+            )
+            session.commit()
+    return status
+
+
 @register("collect")
 def collect(ctx: JobContext) -> None:
+    if (ctx.payload or {}).get("release_item"):
+        run_release(ctx.session_factory, ctx.payload["release_item"], get_settings(), get_storage())
+        return
     run_collect(ctx.session_factory, ctx.ref_id, get_settings(), get_storage())

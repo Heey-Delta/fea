@@ -23,12 +23,13 @@ from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import sessionmaker
 from starlette.middleware.sessions import SessionMiddleware
 
+from core import dashboard as dash
 from core.config import Settings, get_settings
 from core.db import sqlalchemy_url
 from core.logging import configure_logging
 from core.storage import LocalStorage, make_storage
 from networks import make_adapter
-from web import approval, auth, editing, executions, operations, publishing
+from web import approval, auth, editing, executions, operations, publishing, queue_view
 from web.common import MENU, NotLoggedIn, render, require_user
 
 BASE_DIR = Path(__file__).parent
@@ -134,13 +135,28 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.get("/", response_class=HTMLResponse)
     def dashboard(request: Request, user: str = Depends(require_user)) -> Response:
-        return render(request, "dashboard.html", active="/")
+        try:
+            with app.state.session_factory() as session:
+                kpis, errors = dash.kpis(session), dash.recent_errors(session)
+        except OperationalError:
+            # Sem banco, o painel abre com o aviso (as outras telas mostram a página de erro).
+            log.exception("banco indisponível no dashboard")
+            kpis, errors = None, []
+        return render(
+            request,
+            "dashboard.html",
+            active="/",
+            kpis=kpis,
+            errors=errors,
+            link_for=dash.link_for,
+        )
 
     app.include_router(operations.router)
     app.include_router(executions.router)
     app.include_router(approval.router)
     app.include_router(editing.router)
     app.include_router(publishing.router)
+    app.include_router(queue_view.router)
 
     @app.get("/arquivos/{key:path}")
     def local_file(key: str, user: str = Depends(require_user)) -> Response:
@@ -155,19 +171,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if not path.is_file():
             return Response(status_code=404)
         return FileResponse(path)
-
-    def placeholder(item: dict):
-        def view(request: Request, user: str = Depends(require_user)) -> Response:
-            return render(request, "placeholder.html", active=item["href"], item=item)
-
-        return view
-
-    built = {"/", "/operacoes", "/aprovacao", "/publicacoes", "/contas"}
-    for item in MENU:
-        if item["href"] not in built:
-            app.add_api_route(
-                item["href"], placeholder(item), methods=["GET"], response_class=HTMLResponse
-            )
 
     return app
 
