@@ -41,6 +41,13 @@ class Settings(BaseSettings):
     reddit_client_secret: str = ""
     reddit_user_agent: str = "fea/0.1 (ferramenta de operacoes)"
 
+    # YouTube (Postador): cliente OAuth do Google Cloud com a YouTube Data API v3 ativa.
+    # O retorno do OAuth é {PUBLIC_BASE_URL}/contas/youtube/retorno.
+    google_client_id: str = ""
+    google_client_secret: str = ""
+    # Uploads por dia no projeto do Google, somando todas as contas e operações (Task 20.2).
+    youtube_daily_upload_limit: int = 100
+
     # Workers: espera por avisos do banco (LISTEN/NOTIFY) e intervalo máximo sem tarefas.
     worker_listen: bool = True
     worker_idle_max_s: float = 60.0

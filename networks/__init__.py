@@ -17,3 +17,14 @@ def get_profile(profile_id: str | None) -> NetworkProfile:
 def profile_of_config(config: dict) -> NetworkProfile:
     node = next((n for n in config.get("nodes") or [] if n.get("type") == "network"), None)
     return get_profile(((node or {}).get("config") or {}).get("profile"))
+
+
+def make_adapter(platform: str, settings, client_factory=None):
+    """Adaptador de publicação da plataforma da conta (Task 20)."""
+    if platform == "youtube":
+        from networks.youtube_shorts.adapter import YouTubeAdapter
+
+        return YouTubeAdapter(
+            settings.google_client_id, settings.google_client_secret, client_factory
+        )
+    raise ValueError(f"Plataforma sem adaptador: {platform}")

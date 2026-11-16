@@ -55,3 +55,65 @@ class NetworkProfile:
         if fps not in self.allowed_fps:
             errors.append(f"{fps} FPS não aceito em {self.name}.")
         return errors
+
+
+# --- Adaptador de publicação (Task 20.1) ---------------------------------------------------
+
+
+@dataclass
+class PublishRequest:
+    file_path: str
+    title: str
+    description: str
+    tags: list[str]
+    privacy: str = "public"
+    publish_at: str | None = None  # ISO 8601, agendamento nativo da plataforma
+
+
+@dataclass
+class PublishResult:
+    external_id: str
+    url: str
+    status: str = "published"  # published | processing | scheduled_platform
+
+
+class AdapterError(Exception):
+    """Erro da plataforma. As subclasses dizem ao Postador o que fazer."""
+
+
+class AuthError(AdapterError):
+    """Token inválido ou revogado: a conta vai para erro e os envios dela esperam (19.6)."""
+
+
+class RateLimited(AdapterError):
+    """Cota ou limite de taxa: `retry_wait` de 2, 10 e 30 minutos (24.2)."""
+
+
+class TemporaryError(AdapterError):
+    """Falha antes do envio do arquivo (rede, 5xx): pode tentar de novo com segurança."""
+
+
+class Uncertain(AdapterError):
+    """Timeout no meio do envio: o vídeo pode ter sido criado. Exige `check` antes do retry."""
+
+
+class PublishFailed(AdapterError):
+    """Recusa definitiva (arquivo inválido, metadados recusados)."""
+
+
+class PlatformAdapter:
+    """Interface comum (20.1). `credentials` é o token já descriptografado."""
+
+    platform: str = ""
+    capabilities: frozenset[str] = frozenset()
+
+    def publish(self, credentials: str, request: PublishRequest) -> PublishResult:
+        raise NotImplementedError
+
+    def check(self, credentials: str, title: str, since_iso: str) -> PublishResult | None:
+        """Procura um envio recente com este título. None = não foi criado."""
+        raise NotImplementedError
+
+    def account_info(self, credentials: str) -> tuple[str, str]:
+        """(id externo, nome) da conta: usado ao conectar e no "testar"."""
+        raise NotImplementedError

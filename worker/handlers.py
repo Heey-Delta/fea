@@ -50,15 +50,23 @@ def automation(session: Session) -> None:
     automation_tick(session)
 
 
+def enqueue_cleanup_tick(session: Session) -> None:
+    """Uma varredura da Limpeza por minuto (Task 24.5)."""
+    minute = datetime.now(UTC).strftime("%Y%m%d%H%M")
+    queue.enqueue(session, "cleanup", f"cleanup:{minute}", max_attempts=1)
+
+
 ROLE_PERIODIC: dict[str, dict[str, tuple[float, Periodic]]] = {
     "buscador": {"automation": (60.0, automation)},
     "postador": {"scheduler_tick": (60.0, enqueue_scheduler_tick)},
+    "limpeza": {"cleanup_tick": (60.0, enqueue_cleanup_tick)},
 }
 
 
 def load_handlers() -> None:
     """Importa os módulos que registram handlers (cada um usa @register)."""
     import worker.collect  # noqa: F401
+    import worker.publish  # noqa: F401
     import worker.render  # noqa: F401
 
 
