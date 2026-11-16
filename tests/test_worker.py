@@ -23,9 +23,13 @@ def test_checks_without_database():
     assert run_checks(check_database=False)
 
 
-def test_roles_are_not_faked_before_task_3():
+def test_roles_without_handlers_do_not_start():
+    """Enquanto as tasks seguintes não registram handlers, o papel recusa subir."""
+    from worker.handlers import handlers_for
+
     for role in ROLES:
-        assert main(["worker", role]) == 2
+        if not handlers_for(role):
+            assert main(["worker", role]) == 2
 
 
 def test_unknown_command_fails():

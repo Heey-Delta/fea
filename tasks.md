@@ -44,7 +44,7 @@ Status: 1
 - Subtask 1.2: `pyproject.toml` com as dependências e o ambiente gerenciado por `uv`.
 - Subtask 1.3: Configuração por variáveis de ambiente (`.env.example`), incluindo a chave de criptografia dos tokens, que precisa existir na Vercel e na VPS.
 - Subtask 1.4: Interface FastAPI com Jinja2 + HTMX, layout base e entrada `app.py` para a Vercel (`vercel.json`).
-- Subtask 1.5: Login do usuário único, sem papéis (senha com hash em variável de ambiente, sessão assinada).
+- Subtask 1.5: Login só com OAuth do GitHub, liberado para a conta em `GITHUB_ALLOWED_ID` (decidido). Sessão assinada.
 - Subtask 1.6: Logging estruturado que nunca exibe tokens ou segredos.
 - Subtask 1.7: Alembic configurado, com migração inicial vazia.
 - Subtask 1.8: Imagem Docker do worker com FFmpeg, ffprobe, Pillow e fontes. Docker Compose de desenvolvimento com Postgres local, interface e worker. A construção da imagem é verificada pelo CI (Docker indisponível na sessão em que foi feita).
@@ -69,12 +69,12 @@ Status: 1
 
 ## Task 3: Fila de tarefas e workers
 Nível: 5
-Status: 0
+Status: 1
 
 - Subtask 3.1: Fila no Postgres (decidido): tabela `jobs` atrás de uma interface, para trocar a implementação sem mudar o motor.
 - Subtask 3.2: Captura de tarefa com `FOR UPDATE SKIP LOCKED`, ordenando por prioridade e `run_at`.
 - Subtask 3.3: Quatro processos: Buscador (`collect`), Editor (`render`), Postador (`publish` + `scheduler_tick`) e Limpeza (`cleanup`).
-- Subtask 3.4: Concorrência configurável: Buscador 2, Editor 1 por núcleo livre (1 na VPS gratuita), Postador 1 por conta, Limpeza 1.
+- Subtask 3.4: Concorrência configurável (`WORKER_CONCURRENCY`): Buscador 2, Editor 1, Postador 2, Limpeza 1. O limite de 1 upload por conta é aplicado no handler de publicação (Task 24).
 - Subtask 3.5: Idempotência: `collect:{execution_id}`, `render:{item_id}:{config_version}`, `publish:{publish_job_id}`, `cleanup:{item_id}`. Tarefa que reaparece detecta o efeito existente e termina.
 - Subtask 3.6: Retries com `run_at` e espera crescente.
 - Subtask 3.7: Espera sem gastar o banco: LISTEN/NOTIFY quando possível, e consulta em intervalos crescentes com a fila vazia (limite de horas do Neon gratuito).
@@ -84,7 +84,7 @@ Status: 0
 
 ## Task 4: Operações e canvas
 Nível: 4
-Status: -1
+Status: 0
 
 - Subtask 4.1: CRUD de operação (nome, status).
 - Subtask 4.2: Configuração JSON versionada. Cada salvamento cria versão e as anteriores nunca mudam (REQ-UI-003).
