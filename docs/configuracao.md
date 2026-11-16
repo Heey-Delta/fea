@@ -30,8 +30,13 @@ Sem `GITHUB_CLIENT_ID` e `GITHUB_CLIENT_SECRET` a interface sobe, mas o login fi
 
 ## 4. VPS dos workers (Oracle Always Free)
 
-- [ ] Criar a instância ARM, instalar Docker e clonar o repositório.
-- [ ] Criar o `.env` a partir de `.env.example` com `DATABASE_URL`, `TOKEN_ENCRYPTION_KEY` e as chaves do R2.
+- [ ] Criar a instância (Ampere A1, Ubuntu 24.04, até 4 OCPUs e 24 GB). Abrir só a porta 22: os workers não recebem conexões.
+- [ ] Instalar Docker: `curl -fsSL https://get.docker.com | sudo sh && sudo usermod -aG docker $USER` (sair e entrar de novo).
+- [ ] `git clone` do repositório e `cp .env.example deploy/.env`. Preencher em `deploy/.env`: `APP_ENV=production`, `DATABASE_URL`, `TOKEN_ENCRYPTION_KEY`, R2, Reddit e Google (os mesmos valores da Vercel).
+- [ ] `cd deploy && docker compose -f docker-compose.vps.yml run --rm migrar` (migrações) e depois `docker compose -f docker-compose.vps.yml up -d --build`.
+- [ ] Conferir: `docker compose -f docker-compose.vps.yml ps` mostra os 4 workers `healthy`; `logs -f editor` mostra os renders.
+- [ ] Backup: o serviço `backup` grava um dump por dia em `deploy/backups/` (14 dias). Para restaurar: `gunzip -c arquivo.sql.gz | psql "$DATABASE_URL"`.
+- [ ] Atualizar depois de mudanças: `git pull && docker compose -f docker-compose.vps.yml run --rm migrar && docker compose -f docker-compose.vps.yml up -d --build`.
 
 ## 5. Armazenamento (Cloudflare R2)
 

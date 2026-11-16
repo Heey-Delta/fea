@@ -34,3 +34,12 @@ def test_roles_without_handlers_do_not_start():
 
 def test_unknown_command_fails():
     assert main(["worker", "xyz"]) == 1
+
+
+def test_heartbeat_marks_worker_alive(tmp_path, monkeypatch):
+    from worker import runner
+
+    monkeypatch.setattr(runner, "HEARTBEAT", str(tmp_path / "hb"))
+    assert not runner.alive()
+    runner.beat()
+    assert runner.alive() and not runner.alive(max_age_s=-1)

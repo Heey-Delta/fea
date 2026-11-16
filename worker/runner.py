@@ -7,6 +7,7 @@ Neon acordado à toa (Task 3.7). Falha num handler nunca derruba o loop (Task 3.
 """
 
 import logging
+import os
 import socket
 import threading
 import time
@@ -21,6 +22,25 @@ from core import queue
 from core.queue import NOTIFY_CHANNEL, PermanentError, RetryableError
 
 log = logging.getLogger("worker")
+
+
+HEARTBEAT = os.environ.get("WORKER_HEARTBEAT_FILE", "/tmp/fea-worker-heartbeat")
+
+
+def beat() -> None:
+    """Marca que o worker está vivo (lido pelo healthcheck do Docker)."""
+    try:
+        with open(HEARTBEAT, "w") as f:
+            f.write(str(time.time()))
+    except OSError:
+        pass
+
+
+def alive(max_age_s: float = 180) -> bool:
+    try:
+        return time.time() - os.path.getmtime(HEARTBEAT) < max_age_s
+    except OSError:
+        return False
 
 
 @dataclass(frozen=True)
@@ -181,6 +201,7 @@ class Worker:
                             session.commit()
                     except Exception:  # noqa: BLE001
                         log.exception("falha na rotina periódica", extra={"routine": name})
+            beat()
             self.stop.wait(1.0)
 
     def run_forever(self) -> None:

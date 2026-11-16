@@ -336,10 +336,10 @@ Nível: 3
 Status: 0
 
 - Subtask 27.1: Interface na Vercel (`app.py` + `vercel.json`) e variáveis de ambiente. Feito: projeto `fea` (time OHalla) com preview da branch no ar; produção sai quando a branch entrar no `main`.
-- Subtask 27.2: Banco Neon pelo Marketplace da Vercel; migrações aplicadas pelo CI ou manualmente.
-- Subtask 27.3: Workers na VPS com Docker Compose (Buscador, Editor, Postador, Limpeza).
-- Subtask 27.4: Bucket no Cloudflare R2 com URLs assinadas.
-- Subtask 27.5: Backup do banco e healthcheck da interface e dos workers.
+- Subtask 27.2: Banco Neon pelo Marketplace da Vercel; migrações aplicadas pelo CI ou manualmente. Pronto no código: serviço `migrar` do compose da VPS. **Falta: criar o Neon (usuário).**
+- Subtask 27.3: Workers na VPS com Docker Compose (Buscador, Editor, Postador, Limpeza). Pronto: `deploy/docker-compose.vps.yml`. **Falta: criar a VPS e o `deploy/.env` (usuário).**
+- Subtask 27.4: Bucket no Cloudflare R2 com URLs assinadas. Pronto no código (`R2Storage`). **Falta: criar o bucket e as chaves (usuário).**
+- Subtask 27.5: Backup do banco e healthcheck da interface e dos workers. Feito: `/health` na interface, `python -m worker alive` (heartbeat) no healthcheck do Docker, serviço `backup` diário com 14 dias.
 
 ## Task 28: Fase 4 — Expansão
 Nível: 2
@@ -367,7 +367,7 @@ Status: 0
 - Subtask 29.12: Pendente: plano da Vercel (Hobby é só para uso não comercial).
 - Subtask 29.13: Pendente: se o Google aceita `.vercel.app` no OAuth em produção.
 - Subtask 29.14: Pendente: limites gratuitos do Neon.
-- Subtask 29.15: Pendente: tentativas automáticas do render (proposta: 2) e permissão do áudio substituto.
+- Subtask 29.15: Tentativas automáticas do render: **2** (padrão do preset, `max_retries`); permissão do áudio substituto: campo no preset (decidido, ajustável).
 
 ---
 
