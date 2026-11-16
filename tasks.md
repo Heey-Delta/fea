@@ -324,7 +324,7 @@ Status: 1
 
 ## Task 26: Testes e critérios de aceitação
 Nível: 5
-Status: -1
+Status: 1
 
 - Subtask 26.1: Critérios da v2.1 (12).
 - Subtask 26.2: Critérios do editor Nível 1 (20), em `docs/editor-nivel-1.md`.
