@@ -11,7 +11,9 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Resp
 from sqlalchemy.orm import Session
 
 from core import operations as ops
-from core.models import Operation
+from core import sources as src
+from core.connectors import SOURCE_TYPES
+from core.models import Operation, Source
 from core.states import OPERATION_STATUS
 from web.common import db_session, render, require_user
 
@@ -106,6 +108,8 @@ def detail_page(
         actions=ACTIONS[op.status],
         status_label=STATUS_LABEL,
         node_label=ops.NODE_TYPES,
+        sources=src.list_sources(session, op.id),
+        source_types=SOURCE_TYPES,
         flash=request.session.pop("flash", None),
     )
 
@@ -154,6 +158,24 @@ def change_status(
     except ops.OperationError as exc:
         flash(request, "error", str(exc))
     return RedirectResponse(f"/operacoes/{operation_id}", status_code=303)
+
+
+@router.post("/operacoes/{operation_id}/fontes/{source_id}/testar")
+def test_source(
+    request: Request,
+    operation_id: int,
+    source_id: int,
+    session: Session = Depends(db_session),
+):
+    source = session.get(Source, source_id)
+    if source is None or source.operation_id != operation_id:
+        raise HTTPException(status_code=404, detail="Fonte não encontrada")
+    state = request.app.state
+    result = src.test_connection(
+        session, source, state.settings, state.storage, **state.connector_kwargs
+    )
+    flash(request, "ok" if result.ok else "error", result.message)
+    return RedirectResponse(f"/operacoes/{operation_id}?aba=fontes", status_code=303)
 
 
 @router.post("/operacoes/{operation_id}/duplicar")

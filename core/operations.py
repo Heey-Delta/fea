@@ -13,7 +13,9 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from core.connectors import SOURCE_TYPES
 from core.models import Event, Operation, OperationConfig
+from core.sources import sync_sources
 
 NODE_TYPES = {
     "source": "Fonte",
@@ -175,6 +177,13 @@ def validate_graph(config: dict[str, Any]) -> list[Issue]:
             issues.append(Issue("error", message))
 
     for sid in by_type["source"]:
+        cfg = by_id[sid].get("config") or {}
+        source_type = cfg.get("type") or "reddit"
+        if source_type not in SOURCE_TYPES:
+            issues.append(Issue("error", f"Tipo de fonte desconhecido: {source_type}.", sid))
+        elif source_type == "reddit" and not (cfg.get("reference") or "").strip():
+            issues.append(Issue("error", "Fonte do Reddit sem comunidade (ex.: r/nome).", sid))
+    for sid in by_type["source"]:
         if not (by_id[sid].get("config") or {}).get("permission_note"):
             issues.append(
                 Issue(
@@ -221,7 +230,9 @@ def create_operation(session: Session, name: str, config: dict | None = None) ->
     op = Operation(name=name, status="draft")
     session.add(op)
     session.flush()
-    _new_version(session, op, config or default_config())
+    config = config or default_config()
+    _new_version(session, op, config)
+    sync_sources(session, op, config)
     _event(session, op, "created")
     return op
 
@@ -254,6 +265,7 @@ def save_config(session: Session, op: Operation, config: dict) -> OperationConfi
     if config == current_config(session, op).config:
         return current_config(session, op)
     version = _new_version(session, op, config)
+    sync_sources(session, op, config)
     _event(session, op, "config_saved", {"version": version.version})
     return version
 

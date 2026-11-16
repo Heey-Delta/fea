@@ -40,7 +40,9 @@ Sem `GITHUB_CLIENT_ID` e `GITHUB_CLIENT_SECRET` a interface sobe, mas o login fi
 
 ## 6. Reddit (Buscador)
 
-- [ ] Criar o app em reddit.com/prefs/apps e anotar ID e segredo (variáveis entram com a Task 5).
+- [ ] Criar o app em reddit.com/prefs/apps (tipo "script") e preencher na VPS e na Vercel:
+  `REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET` e `REDDIT_USER_AGENT` (ex.: `fea/0.1 (by u/seu_usuario)`).
+- [ ] Depois de criar a fonte no canvas, usar "Testar conexão" na aba Fontes da operação.
 - [ ] Listar as comunidades com autorização de uso registrada.
 - [ ] Se o canal for monetizado, verificar o acordo de uso comercial da API.
 

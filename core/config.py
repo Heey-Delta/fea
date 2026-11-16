@@ -33,11 +33,28 @@ class Settings(BaseSettings):
     r2_secret_access_key: str = ""
     r2_bucket: str = ""
 
+    # Arquivos: R2 quando configurado; senão, disco local (desenvolvimento).
+    storage_dir: str = "storage"
+
+    # Reddit (Buscador): app do tipo "script" ou "web" em reddit.com/prefs/apps.
+    reddit_client_id: str = ""
+    reddit_client_secret: str = ""
+    reddit_user_agent: str = "fea/0.1 (ferramenta de operacoes)"
+
     # Workers: espera por avisos do banco (LISTEN/NOTIFY) e intervalo máximo sem tarefas.
     worker_listen: bool = True
     worker_idle_max_s: float = 60.0
 
     log_level: str = "INFO"
+
+    @property
+    def r2_configured(self) -> bool:
+        return bool(
+            self.r2_account_id
+            and self.r2_access_key_id
+            and self.r2_secret_access_key
+            and self.r2_bucket
+        )
 
     @property
     def is_production(self) -> bool:

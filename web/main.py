@@ -9,7 +9,13 @@ from pathlib import Path
 
 import httpx
 from fastapi import Depends, FastAPI, Request
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
+from fastapi.responses import (
+    FileResponse,
+    HTMLResponse,
+    JSONResponse,
+    RedirectResponse,
+    Response,
+)
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import create_engine
@@ -20,6 +26,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from core.config import Settings, get_settings
 from core.db import sqlalchemy_url
 from core.logging import configure_logging
+from core.storage import LocalStorage, make_storage
 from web import auth, operations
 from web.common import MENU, NotLoggedIn, render, require_user
 
@@ -49,6 +56,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         sqlalchemy_url(settings.database_url), pool_pre_ping=True, pool_size=2, max_overflow=2
     )
     app.state.session_factory = sessionmaker(bind=engine, expire_on_commit=False)
+    app.state.storage = make_storage(settings)
+    # Os testes injetam aqui um cliente HTTP simulado para os conectores.
+    app.state.connector_kwargs = {}
     app.add_middleware(
         SessionMiddleware,
         secret_key=settings.secret_key,
@@ -125,6 +135,20 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return render(request, "dashboard.html", active="/")
 
     app.include_router(operations.router)
+
+    @app.get("/arquivos/{key:path}")
+    def local_file(key: str, user: str = Depends(require_user)) -> Response:
+        """Serve arquivos do disco local em desenvolvimento. Com R2, as URLs são assinadas."""
+        storage = app.state.storage
+        if not isinstance(storage, LocalStorage):
+            return Response(status_code=404)
+        try:
+            path = storage._path(key)
+        except ValueError:
+            return Response(status_code=404)
+        if not path.is_file():
+            return Response(status_code=404)
+        return FileResponse(path)
 
     def placeholder(item: dict):
         def view(request: Request, user: str = Depends(require_user)) -> Response:

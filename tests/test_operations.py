@@ -21,7 +21,11 @@ def complete_config() -> dict:
     """Fluxo padrão com uma fonte e uma conta ligadas: sem erros."""
     config = ops.default_config()
     config["nodes"] += [
-        {"id": "reddit", "type": "source", "config": {"permission_note": "autorizado por X"}},
+        {
+            "id": "reddit",
+            "type": "source",
+            "config": {"type": "reddit", "reference": "r/teste", "permission_note": "ok"},
+        },
         {"id": "contaA", "type": "account", "config": {"account_id": 1}},
     ]
     config["edges"] += [
@@ -78,7 +82,7 @@ def test_unknown_block_and_dangling_edge():
 
 def test_source_without_permission_is_only_a_warning():
     config = complete_config()
-    config["nodes"][-2]["config"] = {}
+    config["nodes"][-2]["config"] = {"type": "reddit", "reference": "r/teste"}
     issues = ops.validate_graph(config)
     assert [i.level for i in issues] == ["warning"]
     assert issues[0].node_id == "reddit"

@@ -72,12 +72,17 @@ class OperationConfig(Base):
 
 class Source(Base):
     __tablename__ = "sources"
-    __table_args__ = (one_of("status", states.SOURCE_STATUS),)
+    __table_args__ = (
+        one_of("status", states.SOURCE_STATUS),
+        UniqueConstraint("operation_id", "node_id"),
+    )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     operation_id: Mapped[int] = mapped_column(
         BigInteger, ForeignKey("operations.id", ondelete="CASCADE"), index=True
     )
+    # Bloco Fonte do canvas que criou esta fonte (Task 5.9).
+    node_id: Mapped[str | None] = mapped_column(String(80))
     type: Mapped[str] = mapped_column(String(40))
     reference: Mapped[str] = mapped_column(String(500))
     # Sem nota de permissão, os itens da fonte entram como pending_permission (REQ-UI-004).
