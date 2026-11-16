@@ -3,6 +3,8 @@
 Fontes:
 - Artefato **"Especificação da Ferramenta — v2.1"** (https://claude.ai/artifact/GHvbjsWudPNWXgXHyUyEz5).
 - `docs/editor-nivel-1.md` (editor automático, Nível 1, adaptado ao projeto).
+- `docs/fluxo-operacao.md` (blocos Pesca, Edição, Postagem e canvas da operação).
+- Wireframe navegável, 20 telas (https://claude.ai/artifact/1xSF1qABqYpySyFhNZYZHy). Cada tela traz as tasks que atende.
 
 ## Legenda
 
