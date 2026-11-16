@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<h1>Dashboard</h1>
+<p class="sub">Visão operacional. Os cards abrem a fila já filtrada (Task 25).</p>
+<div class="grid">
+  {% for label in ["Operações ativas", "Execuções rodando", "Estoque de editados", "Aguardando aprovação", "Planejados hoje", "Publicados hoje", "Falhas", "Contas com erro"] %}
+  <div class="card kpi"><span class="lbl">{{ label }}</span><span class="num">—</span></div>
+  {% endfor %}
+</div>
+{% endblock %}

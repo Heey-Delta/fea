@@ -38,7 +38,7 @@ Blocos do produto (ver `docs/fluxo-operacao.md`): **Pesca** (Tasks 5 a 8), **Edi
 
 ## Task 1: Fundação do projeto
 Nível: 5
-Status: -1
+Status: 1
 
 - Subtask 1.1: Estrutura de pastas: `core/` (motor genérico), `networks/` (perfis por rede), `web/` (interface na Vercel), `worker/` (processos da VPS), `migrations/`, `tests/`, `docs/`.
 - Subtask 1.2: `pyproject.toml` com as dependências e o ambiente gerenciado por `uv`.
@@ -47,13 +47,13 @@ Status: -1
 - Subtask 1.5: Login do usuário único, sem papéis (senha com hash em variável de ambiente, sessão assinada).
 - Subtask 1.6: Logging estruturado que nunca exibe tokens ou segredos.
 - Subtask 1.7: Alembic configurado, com migração inicial vazia.
-- Subtask 1.8: Imagem Docker do worker com FFmpeg, ffprobe, Pillow e fontes. Docker Compose de desenvolvimento com Postgres local, interface e worker.
+- Subtask 1.8: Imagem Docker do worker com FFmpeg, ffprobe, Pillow e fontes. Docker Compose de desenvolvimento com Postgres local, interface e worker. A construção da imagem é verificada pelo CI (Docker indisponível na sessão em que foi feita).
 - Subtask 1.9: Healthcheck da interface (`/health`) e verificação de FFmpeg no worker.
 - Subtask 1.10: CI no GitHub Actions (ruff + pytest) e README com instruções de execução.
 
 ## Task 2: Banco de dados (14 tabelas)
 Nível: 5
-Status: -1
+Status: 0
 
 - Subtask 2.1: `operations` e `operation_configs` (config JSON versionada; inclui grafo do canvas, preset, perfil de rede, modo automático, estoque e tempo de exclusão).
 - Subtask 2.2: `accounts` e `operation_accounts` (muitos-para-muitos).

@@ -1,0 +1,44 @@
+:root {
+  --bg: #f2f2ef;
+  --surface: #ffffff;
+  --line: #cfcfcb;
+  --ink: #1e1e1c;
+  --ink-2: #3a3a37;
+  --muted: #5c5c58;
+  --fill: #e6e6e2;
+  --error-bg: #fbe9e4;
+  --error-ink: #6e1f0b;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: Inter, system-ui, sans-serif; }
+a { color: var(--ink); }
+h1 { font-size: 24px; margin: 0 0 4px; }
+.sub { color: var(--muted); font-size: 14px; margin: 0 0 20px; line-height: 1.5; }
+
+.app { display: flex; flex-wrap: wrap; min-height: 100vh; }
+.side { flex: 1 1 232px; background: var(--surface); border-right: 1px solid var(--line); padding: 20px 14px; display: flex; flex-direction: column; gap: 4px; }
+.brand { font-weight: 700; font-size: 16px; padding: 4px 12px 16px; }
+.nav { display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 8px; text-decoration: none; font: 14px Inter, system-ui, sans-serif; color: var(--ink-2); background: none; border: 0; width: 100%; cursor: pointer; text-align: left; }
+.nav:hover { background: #ededea; }
+.nav.on { background: var(--fill); font-weight: 600; color: var(--ink); }
+.grow { flex-grow: 1; min-height: 24px; }
+.main { flex: 999 1 560px; min-width: 0; padding: 28px 32px 48px; }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+.kpi { min-height: 100px; }
+.lbl { font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.num { font-size: 32px; font-weight: 700; }
+
+.center { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 48px 16px; }
+.login { width: 100%; max-width: 420px; gap: 14px; }
+.field { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.input { min-height: 44px; border: 1px solid #a8a8a3; border-radius: 8px; padding: 0 12px; font: 14px Inter, system-ui, sans-serif; width: 100%; }
+.btn { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 16px; border-radius: 8px; border: 1px solid var(--ink); background: var(--surface); font: 600 14px Inter, system-ui, sans-serif; color: var(--ink); cursor: pointer; }
+.btn.pri { background: var(--ink); color: #fff; }
+.error { background: var(--error-bg); color: var(--error-ink); border-radius: 8px; padding: 10px 12px; font-size: 14px; margin: 0; }
+
+@media (max-width: 640px) {
+  .main { padding: 20px 16px 40px; }
+}

@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Entrar</title>
+  <link rel="stylesheet" href="{{ url_for('static', path='app.css') }}">
+</head>
+<body>
+  <div class="center">
+    <form class="card login" method="post" action="/login">
+      <h1>Entrar</h1>
+      <p class="sub">Acesso do usuário único da ferramenta.</p>
+      {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+      <label class="field" for="username">Usuário
+        <input class="input" id="username" name="username" autocomplete="username" required>
+      </label>
+      <label class="field" for="password">Senha
+        <input class="input" id="password" name="password" type="password" autocomplete="current-password" required>
+      </label>
+      <button class="btn pri" type="submit">Entrar</button>
+    </form>
+  </div>
+</body>
+</html>
