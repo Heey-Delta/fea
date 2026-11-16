@@ -53,6 +53,10 @@ Sem `GITHUB_CLIENT_ID` e `GITHUB_CLIENT_SECRET` a interface sobe, mas o login fi
 - [ ] Listar as comunidades com autorização de uso registrada.
 - [ ] Se o canal for monetizado, verificar o acordo de uso comercial da API.
 
+## 6b. Automação da operação (canvas → Configuração)
+
+- [ ] Em `automation` no fluxo: `daily_play_at` (ex.: `"06:00"`, no fuso do bloco Postagem), `daily_target` (vídeos por dia), `stock_enabled` e `stock_min_days` (recomendado 3 a 7).
+
 ## 7. YouTube (Postador)
 
 - [ ] Projeto no Google Cloud com a YouTube Data API v3 ativa e cliente OAuth (variáveis entram com a Task 19).

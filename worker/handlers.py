@@ -43,7 +43,15 @@ def enqueue_scheduler_tick(session: Session) -> None:
     queue.enqueue(session, "scheduler", f"scheduler:{minute}", max_attempts=1)
 
 
+def automation(session: Session) -> None:
+    """Play diário e reposição de estoque (Tasks 6.8 e 6.9)."""
+    from core.automation import automation_tick
+
+    automation_tick(session)
+
+
 ROLE_PERIODIC: dict[str, dict[str, tuple[float, Periodic]]] = {
+    "buscador": {"automation": (60.0, automation)},
     "postador": {"scheduler_tick": (60.0, enqueue_scheduler_tick)},
 }
 

@@ -2,7 +2,7 @@
 FROM python:3.12-slim
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ffmpeg fonts-dejavu-core fonts-inter \
+    && apt-get install -y --no-install-recommends ffmpeg tesseract-ocr fonts-dejavu-core fonts-inter \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=ghcr.io/astral-sh/uv:0.5.4 /uv /usr/local/bin/uv

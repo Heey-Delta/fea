@@ -76,6 +76,7 @@ def default_config() -> dict[str, Any]:
                     "criteria": "recent",
                     "accepted_media": ["video"],
                     "max_duration_s": 60,
+                    "reject_watermarks": True,
                 },
             },
             {"id": "edicao", "type": "edit", "config": {"preset": {}}},
@@ -101,7 +102,12 @@ def default_config() -> dict[str, Any]:
             {"from": "rede", "to": "edicao"},
             {"from": "rede", "to": "postagem"},
         ],
-        "automation": {"daily_play_at": None, "stock_min_days": 3},
+        "automation": {
+            "daily_play_at": None,
+            "daily_target": 30,
+            "stock_enabled": False,
+            "stock_min_days": 3,
+        },
         "retention": {"delete_after_minutes": 30},
     }
 

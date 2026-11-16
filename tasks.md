@@ -115,7 +115,7 @@ Status: 1
 
 ## Task 6: Execução (Play), modo automático e estoque
 Nível: 5
-Status: 0
+Status: 1
 
 - Subtask 6.1: Tela do Play com quantidade X, orçamento de busca, fontes, critério e prioridade.
 - Subtask 6.2: Criar `executions` com `config_version_id` congelada, X, orçamento e `status=running`.
@@ -129,7 +129,7 @@ Status: 0
 
 ## Task 7: Itens, validação, deduplicação e classificação
 Nível: 5
-Status: -1
+Status: 1
 
 - Subtask 7.1: Máquina de estados do item (tabela da seção 6.1 da v2.1).
 - Subtask 7.2: Checagem de formato, duração (`max_duration_s`), palavra bloqueada e nicho → `rejected`.
@@ -139,12 +139,12 @@ Status: -1
   - Subtask 7.3.3: Imagem parecida por `phash` com distância ≤ 6, escopo global, sobre 3 quadros (10%, 50%, 90%).
 - Subtask 7.4: Duplicado de outra operação recebe `duplicate` com `duplicate_of`.
 - Subtask 7.5: Classificação: score = tags (1) + heat tags (2). Score 0 com tags configuradas → `rejected`.
-- Subtask 7.6: Permissão: o item herda o `permission_note` da fonte. Sem permissão → `pending_permission`.
-- Subtask 7.7: Detecção de marca d'água de terceiro (logotipo de outras redes e texto do @ na imagem) → `rejected` com motivo "marca d'água de terceiro". Nunca remover a marca.
+- Subtask 7.6: Permissão: o item herda o `permission_note` da fonte. Sem permissão → `pending_permission`, sem baixar nada. Liberar ou rejeitar em lote fica na fila (Task 8).
+- Subtask 7.7: Detecção de marca d'água de terceiro por OCR (Tesseract) em 3 quadros: nome de outra rede ou @ que persiste → `rejected` com motivo. Nunca remove a marca. Configurável por `reject_watermarks` no bloco Pesca.
 
 ## Task 8: Filas
 Nível: 4
-Status: -1
+Status: 0
 
 - Subtask 8.1: Fila geral com colunas: item, operação, execução, etapa/estado, prioridade, score, data, erro, ação.
 - Subtask 8.2: Fila da operação é a mesma tela com filtro `operation_id` (REQ-QUEUE-003).

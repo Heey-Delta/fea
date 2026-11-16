@@ -20,7 +20,7 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session, sessionmaker
 
-from core import executions, fishing, queue
+from core import executions, fishing, queue, watermark
 from core.config import Settings, get_settings
 from core.connectors import RawItem, SourceRef, make_connector
 from core.connectors.base import SourceError
@@ -130,6 +130,8 @@ def process_raw(
                 duration, reason = None, None
             sha256 = fishing.sha256_file(path)
             phash = fishing.media_phash(path, raw.media_type, duration)
+            if not reason and rules.get("reject_watermarks", True):
+                reason = watermark.detect(path, raw.media_type, duration)
         except RetryableError as exc:
             # Falha de rede: apaga o item para o post ser tentado de novo numa próxima busca.
             with factory() as session:
