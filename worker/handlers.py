@@ -59,6 +59,7 @@ ROLE_PERIODIC: dict[str, dict[str, tuple[float, Periodic]]] = {
 def load_handlers() -> None:
     """Importa os módulos que registram handlers (cada um usa @register)."""
     import worker.collect  # noqa: F401
+    import worker.render  # noqa: F401
 
 
 def handlers_for(role: str) -> dict[str, Handler]:

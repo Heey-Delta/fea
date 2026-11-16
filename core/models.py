@@ -345,6 +345,8 @@ class Job(Base):
     attempts: Mapped[int] = mapped_column(Integer, server_default="0")
     max_attempts: Mapped[int] = mapped_column(Integer, server_default="3")
     idempotency_key: Mapped[str] = mapped_column(String(200), unique=True)
+    # Dados extras da tarefa (ex.: versão da configuração de um novo render).
+    payload: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     locked_by: Mapped[str | None] = mapped_column(String(100))
     locked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_error: Mapped[str | None] = mapped_column(Text)

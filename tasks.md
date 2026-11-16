@@ -156,7 +156,7 @@ Status: 0
 
 ## Task 9: Módulo de redes sociais (perfis)
 Nível: 5
-Status: -1
+Status: 1
 
 - Subtask 9.1: Interface `NetworkProfile`: saída padrão, restrições, regras de QC, limites de metadados, capacidades, adaptador.
 - Subtask 9.2: Registro de perfis carregado pelo core. Cada operação escolhe um perfil.
@@ -167,7 +167,7 @@ Status: -1
 
 ## Task 10: Editor — pipeline e análise
 Nível: 5
-Status: -1
+Status: 1
 
 - Subtask 10.1: Recebimento: pega da fila de pesca, identifica operação, item e preset.
 - Subtask 10.2: Análise com ffprobe: resolução, proporção, FPS, duração, codecs, áudio, integridade.
@@ -177,7 +177,7 @@ Status: -1
 
 ## Task 11: Padronização e enquadramento
 Nível: 5
-Status: -1
+Status: 1
 
 - Subtask 11.1: Conversão para resolução, FPS, pixel format e codecs do preset.
 - Subtask 11.2: Modo A (preencher), com posição do corte configurável.
@@ -187,7 +187,7 @@ Status: -1
 
 ## Task 12: Máscaras PNG
 Nível: 4
-Status: -1
+Status: 0
 
 - Subtask 12.1: Importação e armazenamento em `mask_assets` e `mask_versions`, com checksum.
 - Subtask 12.2: Validação: integridade, PNG, dimensões, canal alfa, compatibilidade e proporção.
@@ -197,7 +197,7 @@ Status: -1
 
 ## Task 13: Textos e elementos gráficos
 Nível: 4
-Status: -1
+Status: 1
 
 - Subtask 13.1: Texto desenhado em PNG pelo Pillow e sobreposto pelo FFmpeg.
 - Subtask 13.2: Somente textos fixos do preset: o título não vai escrito no vídeo (decidido).
@@ -206,7 +206,7 @@ Status: -1
 
 ## Task 14: Áudio
 Nível: 4
-Status: -1
+Status: 1
 
 - Subtask 14.1: Preservar, remover ou substituir.
 - Subtask 14.2: Volume, normalização de loudness, fade-in e fade-out.
@@ -215,7 +215,7 @@ Status: -1
 
 ## Task 15: Presets e versionamento
 Nível: 5
-Status: -1
+Status: 0
 
 - Subtask 15.1: Preset dentro do JSON versionado da operação.
 - Subtask 15.2: Formulário de configuração em seções, sem timeline e sem prévia editável.
@@ -234,7 +234,7 @@ Status: -1
 
 ## Task 17: Controle de qualidade (QC)
 Nível: 5
-Status: -1
+Status: 1
 
 - Subtask 17.1: Verificações técnicas do render (abre, resolução, proporção, FPS, codec, duração, áudio, máscara, armazenado).
 - Subtask 17.2: Impeditivo bloqueia; aviso passa e fica visível.
@@ -243,7 +243,7 @@ Status: -1
 
 ## Task 18: Aprovação
 Nível: 5
-Status: -1
+Status: 0
 
 - Subtask 18.1: Tela de aprovação com player do R2 por URL assinada, origem, permissão, QC e contas.
 - Subtask 18.2: Aprovar, rejeitar, nova versão (novo render com o preset atual).

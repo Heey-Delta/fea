@@ -216,6 +216,20 @@ def _has_cycle(by_id: dict[str, dict], outgoing: dict[str, set[str]]) -> bool:
     return any(state.get(n) is None and visit(n) for n in by_id)
 
 
+def linked_account_ids(config: dict[str, Any]) -> list[int]:
+    """Contas ligadas ao bloco Postagem (ids da tabela accounts)."""
+    nodes = {n.get("id"): n for n in config.get("nodes") or []}
+    ids = []
+    for edge in config.get("edges") or []:
+        node = nodes.get(edge.get("from"))
+        target = nodes.get(edge.get("to"))
+        if node and target and node.get("type") == "account" and target.get("type") == "publish":
+            account_id = (node.get("config") or {}).get("account_id")
+            if isinstance(account_id, int) and account_id not in ids:
+                ids.append(account_id)
+    return ids
+
+
 def has_errors(issues: list[Issue]) -> bool:
     return any(i.level == "error" for i in issues)
 

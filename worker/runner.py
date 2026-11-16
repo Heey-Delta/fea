@@ -34,6 +34,7 @@ class JobContext:
     execution_id: int | None
     attempts: int
     session_factory: sessionmaker
+    payload: dict | None = None
 
 
 Handler = Callable[[JobContext], None]
@@ -117,6 +118,7 @@ class Worker:
                 execution_id=job.execution_id,
                 attempts=job.attempts,
                 session_factory=self.session_factory,
+                payload=job.payload,
             )
             session.commit()
 

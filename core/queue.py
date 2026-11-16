@@ -54,6 +54,7 @@ def enqueue(
     priority: str = "normal",
     run_at: datetime | None = None,
     max_attempts: int = 3,
+    payload: dict | None = None,
 ) -> Enqueued:
     """Põe uma tarefa na fila. A mesma chave nunca cria duas tarefas (Task 3.5)."""
     values = {
@@ -64,6 +65,7 @@ def enqueue(
         "execution_id": execution_id,
         "priority": PRIORITY_VALUE[priority],
         "max_attempts": max_attempts,
+        "payload": payload,
     }
     if run_at is not None:
         values["run_at"] = run_at
