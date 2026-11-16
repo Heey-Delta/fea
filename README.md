@@ -28,7 +28,9 @@ uv run uvicorn app:app --reload                # interface em http://localhost:8
 uv run python -m worker check                  # confere FFmpeg, ffprobe e banco
 ```
 
-Com Docker, `docker compose up` sobe o Postgres, a interface e o worker.
+Com Docker, `docker compose up` sobe o Postgres, a interface e os quatro workers (Buscador, Editor, Postador e Limpeza).
+
+Produção na VPS: `deploy/docker-compose.vps.yml` (workers com healthcheck, migrações e backup diário). Passo a passo e tudo o que falta preencher: `docs/configuracao.md`. Critérios de aceitação e seus testes: `docs/aceitacao.md`.
 
 ## Testes
 
