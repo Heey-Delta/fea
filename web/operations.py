@@ -110,6 +110,36 @@ def detail_page(
     )
 
 
+@router.get("/operacoes/{operation_id}/fluxo", response_class=HTMLResponse)
+def canvas_page(
+    request: Request, operation_id: int, session: Session = Depends(db_session)
+) -> Response:
+    op = get_operation(session, operation_id)
+    config = ops.current_config(session, op)
+    read_only = op.status == "archived"
+    boot = {
+        "config": config.config,
+        "issues": [
+            {"level": i.level, "message": i.message, "node_id": i.node_id}
+            for i in ops.validate_graph(config.config)
+        ],
+        "labels": ops.NODE_TYPES,
+        "allowedEdges": sorted(ops.ALLOWED_EDGES),
+        "saveUrl": f"/operacoes/{op.id}/config",
+        "readOnly": read_only,
+    }
+    return render(
+        request,
+        "operation_canvas.html",
+        active="/operacoes",
+        op=op,
+        config=config,
+        boot=boot,
+        read_only=read_only,
+        palette=list(ops.NODE_TYPES.items()),
+    )
+
+
 @router.post("/operacoes/{operation_id}/status")
 def change_status(
     request: Request,

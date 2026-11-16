@@ -67,3 +67,25 @@ td { padding: 10px 12px; border-bottom: 1px solid var(--fill); }
 .back { font-size: 13px; display: inline-block; margin-bottom: 8px; }
 pre { margin: 0; font: 12px/1.5 ui-monospace, Menlo, monospace; background: #f7f7f5; border: 1px solid var(--fill); border-radius: 8px; padding: 12px; overflow-x: auto; }
 .sr { position: absolute; left: -9999px; }
+
+/* Canvas de blocos (Task 4) */
+.canvas-work { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; margin-bottom: 16px; }
+.palette { margin-bottom: 12px; }
+.palette .sub { margin: 0; }
+.pitem { min-height: 44px; border: 1px dashed #a8a8a3; border-radius: 8px; background: #fafaf8; font: 500 14px Inter, system-ui, sans-serif; text-align: left; padding: 0 12px; cursor: pointer; }
+.canvas-box { flex: 999 1 560px; min-width: 0; height: 560px; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background-color: #fafaf8; background-image: radial-gradient(#cfcfcb 1px, transparent 1px); background-size: 20px 20px; }
+#drawflow { width: 100%; height: 100%; }
+.panel { flex: 1 1 280px; max-width: 100%; }
+.panel h2 { font-size: 18px; margin: 0; }
+.code { font: 12px/1.5 ui-monospace, Menlo, monospace; padding: 10px; min-height: 220px; }
+#drawflow .drawflow-node { width: 160px; min-height: 60px; border: 1px solid #5c5c58; border-radius: 10px; background: #fff; color: var(--ink); padding: 8px 12px; }
+#drawflow .drawflow-node.selected { border: 2px solid #1a4f9c; background: #fff; color: var(--ink); box-shadow: 0 0 0 4px #e3ecf9; }
+#drawflow .drawflow-node.has-error { border: 2px dashed #a33a1e; }
+#drawflow .drawflow-node .input, #drawflow .drawflow-node .output { width: 14px; height: 14px; min-height: 0; padding: 0; border: 2px solid #5c5c58; border-radius: 50%; background: #fff; }
+#drawflow .drawflow-node .input:hover, #drawflow .drawflow-node .output:hover { background: #1a4f9c; }
+#drawflow .connection .main-path { stroke: #5c5c58; stroke-width: 2px; }
+.node-title { font-weight: 700; font-size: 14px; }
+.node-sub { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#canvas-status { font-size: 13px; color: var(--muted); }
+#canvas-status.error { color: #a33a1e; font-weight: 600; }
+#canvas-status.ok { color: #1e5e3a; font-weight: 600; }

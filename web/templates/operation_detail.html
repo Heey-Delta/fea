@@ -10,6 +10,7 @@
     {% for value, label in actions %}
     <form method="post" action="/operacoes/{{ op.id }}/status"><input type="hidden" name="acao" value="{{ value }}"><button class="btn{% if value == 'active' %} pri{% endif %}" type="submit">{{ label }}</button></form>
     {% endfor %}
+    <a class="btn" href="/operacoes/{{ op.id }}/fluxo">{{ 'Ver fluxo' if op.status == 'archived' else 'Editar fluxo' }}</a>
     <form method="post" action="/operacoes/{{ op.id }}/duplicar"><button class="btn" type="submit">Duplicar</button></form>
     {% if op.status != 'archived' %}
     <form method="post" action="/operacoes/{{ op.id }}/status" onsubmit="return confirm('Arquivar deixa a operação somente leitura. Continuar?')"><input type="hidden" name="acao" value="archived"><button class="btn" type="submit">Arquivar</button></form>
@@ -30,7 +31,7 @@
   <div class="row">
     {% for node in config.config.nodes %}<span class="chip">{{ node_label.get(node.type, node.type) }}</span>{% endfor %}
   </div>
-  <p class="sub">O canvas para editar o fluxo chega na próxima etapa da Task 4.</p>
+  <a class="btn sm" href="/operacoes/{{ op.id }}/fluxo">Abrir canvas</a>
 </section>
 <section class="card">
   <h2>Validação do fluxo</h2>

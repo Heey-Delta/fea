@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Fluxo · {{ op.name }}{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', path='drawflow.min.css') }}">
+{% endblock %}
+{% block content %}
+<a class="back" href="/operacoes/{{ op.id }}">← {{ op.name }}</a>
+<div class="top">
+  <div class="row">
+    <h1>Fluxo da operação</h1>
+    <span class="chip" id="version">v{{ config.version }}</span>
+    {% if read_only %}<span class="chip">Somente leitura</span>{% endif %}
+  </div>
+  <div class="row">
+    <span id="canvas-status" role="status"></span>
+    {% if not read_only %}<button class="btn pri" type="button" id="save">Salvar versão</button>{% endif %}
+  </div>
+</div>
+
+{% if not read_only %}
+<div class="palette row" role="toolbar" aria-label="Adicionar bloco">
+  <span class="lbl">Adicionar</span>
+  {% for type, label in palette %}
+  <button class="pitem" type="button" data-add="{{ type }}">+ {{ label }}</button>
+  {% endfor %}
+  <span class="sub">Ligue a saída (direita) de um bloco à entrada (esquerda) de outro.</span>
+</div>
+{% endif %}
+<div class="canvas-work">
+  <section class="canvas-box" aria-label="Canvas do fluxo">
+    <div id="drawflow"></div>
+  </section>
+  <aside class="card panel" id="panel" aria-label="Configuração do bloco"></aside>
+</div>
+
+<section class="card">
+  <h2>Validação do fluxo</h2>
+  <div id="canvas-issues"></div>
+</section>
+
+<script id="canvas-data" type="application/json">{{ boot | tojson }}</script>
+<script src="{{ url_for('static', path='drawflow.min.js') }}"></script>
+<script src="{{ url_for('static', path='canvas.js') }}"></script>
+{% endblock %}

@@ -25,6 +25,7 @@ worker = [
 
 [dependency-groups]
 dev = [
+    "playwright>=1.65.2",
     "pytest>=8.3",
     "ruff>=0.6",
 ]

@@ -84,7 +84,7 @@ Status: 1
 
 ## Task 4: Operações e canvas
 Nível: 4
-Status: 0
+Status: 1
 
 - Subtask 4.1: CRUD de operação (nome, status).
 - Subtask 4.2: Configuração JSON versionada. Cada salvamento cria versão e as anteriores nunca mudam (REQ-UI-003).
@@ -95,14 +95,14 @@ Status: 0
 - Subtask 4.7: Teste: duas operações com configurações diferentes rodando nos mesmos motores (critério 1 da v2.1).
 - Subtask 4.8: Canvas de criação com Drawflow (decidido): blocos Fonte, Pesca, Edição, Aprovação, Postagem, Rede e Conta, com portas de entrada e saída. O canvas só configura o fluxo; não edita vídeo (decidido).
 - Subtask 4.9: Ligações fora da tabela de tipos de porta são recusadas com motivo.
-- Subtask 4.10: Clicar no bloco abre o painel de configuração em formulário, do lado direito.
+- Subtask 4.10: Clicar no bloco abre o painel de configuração do lado direito. Por enquanto em JSON; os formulários de cada bloco chegam com as Tasks 6, 15 e 21.
 - Subtask 4.11: Validação antes de ativar: Fonte → Pesca → Edição → Aprovação → Postagem; uma Rede ligada a Edição e Postagem; ao menos uma Conta; sem ciclos.
 - Subtask 4.12: Grafo (nós, arestas e configs) salvo como JSON versionado em `operation_configs`. Cada execução guarda snapshot.
 - Subtask 4.13: Operação arquivada abre o canvas em somente leitura, com opção de duplicar.
 
 ## Task 5: Fontes e conectores (Buscador)
 Nível: 4
-Status: -1
+Status: 0
 
 - Subtask 5.1: Cadastro de fonte por operação (`type`, `reference`, `permission_note`, `status`, `cursor`, `last_error`).
 - Subtask 5.2: `permission_note` obrigatório. Sem ele, os itens entram como `pending_permission` (REQ-UI-004).
