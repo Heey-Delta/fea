@@ -93,3 +93,9 @@ pre { margin: 0; font: 12px/1.5 ui-monospace, Menlo, monospace; background: #f7f
 .upload-log .ok { color: #1e5e3a; }
 .upload-log .error { color: #a33a1e; }
 label.btn { cursor: pointer; }
+.form { gap: 16px; }
+fieldset { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; }
+.check { display: flex; align-items: center; gap: 10px; min-height: 40px; font-size: 14px; }
+.check input { width: 18px; height: 18px; }
+.bar { height: 12px; border-radius: 6px; background: var(--fill); overflow: hidden; }
+.bar .fill { height: 12px; background: var(--ink); }

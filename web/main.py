@@ -27,7 +27,7 @@ from core.config import Settings, get_settings
 from core.db import sqlalchemy_url
 from core.logging import configure_logging
 from core.storage import LocalStorage, make_storage
-from web import auth, operations
+from web import auth, executions, operations
 from web.common import MENU, NotLoggedIn, render, require_user
 
 BASE_DIR = Path(__file__).parent
@@ -135,6 +135,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return render(request, "dashboard.html", active="/")
 
     app.include_router(operations.router)
+    app.include_router(executions.router)
 
     @app.get("/arquivos/{key:path}")
     def local_file(key: str, user: str = Depends(require_user)) -> Response:

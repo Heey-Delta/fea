@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Execução #{{ ex.id }}{% endblock %}
+{% block content %}
+<a class="back" href="/operacoes/{{ op.id }}?aba=execucoes">← {{ op.name }}</a>
+<div class="top">
+  <div>
+    <div class="row"><h1>Execução #{{ ex.id }}</h1><span class="chip">{{ label[ex.status] }}</span><span class="chip">prioridade {{ priority_label[ex.priority]|lower }}</span></div>
+    <p class="sub">Config congelada #{{ ex.config_id }} · {{ criteria_label[ex.criteria] }} · iniciada {{ ex.started_at.strftime('%d/%m %H:%M') }}{% if ex.trigger != 'manual' %} · {{ 'agendada' if ex.trigger == 'scheduled' else 'reposição de estoque' }}{% endif %}</p>
+  </div>
+  <div class="row">
+    {% if ex.status == 'running' %}<form method="post" action="/execucoes/{{ ex.id }}/pausar"><button class="btn" type="submit">Pausar</button></form>{% endif %}
+    {% if ex.status == 'paused' %}<form method="post" action="/execucoes/{{ ex.id }}/retomar"><button class="btn pri" type="submit">Retomar</button></form>{% endif %}
+    {% if ex.status in ('running', 'paused') %}<form method="post" action="/execucoes/{{ ex.id }}/cancelar" onsubmit="return confirm('Cancelar não apaga itens nem desfaz publicações. Continuar?')"><button class="btn" type="submit">Cancelar</button></form>{% endif %}
+    <a class="btn" href="/operacoes/{{ op.id }}/play">Reexecutar (novo Play)</a>
+  </div>
+</div>
+{% if flash %}<p class="{{ 'error' if flash.kind == 'error' else 'notice' }}" role="status">{{ flash.text }}</p>{% endif %}
+
+<section class="card">
+  <h2>Progresso da meta</h2>
+  <div class="bar" role="progressbar" aria-valuenow="{{ progress }}" aria-valuemin="0" aria-valuemax="100"><div class="fill" style="width: {{ progress }}%"></div></div>
+  <p><strong>{{ counts.elegiveis }}</strong> de <strong>{{ ex.target_x }}</strong> elegíveis · {{ counts.examinados }} de {{ ex.search_budget }} posts examinados</p>
+  {% if ex.shortfall_reason %}<p class="sub">Fechou parcial: {{ ex.shortfall_reason }}.</p>{% endif %}
+</section>
+
+<div class="grid">
+  {% for key, title in [('examinados','Examinados'),('duplicados','Duplicados'),('rejeitados','Rejeitados'),('pendentes_permissao','Pendentes de permissão'),('elegiveis','Elegíveis'),('reserva','Reserva'),('renderizados','Renderizados'),('aguardando_aprovacao','Aguardando aprovação'),('com_erro','Com erro')] %}
+  <div class="card kpi"><span class="lbl">{{ title }}</span><span class="num">{{ counts[key] }}</span></div>
+  {% endfor %}
+</div>
+<p class="sub">Contadores calculados pelos itens desta execução. Pausar: o worker não pega tarefas novas desta execução; as que rodam terminam.</p>
+{% endblock %}

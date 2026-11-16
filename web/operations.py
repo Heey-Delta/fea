@@ -15,6 +15,7 @@ from fastapi import APIRouter, Body, Depends, File, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from sqlalchemy.orm import Session
 
+from core import executions as exe
 from core import operations as ops
 from core import sources as src
 from core.connectors import SOURCE_TYPES
@@ -115,6 +116,7 @@ def detail_page(
         status_label=STATUS_LABEL,
         node_label=ops.NODE_TYPES,
         sources=src.list_sources(session, op.id),
+        executions=exe.list_executions(session, op.id) if aba == "execucoes" else [],
         source_types=SOURCE_TYPES,
         flash=request.session.pop("flash", None),
     )

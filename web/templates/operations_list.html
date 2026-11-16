@@ -33,7 +33,7 @@
         <td>#{{ op.current_config_id }}</td>
         <td>{{ op.updated_at.strftime('%d/%m %H:%M') }}</td>
         <td class="row">
-          {% if op.status == 'active' %}<span class="btn sm pri" title="Play chega com a Task 6" aria-disabled="true">▶ Play</span>{% endif %}
+          {% if op.status == 'active' %}<a class="btn sm pri" href="/operacoes/{{ op.id }}/play">▶ Play</a>{% endif %}
           <a class="btn sm" href="/operacoes/{{ op.id }}">Abrir</a>
         </td>
       </tr>

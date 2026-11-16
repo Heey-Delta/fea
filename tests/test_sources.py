@@ -68,6 +68,9 @@ class FakeReddit:
                 status = self.listing_status
             if status != 200:
                 return httpx.Response(status)
+            if request.url.params.get("after") == "t3_next":
+                # Página seguinte à última: fim da comunidade.
+                return httpx.Response(200, json={"data": {"children": [], "after": None}})
             return httpx.Response(200, json={"data": {"children": self.posts, "after": "t3_next"}})
         content = self.files.get(str(request.url).split("?")[0])
         return httpx.Response(200, content=content) if content else httpx.Response(403)

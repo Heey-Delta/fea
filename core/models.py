@@ -150,6 +150,10 @@ class Execution(Base):
     priority: Mapped[str] = mapped_column(String(10), server_default="normal")
     status: Mapped[str] = mapped_column(String(20), server_default="running")
     shortfall_reason: Mapped[str | None] = mapped_column(Text)
+    # Fontes escolhidas no Play (None = todas as ativas).
+    source_ids: Mapped[list[int] | None] = mapped_column(ARRAY(BigInteger))
+    # Contagens da busca que não viram linhas em items (ex.: posts já vistos antes).
+    stats: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     started_at: Mapped[datetime] = created_at()
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 

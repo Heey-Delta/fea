@@ -7,6 +7,7 @@
     <div class="row"><h1>{{ op.name }}</h1><span class="chip">{{ status_label[op.status] }}</span><span class="chip">config v{{ config.version }}</span></div>
   </div>
   <div class="row">
+    {% if op.status == 'active' %}<a class="btn pri" href="/operacoes/{{ op.id }}/play">▶ Play</a>{% endif %}
     {% for value, label in actions %}
     <form method="post" action="/operacoes/{{ op.id }}/status"><input type="hidden" name="acao" value="{{ value }}"><button class="btn{% if value == 'active' %} pri{% endif %}" type="submit">{{ label }}</button></form>
     {% endfor %}
@@ -59,6 +60,21 @@
   <h2>Configuração v{{ shown.version }}</h2>
   <pre>{{ shown_json }}</pre>
 </section>
+{% elif tab == 'execucoes' %}
+{% if executions %}
+<div class="tbl">
+  <table>
+    <thead><tr><th>Execução</th><th>Início</th><th>X</th><th>Estado</th><th>Déficit</th><th></th></tr></thead>
+    <tbody>
+    {% for e in executions %}
+      <tr><td>#{{ e.id }}</td><td>{{ e.started_at.strftime('%d/%m %H:%M') }}</td><td>{{ e.target_x }}</td><td><span class="chip">{{ e.status }}</span></td><td>{{ e.shortfall_reason or '—' }}</td><td><a href="/execucoes/{{ e.id }}">Abrir</a></td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty"><strong>Nenhuma execução ainda</strong><span class="sub">{% if op.status == 'active' %}Use o Play para iniciar.{% else %}Ative a operação para usar o Play.{% endif %}</span></div>
+{% endif %}
 {% elif tab == 'fontes' %}
 <p class="sub">As fontes são configuradas nos blocos Fonte do <a href="/operacoes/{{ op.id }}/fluxo">canvas</a>. Aqui ficam o estado e o teste de conexão.</p>
 {% if sources %}
@@ -94,8 +110,7 @@
 {% else %}
 <section class="card">
   <p class="sub">
-    {% if tab == 'contas' %}As contas chegam com a Task 19.
-    {% else %}As execuções chegam com a Task 6.{% endif %}
+    As contas chegam com a Task 19.
   </p>
 </section>
 {% endif %}

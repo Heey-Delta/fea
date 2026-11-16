@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Play · {{ op.name }}{% endblock %}
+{% block content %}
+<a class="back" href="/operacoes/{{ op.id }}">← {{ op.name }}</a>
+<h1>▶ Iniciar execução</h1>
+<p class="sub">Roda a Pesca com a configuração v{{ config.version }}, congelada para esta execução. Os vídeos escolhidos seguem para a fila do Editor.</p>
+{% if flash %}<p class="{{ 'error' if flash.kind == 'error' else 'notice' }}" role="status">{{ flash.text }}</p>{% endif %}
+{% if op.status != 'active' %}
+<p class="error" role="alert">Só operações ativas aceitam Play. Esta está como "{{ op.status }}".</p>
+{% else %}
+<form class="card form" method="post" action="/operacoes/{{ op.id }}/play">
+  <div class="grid">
+    <label class="field" for="target_x">Quantidade-alvo X
+      <input class="input" id="target_x" name="target_x" type="number" min="1" value="{{ fishing.target_x or 10 }}" required>
+    </label>
+    <label class="field" for="search_budget">Orçamento de busca (posts examinados)
+      <input class="input" id="search_budget" name="search_budget" type="number" min="1" value="{{ fishing.search_budget or 300 }}" required>
+    </label>
+  </div>
+  <p class="sub">X é uma meta: duplicados, rejeitados e sem permissão não contam. Se faltar conteúdo, a execução termina com o total real e o motivo.</p>
+  <fieldset>
+    <legend class="field">Fontes</legend>
+    {% for s in sources %}
+    <label class="check"><input type="checkbox" name="source_ids" value="{{ s.id }}" {% if s.status == 'ok' %}checked{% else %}disabled{% endif %}> {{ s.reference or s.node_id }} ({{ s.type }}){% if s.status == 'error' %}: com erro, teste a conexão na aba Fontes{% endif %}</label>
+    {% else %}
+    <p class="error">Nenhuma fonte. Adicione um bloco Fonte no canvas.</p>
+    {% endfor %}
+  </fieldset>
+  <fieldset>
+    <legend class="field">Critério</legend>
+    {% for key, label in criteria_label.items() %}
+    <label class="check"><input type="radio" name="criteria" value="{{ key }}" {% if (fishing.criteria or 'recent') == key %}checked{% endif %}> {{ label }}</label>
+    {% endfor %}
+  </fieldset>
+  <fieldset>
+    <legend class="field">Prioridade</legend>
+    <div class="row">
+    {% for key, label in priority_label.items() %}
+    <label class="check"><input type="radio" name="priority" value="{{ key }}" {% if key == 'normal' %}checked{% endif %}> {{ label }}</label>
+    {% endfor %}
+    </div>
+  </fieldset>
+  <div class="row"><a class="btn" href="/operacoes/{{ op.id }}">Cancelar</a><button class="btn pri" type="submit">Iniciar execução</button></div>
+</form>
+{% endif %}
+{% endblock %}
