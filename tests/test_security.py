@@ -2,21 +2,7 @@ import pytest
 from cryptography.fernet import Fernet
 
 from core.config import DEFAULT_SECRET_KEY, Settings
-from core.security import TokenCipher, hash_password, verify_password
-
-
-def test_password_hash_roundtrip():
-    stored = hash_password("abc123")
-    assert stored.startswith("scrypt:")
-    assert "$" not in stored  # não pode ser interpolado pelo Docker Compose
-    assert verify_password("abc123", stored)
-    assert not verify_password("abc124", stored)
-
-
-def test_verify_rejects_malformed_hash():
-    assert not verify_password("x", "")
-    assert not verify_password("x", "md5:00:11")
-    assert not verify_password("x", "scrypt:zz:11")
+from core.security import TokenCipher
 
 
 def test_token_cipher_roundtrip():
@@ -38,20 +24,17 @@ def test_token_cipher_requires_key():
 
 
 def test_production_refuses_default_secrets():
+    settings = Settings(_env_file=None, app_env="production", secret_key=DEFAULT_SECRET_KEY)
     with pytest.raises(RuntimeError) as exc:
-        Settings(
-            _env_file=None, app_env="production", secret_key=DEFAULT_SECRET_KEY
-        ).check_production()
-    message = str(exc.value)
-    assert "SECRET_KEY" in message and "APP_PASSWORD_HASH" in message
-    assert "TOKEN_ENCRYPTION_KEY" in message
+        settings.check_production()
+    assert "SECRET_KEY" in str(exc.value) and "TOKEN_ENCRYPTION_KEY" in str(exc.value)
 
 
-def test_production_accepts_complete_config():
+def test_production_starts_without_github_credentials():
+    """Sem as credenciais do GitHub o login fica desativado, mas a interface sobe."""
     Settings(
         _env_file=None,
         app_env="production",
         secret_key="x" * 40,
-        app_password_hash=hash_password("p"),
         token_encryption_key=Fernet.generate_key().decode(),
     ).check_production()

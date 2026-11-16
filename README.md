@@ -22,7 +22,7 @@ Requisitos: Python 3.12+, [uv](https://docs.astral.sh/uv/), FFmpeg e Postgres (o
 uv sync --all-extras
 cp .env.example .env
 uv run python -m core.security new-keys        # cole SECRET_KEY e TOKEN_ENCRYPTION_KEY no .env
-uv run python -m core.security hash-password   # cole APP_PASSWORD_HASH no .env
+# preencha GITHUB_CLIENT_ID e GITHUB_CLIENT_SECRET (ver docs/configuracao.md)
 uv run alembic upgrade head
 uv run uvicorn app:app --reload                # interface em http://localhost:8000
 uv run python -m worker check                  # confere FFmpeg, ffprobe e banco
@@ -47,14 +47,4 @@ Senhas, tokens e chaves vão só nas variáveis de ambiente (Vercel e VPS), nunc
 
 O projeto `fea` do time OHalla na Vercel está ligado a este repositório. Cada push gera um deploy: o `main` vai para produção e as outras branches viram preview, protegidos pelo login da Vercel.
 
-Variáveis configuradas no projeto (produção e preview): `APP_ENV`, `APP_USER`, `SECRET_KEY`, `TOKEN_ENCRYPTION_KEY` e `APP_PASSWORD_HASH`. Os três últimos são do tipo sensível e não aparecem no painel.
-
-Para trocar a senha de acesso:
-
-```bash
-uv run python -m core.security hash-password
-```
-
-Depois substitua o valor de `APP_PASSWORD_HASH` em Settings → Environment Variables e faça um novo deploy.
-
-`DATABASE_URL` entra quando o banco Neon for criado (Task 2 / Task 27.2).
+O login da ferramenta é pelo GitHub e só aceita a conta com o ID em `GITHUB_ALLOWED_ID`. Tudo o que você precisa preencher, e onde, está em [`docs/configuracao.md`](docs/configuracao.md).

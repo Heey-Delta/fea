@@ -8,18 +8,16 @@
 </head>
 <body>
   <div class="center">
-    <form class="card login" method="post" action="/login">
+    <div class="card login">
       <h1>Entrar</h1>
-      <p class="sub">Acesso do usuário único da ferramenta.</p>
+      <p class="sub">Acesso restrito à conta do GitHub autorizada.</p>
       {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
-      <label class="field" for="username">Usuário
-        <input class="input" id="username" name="username" autocomplete="username" required>
-      </label>
-      <label class="field" for="password">Senha
-        <input class="input" id="password" name="password" type="password" autocomplete="current-password" required>
-      </label>
-      <button class="btn pri" type="submit">Entrar</button>
-    </form>
+      {% if configured %}
+      <a class="btn pri" href="/auth/github">Entrar com GitHub</a>
+      {% else %}
+      <p class="error" role="alert">O login com GitHub ainda não está configurado. Preencha GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET e GITHUB_ALLOWED_ID nas variáveis de ambiente.</p>
+      {% endif %}
+    </div>
   </div>
 </body>
 </html>

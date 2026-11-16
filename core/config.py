@@ -13,9 +13,13 @@ class Settings(BaseSettings):
     app_env: str = "development"
     secret_key: str = DEFAULT_SECRET_KEY
 
-    # Usuário único da ferramenta. A senha fica só como hash (python -m core.security).
-    app_user: str = "admin"
-    app_password_hash: str = ""
+    # Login: OAuth do GitHub, liberado só para a conta com este ID numérico.
+    github_client_id: str = ""
+    github_client_secret: str = ""
+    github_allowed_id: str = ""
+    # Endereço fixo da interface (ex.: https://fea-oh-alla.vercel.app). O GitHub só aceita
+    # o retorno do login na URL cadastrada no OAuth App; sem isto, usa o endereço acessado.
+    public_base_url: str = ""
 
     # Neon em produção; Postgres local em desenvolvimento.
     database_url: str = "postgresql://fea:fea@localhost:5432/fea"
@@ -29,6 +33,10 @@ class Settings(BaseSettings):
     r2_secret_access_key: str = ""
     r2_bucket: str = ""
 
+    # Workers: espera por avisos do banco (LISTEN/NOTIFY) e intervalo máximo sem tarefas.
+    worker_listen: bool = True
+    worker_idle_max_s: float = 60.0
+
     log_level: str = "INFO"
 
     @property
@@ -36,14 +44,16 @@ class Settings(BaseSettings):
         return self.app_env == "production"
 
     def check_production(self) -> None:
-        """Recusa subir em produção com segredos padrão ou ausentes."""
+        """Recusa subir em produção com segredos padrão ou ausentes.
+
+        As credenciais do GitHub podem faltar: sem elas o login fica desativado,
+        mas a aplicação sobe e mostra o que falta configurar.
+        """
         if not self.is_production:
             return
         problems = []
         if self.secret_key == DEFAULT_SECRET_KEY or len(self.secret_key) < 32:
             problems.append("SECRET_KEY")
-        if not self.app_password_hash:
-            problems.append("APP_PASSWORD_HASH")
         if not self.token_encryption_key:
             problems.append("TOKEN_ENCRYPTION_KEY")
         if problems:
