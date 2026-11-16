@@ -11,6 +11,8 @@ Fontes:
 
 ## Mapa de fases
 
+Blocos do produto (ver `docs/fluxo-operacao.md`): **Pesca** (Tasks 5 a 8), **Edição** (Tasks 9 a 18), **Postagem** (Tasks 19 a 24). Montados no canvas da operação (Task 4).
+
 - **Base:** Tasks 1 a 3.
 - **Fase 1 — Operação e coleta:** Tasks 4 a 8.
 - **Fase 2 — Edição e aprovação:** Tasks 9 a 18 (módulo de redes e editor Nível 1).
@@ -75,6 +77,14 @@ Status: -1
 - Subtask 4.6: Tela de detalhe com abas: Visão geral, Configuração, Fontes, Contas, Execuções, Histórico de versões.
 - Subtask 4.7: Lista de operações com botão Play em cada linha.
 - Subtask 4.8: Teste: duas operações com configurações diferentes rodando nos mesmos motores (critério 1 da v2.1).
+- Subtask 4.9: Canvas de criação: blocos como cartões, com portas de entrada e saída. Paleta: Fonte, Pesca, Edição, Aprovação, Postagem, Rede, Conta.
+- Subtask 4.10: Ligar saída a entrada cria aresta. Ligações fora da tabela de tipos de porta são recusadas com motivo.
+- Subtask 4.11: Clicar no bloco abre painel de configuração em formulário, do lado direito. O canvas não edita vídeo.
+- Subtask 4.12: Validação antes de ativar: Fonte → Pesca → Edição → Aprovação → Postagem; uma Rede ligada a Edição e Postagem; ao menos uma Conta na Postagem; sem ciclos. Erros marcados no bloco.
+- Subtask 4.13: Fonte sem `permission_note` gera aviso, não bloqueia. Rascunho pode ter erros, operação ativa não.
+- Subtask 4.14: Grafo (nós, arestas e configs) salvo como JSON versionado em `operation_configs`. Cada execução guarda snapshot.
+- Subtask 4.15: Motor executa o grafo chamando o módulo de cada tipo de bloco. Tipo novo de bloco não exige mudar o canvas.
+- Subtask 4.16: Operação arquivada abre o canvas em somente leitura. Opção de duplicar para criar nova versão do fluxo.
 
 ## Task 5: Fontes e conectores
 Nível: 4
@@ -87,6 +97,8 @@ Status: -1
 - Subtask 5.5: Conector Reddit pela API oficial, só em comunidades com autorização registrada.
 - Subtask 5.6: Erro temporário: até 3 tentativas com espera crescente.
 - Subtask 5.7: Credencial inválida ou fonte removida: `status=error`, aparece no dashboard, e a execução segue com as outras fontes.
+- Subtask 5.8: Interface `search(tags, cursor)` além de `fetch`. Conector declara se suporta busca. Reddit pesquisa por tags e heat tags. Upload manual não pesquisa: tags viram só filtro.
+- Subtask 5.9: Cada Fonte é um bloco no canvas, com `permission_note` e tipo de conector.
 
 ## Task 6: Execução (Play)
 Nível: 5
@@ -102,6 +114,8 @@ Status: -1
 - Subtask 6.8: Contadores por `COUNT` sobre `items` (examinados, duplicados, rejeitados, pendentes de permissão, elegíveis, renderizados, aguardando aprovação, com erro).
 - Subtask 6.9: Controles: pausar, retomar, cancelar (não apaga registros), reexecutar como novo Play com novo `execution_id`.
 - Subtask 6.10: Execuções simultâneas da mesma operação são permitidas.
+- Subtask 6.11: Bloco Pesca do grafo fornece tags, heat tags, palavras bloqueadas, X, orçamento, critério, duração e mídia aceita.
+- Subtask 6.12: Pesca e Edição rodam sem ação do usuário. Postagem só roda por ação explícita (Task 21).
 
 ## Task 7: Itens, validação, deduplicação e classificação
 Nível: 5
@@ -279,6 +293,8 @@ Status: -1
 - Subtask 21.3: Prévia da agenda por conta antes de confirmar.
 - Subtask 21.4: Botão Confirmar.
 - Subtask 21.5: Lista de lotes e lista de envios com os estados da Task 24.
+- Subtask 21.6: Bloco Postagem do canvas: entrada são renders aprovados; configs são contas (arestas), intervalo, primeira imediata, início, janela, título, descrição e tags por plataforma.
+- Subtask 21.7: Bloco Aprovação entre Edição e Postagem, com `approval.required`.
 
 ## Task 22: Cálculo de horários
 Nível: 5
@@ -368,6 +384,9 @@ Status: -1
 - Subtask 29.9: **Comunidades do Reddit** autorizadas para as primeiras fontes.
 - Subtask 29.10: **`daily_limit` inicial** por conta (proposta: 3 por dia no YouTube até medir a cota real).
 - Subtask 29.11: **Aprovação automática**: entra na Fase 2 ou depois, e com quais critérios (campo `approval.required` já existe).
+- Subtask 29.12: **Canvas e "sem editor"**: confirmar que o canvas só configura o fluxo (blocos e ligações) e não edita vídeo. Proposta: sim.
+- Subtask 29.13: **Blocos de topo**: confirmar Aprovação e Rede como blocos próprios, e uma Rede por operação (`docs/fluxo-operacao.md`, seção 6).
+- Subtask 29.14: **Busca por tags**: confirmar que conectores declaram `search(tags, cursor)` além de `fetch`.
 
 ---
 
