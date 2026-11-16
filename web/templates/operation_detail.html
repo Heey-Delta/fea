@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}{{ op.name }}{% endblock %}
+{% block content %}
+<a class="back" href="/operacoes">← Operações</a>
+<div class="top">
+  <div>
+    <div class="row"><h1>{{ op.name }}</h1><span class="chip">{{ status_label[op.status] }}</span><span class="chip">config v{{ config.version }}</span></div>
+  </div>
+  <div class="row">
+    {% for value, label in actions %}
+    <form method="post" action="/operacoes/{{ op.id }}/status"><input type="hidden" name="acao" value="{{ value }}"><button class="btn{% if value == 'active' %} pri{% endif %}" type="submit">{{ label }}</button></form>
+    {% endfor %}
+    <form method="post" action="/operacoes/{{ op.id }}/duplicar"><button class="btn" type="submit">Duplicar</button></form>
+    {% if op.status != 'archived' %}
+    <form method="post" action="/operacoes/{{ op.id }}/status" onsubmit="return confirm('Arquivar deixa a operação somente leitura. Continuar?')"><input type="hidden" name="acao" value="archived"><button class="btn" type="submit">Arquivar</button></form>
+    {% endif %}
+  </div>
+</div>
+{% if flash %}<p class="{{ 'error' if flash.kind == 'error' else 'notice' }}" role="status">{{ flash.text }}</p>{% endif %}
+
+<nav class="tabs" aria-label="Seções da operação">
+  {% for key, label in tabs %}
+  <a class="tab{% if tab == key %} on{% endif %}" href="/operacoes/{{ op.id }}?aba={{ key }}">{{ label }}</a>
+  {% endfor %}
+</nav>
+
+{% if tab == 'geral' %}
+<section class="card">
+  <h2>Fluxo atual</h2>
+  <div class="row">
+    {% for node in config.config.nodes %}<span class="chip">{{ node_label.get(node.type, node.type) }}</span>{% endfor %}
+  </div>
+  <p class="sub">O canvas para editar o fluxo chega na próxima etapa da Task 4.</p>
+</section>
+<section class="card">
+  <h2>Validação do fluxo</h2>
+  {% if not issues %}<p>Fluxo completo. A operação pode ser ativada.</p>{% endif %}
+  {% for issue in issues %}
+  <p class="issue {{ issue.level }}"><strong>{{ 'ERRO' if issue.level == 'error' else 'AVISO' }}</strong> {{ issue.message }}</p>
+  {% endfor %}
+  {% if errors %}<p class="sub">Rascunho pode ser salvo com erros. Ativar fica bloqueado até zerar os erros.</p>{% endif %}
+</section>
+{% elif tab == 'config' or tab == 'historico' %}
+{% if tab == 'historico' %}
+<div class="tbl">
+  <table>
+    <thead><tr><th>Versão</th><th>Salva em</th><th></th></tr></thead>
+    <tbody>
+    {% for h in history %}
+      <tr><td>v{{ h.version }}{% if h.id == config.id %} (vigente){% endif %}</td><td>{{ h.created_at.strftime('%d/%m %H:%M') }}</td><td><a href="/operacoes/{{ op.id }}?aba=historico&amp;v={{ h.version }}">Ver</a></td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+<p class="sub">Versões nunca são alteradas.</p>
+{% endif %}
+<section class="card">
+  <h2>Configuração v{{ shown.version }}</h2>
+  <pre>{{ shown_json }}</pre>
+</section>
+{% else %}
+<section class="card">
+  <p class="sub">
+    {% if tab == 'fontes' %}As fontes chegam com a Task 5.
+    {% elif tab == 'contas' %}As contas chegam com a Task 19.
+    {% else %}As execuções chegam com a Task 6.{% endif %}
+  </p>
+</section>
+{% endif %}
+{% endblock %}

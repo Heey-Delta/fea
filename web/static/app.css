@@ -42,3 +42,28 @@ h1 { font-size: 24px; margin: 0 0 4px; }
 @media (max-width: 640px) {
   .main { padding: 20px 16px 40px; }
 }
+
+.top { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-start; justify-content: space-between; margin-bottom: 16px; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.row form { margin: 0; }
+.chips { margin: 0 0 16px; }
+.chip { display: inline-flex; align-items: center; min-height: 28px; padding: 0 10px; border-radius: 999px; border: 1px solid #a8a8a3; font-size: 12px; color: var(--ink-2); background: var(--surface); text-decoration: none; }
+.chip.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+.btn.sm { min-height: 36px; padding: 0 12px; font-size: 13px; text-decoration: none; }
+.tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); margin-bottom: 16px; }
+table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 14px; }
+th { text-align: left; font-weight: 600; color: var(--ink-2); background: #f7f7f5; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+td { padding: 10px 12px; border-bottom: 1px solid var(--fill); }
+.tabs { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid var(--line); margin: 8px 0 16px; }
+.tab { min-height: 44px; display: inline-flex; align-items: center; padding: 0 14px; border-bottom: 2px solid transparent; text-decoration: none; color: var(--ink-2); font-size: 14px; }
+.tab.on { border-bottom-color: var(--ink); font-weight: 700; color: var(--ink); }
+.card h2 { font-size: 17px; margin: 0; }
+.card { margin-bottom: 16px; }
+.issue { margin: 0; padding: 8px 0; border-top: 1px solid var(--fill); font-size: 14px; }
+.issue.error strong { color: #a33a1e; }
+.issue.warning strong { color: #7a5200; }
+.notice { background: #e5f4e4; color: #1e5e3a; border-radius: 8px; padding: 10px 12px; font-size: 14px; }
+.empty { border: 1px dashed #a8a8a3; border-radius: 10px; padding: 32px 20px; display: flex; flex-direction: column; gap: 8px; align-items: center; text-align: center; background: var(--surface); }
+.back { font-size: 13px; display: inline-block; margin-bottom: 8px; }
+pre { margin: 0; font: 12px/1.5 ui-monospace, Menlo, monospace; background: #f7f7f5; border: 1px solid var(--fill); border-radius: 8px; padding: 12px; overflow-x: auto; }
+.sr { position: absolute; left: -9999px; }

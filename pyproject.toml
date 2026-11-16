@@ -46,3 +46,7 @@ pythonpath = ["."]
 [tool.ruff.lint.per-file-ignores]
 # Migrações geradas pelo Alembic têm constraints em uma linha só.
 "migrations/versions/*" = ["E501"]
+
+[tool.ruff.lint.flake8-bugbear]
+# Padrão do FastAPI: Depends/Form/Body/Query como valor padrão do parâmetro.
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Form", "fastapi.Body", "fastapi.Query"]

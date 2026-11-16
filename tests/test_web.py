@@ -92,9 +92,9 @@ def test_login_disabled_when_not_configured(settings):
 
 
 def test_placeholder_pages_name_their_task(logged_client):
-    response = logged_client.get("/operacoes")
+    response = logged_client.get("/fila")
     assert response.status_code == 200
-    assert "Task 4" in response.text
+    assert "Task 8" in response.text
 
 
 def test_logout_ends_session(logged_client):
