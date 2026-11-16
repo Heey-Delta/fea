@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Aprovação{% endblock %}
+{% block content %}
+<div class="top">
+  <div>
+    <h1>Aprovação</h1>
+    <p class="sub">Fila de editados. Marque os vídeos e aprove para as contas escolhidas. Aprovar não publica: a Postagem distribui depois.</p>
+  </div>
+  <form class="row" method="get" action="/aprovacao">
+    <label class="sr" for="op">Operação</label>
+    <select class="input" id="op" name="op" onchange="this.form.submit()">
+      <option value="">Todas as operações</option>
+      {% for o in operations %}<option value="{{ o.id }}" {% if op == o.id %}selected{% endif %}>{{ o.name }}</option>{% endfor %}
+    </select>
+  </form>
+</div>
+{% if flash %}<p class="{{ 'error' if flash.kind == 'error' else 'notice' }}" role="status">{{ flash.text }}</p>{% endif %}
+
+{% if cards %}
+<form method="post" action="/aprovacao/lote">
+  <div class="bulk row">
+    <strong>Em lote:</strong>
+    {% for a in accounts %}<label class="check"><input type="checkbox" name="account_ids" value="{{ a.id }}" checked> {{ a.name }}</label>{% else %}<span class="sub">Nenhuma conta ligada à Postagem desta operação.</span>{% endfor %}
+    <button class="btn sm pri" type="submit" name="acao" value="approve">Aprovar selecionados</button>
+    <input class="input sm-input" name="motivo" placeholder="Motivo da rejeição" aria-label="Motivo da rejeição">
+    <button class="btn sm" type="submit" name="acao" value="reject">Rejeitar selecionados</button>
+  </div>
+  <div class="vgrid">
+    {% for c in cards %}
+    <div class="card vcard">
+      <label class="check"><input type="checkbox" name="item_ids" value="{{ c.item.id }}" {% if c.blocked %}disabled{% endif %}> #{{ c.item.id }}</label>
+      {% if c.video_url %}<video src="{{ c.video_url }}" controls preload="metadata" playsinline></video>{% else %}<div class="ph">sem render</div>{% endif %}
+      <span class="sub">{{ (c.item.text or '')[:80] }}</span>
+      {% if c.blocked %}<span class="chip">{{ c.blocked }}</span>{% endif %}
+      {% for w in c.warnings %}<span class="chip">aviso: {{ w[:60] }}</span>{% endfor %}
+      <a class="btn sm" href="/aprovacao/{{ c.item.id }}">Revisar</a>
+    </div>
+    {% endfor %}
+  </div>
+</form>
+{% else %}
+<div class="empty"><strong>Nada aguardando aprovação</strong><span class="sub">Rode um Play numa operação ativa para gerar vídeos.</span></div>
+{% endif %}
+{% endblock %}

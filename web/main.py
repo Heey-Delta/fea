@@ -27,7 +27,7 @@ from core.config import Settings, get_settings
 from core.db import sqlalchemy_url
 from core.logging import configure_logging
 from core.storage import LocalStorage, make_storage
-from web import auth, executions, operations
+from web import approval, auth, executions, operations
 from web.common import MENU, NotLoggedIn, render, require_user
 
 BASE_DIR = Path(__file__).parent
@@ -136,6 +136,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app.include_router(operations.router)
     app.include_router(executions.router)
+    app.include_router(approval.router)
 
     @app.get("/arquivos/{key:path}")
     def local_file(key: str, user: str = Depends(require_user)) -> Response:
@@ -157,7 +158,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
         return view
 
-    built = {"/", "/operacoes"}
+    built = {"/", "/operacoes", "/aprovacao"}
     for item in MENU:
         if item["href"] not in built:
             app.add_api_route(

@@ -243,7 +243,7 @@ Status: 1
 
 ## Task 18: Aprovação
 Nível: 5
-Status: 0
+Status: 1
 
 - Subtask 18.1: Tela de aprovação com player do R2 por URL assinada, origem, permissão, QC e contas.
 - Subtask 18.2: Aprovar, rejeitar, nova versão (novo render com o preset atual).
