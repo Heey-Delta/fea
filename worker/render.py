@@ -75,6 +75,49 @@ def fetch(storage: Storage, key: str, tmp: Path, name: str) -> Path:
     return path
 
 
+def produce(
+    storage: Storage, preset: dict, profile, mask_version, original: str, media_type: str, tmp: Path
+) -> tuple[Path, qc.QCReport]:
+    """Baixa os arquivos, monta a camada fixa, renderiza e roda o QC (sem tocar no banco)."""
+    source = fetch(storage, original, tmp, "original" + Path(original).suffix)
+    info = rd.analyze(source, media_type)
+    mask_path = fetch(storage, mask_version.file_key, tmp, "mask.png") if mask_version else None
+    elements = [
+        fetch(storage, e["file_key"], tmp, f"el{i}{Path(e['file_key']).suffix}")
+        for i, e in enumerate(preset["elements"])
+    ]
+    audio_key = preset["audio"]["file_key"]
+    music = (
+        fetch(storage, audio_key, tmp, "audio" + Path(audio_key).suffix)
+        if preset["audio"]["mode"] == "replace" and audio_key
+        else None
+    )
+    layer = ov.build_overlay(preset, tmp / "overlay.png", mask_path, elements)
+    out = tmp / "render.mp4"
+    plan = rd.plan_render(
+        preset,
+        source,
+        media_type,
+        info,
+        out,
+        overlay=layer.path,
+        replacement_audio=music,
+        max_duration_s=profile.max_duration_s,
+    )
+    rd.run(plan)
+    report = qc.check_render(
+        out,
+        preset,
+        expected_audio=plan.has_audio,
+        audio_required=bool(preset["audio"]["required"]),
+        used_mask=layer.used_mask,
+        mask_configured=bool(preset["mask"]["mask_id"]),
+        max_duration_s=profile.max_duration_s,
+        extra_warnings=layer.warnings + plan.warnings,
+    )
+    return out, report
+
+
 def run_render(
     factory: sessionmaker,
     item_id: int,
@@ -103,44 +146,7 @@ def run_render(
     try:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
-            source = fetch(storage, original, tmp, "original" + Path(original).suffix)
-            info = rd.analyze(source, media_type)
-            mask_path = (
-                fetch(storage, mask_version.file_key, tmp, "mask.png") if mask_version else None
-            )
-            elements = [
-                fetch(storage, e["file_key"], tmp, f"el{i}{Path(e['file_key']).suffix}")
-                for i, e in enumerate(preset["elements"])
-            ]
-            audio_key = preset["audio"]["file_key"]
-            music = (
-                fetch(storage, audio_key, tmp, "audio" + Path(audio_key).suffix)
-                if preset["audio"]["mode"] == "replace" and audio_key
-                else None
-            )
-            layer = ov.build_overlay(preset, tmp / "overlay.png", mask_path, elements)
-            out = tmp / "render.mp4"
-            plan = rd.plan_render(
-                preset,
-                source,
-                media_type,
-                info,
-                out,
-                overlay=layer.path,
-                replacement_audio=music,
-                max_duration_s=profile.max_duration_s,
-            )
-            rd.run(plan)
-            report = qc.check_render(
-                out,
-                preset,
-                expected_audio=plan.has_audio,
-                audio_required=bool(preset["audio"]["required"]),
-                used_mask=layer.used_mask,
-                mask_configured=bool(preset["mask"]["mask_id"]),
-                max_duration_s=profile.max_duration_s,
-                extra_warnings=layer.warnings + plan.warnings,
-            )
+            out, report = produce(storage, preset, profile, mask_version, original, media_type, tmp)
             key = render_key(operation_id, item_id, render_id_version(factory, render_id))
             if report.passed:
                 storage.put_file(key, out, "video/mp4")
@@ -241,8 +247,79 @@ def succeed(
         return render
 
 
+def run_test(factory: sessionmaker, job_id: int, payload: dict, storage: Storage) -> dict:
+    """Testar preset (Task 15.4): render de amostra, sem item e sem fila de editados.
+
+    Guarda o resultado num evento `preset_test` que a tela da Edição mostra.
+    """
+    import time
+
+    with factory() as session:
+        config = session.get(OperationConfig, payload["config_id"])
+        if config is None:
+            raise PermanentError("Versão de configuração não encontrada.")
+        operation_id, data = config.operation_id, config.config
+        preset = pr.from_config(data)
+        profile = profile_of_config(data)
+        problems = pr.validate(preset) + profile.validate_preset(preset)
+        mask_version = None
+        if preset["mask"]["mask_id"]:
+            mask_version = masks.latest_version(session, int(preset["mask"]["mask_id"]))
+            if mask_version is None:
+                problems.append("Máscara configurada não existe.")
+            else:
+                session.expunge(mask_version)
+    detail: dict = {"ok": False, "config_id": payload["config_id"], "sample": payload["sample_key"]}
+    started = time.monotonic()
+    if problems:
+        detail["error"] = "; ".join(problems)
+    else:
+        try:
+            with tempfile.TemporaryDirectory() as tmpdir:
+                out, report = produce(
+                    storage,
+                    preset,
+                    profile,
+                    mask_version,
+                    payload["sample_key"],
+                    payload.get("media_type") or "video",
+                    Path(tmpdir),
+                )
+                detail["qa"] = {**report.as_dict(), "errors": report.errors}
+                info = rd.analyze(out, "video") if out.exists() else None
+                if report.passed:
+                    key = f"operations/{operation_id}/tests/{job_id}.mp4"
+                    storage.put_file(key, out, "video/mp4")
+                    detail.update(
+                        ok=True,
+                        output_file=key,
+                        size_bytes=out.stat().st_size,
+                        duration_s=round(info.duration, 2) if info and info.duration else None,
+                    )
+                else:
+                    detail["error"] = "; ".join(report.errors)
+        except (ValueError, OSError, RuntimeError) as exc:
+            detail["error"] = str(exc)[:1000]
+    detail["elapsed_s"] = round(time.monotonic() - started, 1)
+    with factory() as session:
+        session.add(
+            Event(
+                entity="preset_test",
+                entity_id=job_id,
+                operation_id=operation_id,
+                action="finished",
+                detail=detail,
+            )
+        )
+        session.commit()
+    return detail
+
+
 @register("render")
 def render_job(ctx: JobContext) -> None:
+    if (ctx.payload or {}).get("test"):
+        run_test(ctx.session_factory, ctx.id, ctx.payload, get_storage())
+        return
     run_render(
         ctx.session_factory, ctx.ref_id, get_storage(), get_settings(), ctx.payload, ctx.attempts
     )

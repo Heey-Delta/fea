@@ -12,6 +12,7 @@
     <form method="post" action="/operacoes/{{ op.id }}/status"><input type="hidden" name="acao" value="{{ value }}"><button class="btn{% if value == 'active' %} pri{% endif %}" type="submit">{{ label }}</button></form>
     {% endfor %}
     <a class="btn" href="/operacoes/{{ op.id }}/fluxo">{{ 'Ver fluxo' if op.status == 'archived' else 'Editar fluxo' }}</a>
+    <a class="btn" href="/operacoes/{{ op.id }}/edicao">Edição e máscaras</a>
     <form method="post" action="/operacoes/{{ op.id }}/duplicar"><button class="btn" type="submit">Duplicar</button></form>
     {% if op.status != 'archived' %}
     <form method="post" action="/operacoes/{{ op.id }}/status" onsubmit="return confirm('Arquivar deixa a operação somente leitura. Continuar?')"><input type="hidden" name="acao" value="archived"><button class="btn" type="submit">Arquivar</button></form>

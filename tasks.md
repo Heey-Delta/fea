@@ -187,7 +187,7 @@ Status: 1
 
 ## Task 12: Máscaras PNG
 Nível: 4
-Status: 0
+Status: 1
 
 - Subtask 12.1: Importação e armazenamento em `mask_assets` e `mask_versions`, com checksum.
 - Subtask 12.2: Validação: integridade, PNG, dimensões, canal alfa, compatibilidade e proporção.
@@ -215,7 +215,7 @@ Status: 1
 
 ## Task 15: Presets e versionamento
 Nível: 5
-Status: 0
+Status: 1
 
 - Subtask 15.1: Preset dentro do JSON versionado da operação.
 - Subtask 15.2: Formulário de configuração em seções, sem timeline e sem prévia editável.
