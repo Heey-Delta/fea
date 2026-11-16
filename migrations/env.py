@@ -5,6 +5,7 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import create_engine, pool
 
+import core.models  # noqa: F401 - registra as tabelas no metadata
 from core.config import get_settings
 from core.db import Base, sqlalchemy_url
 

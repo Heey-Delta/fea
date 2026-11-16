@@ -42,3 +42,7 @@ select = ["E", "F", "I", "B", "UP"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+
+[tool.ruff.lint.per-file-ignores]
+# Migrações geradas pelo Alembic têm constraints em uma linha só.
+"migrations/versions/*" = ["E501"]

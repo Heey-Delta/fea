@@ -53,7 +53,7 @@ Status: 1
 
 ## Task 2: Banco de dados (14 tabelas)
 Nível: 5
-Status: 0
+Status: 1
 
 - Subtask 2.1: `operations` e `operation_configs` (config JSON versionada; inclui grafo do canvas, preset, perfil de rede, modo automático, estoque e tempo de exclusão).
 - Subtask 2.2: `accounts` e `operation_accounts` (muitos-para-muitos).
@@ -69,7 +69,7 @@ Status: 0
 
 ## Task 3: Fila de tarefas e workers
 Nível: 5
-Status: -1
+Status: 0
 
 - Subtask 3.1: Fila no Postgres (decidido): tabela `jobs` atrás de uma interface, para trocar a implementação sem mudar o motor.
 - Subtask 3.2: Captura de tarefa com `FOR UPDATE SKIP LOCKED`, ordenando por prioridade e `run_at`.
