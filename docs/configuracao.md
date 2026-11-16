@@ -37,6 +37,13 @@ Sem `GITHUB_CLIENT_ID` e `GITHUB_CLIENT_SECRET` a interface sobe, mas o login fi
 
 - [ ] Criar o bucket e um token de API com leitura e escrita nele.
 - [ ] Preencher `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` e `R2_BUCKET` na Vercel e na VPS.
+- [ ] No bucket, em Settings → CORS policy, liberar o envio direto do navegador (upload manual):
+
+```json
+[{"AllowedOrigins": ["https://fea-oh-alla.vercel.app"], "AllowedMethods": ["PUT", "GET"], "AllowedHeaders": ["Content-Type"], "MaxAgeSeconds": 3600}]
+```
+
+  Troque a origem pelo endereço real da interface (o mesmo de `PUBLIC_BASE_URL`).
 
 ## 6. Reddit (Buscador)
 

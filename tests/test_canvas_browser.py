@@ -168,3 +168,26 @@ def test_archived_operation_is_read_only(page, server, factory):
     assert page.locator("#save").count() == 0
     assert page.locator("[data-add]").count() == 0
     assert "Somente leitura" in page.inner_text("h1 + .chip + .chip")
+
+
+def test_manual_upload_from_sources_tab(page, server, factory, tmp_path):
+    from core.sources import list_sources
+    from core.storage import LocalStorage
+
+    config = complete_config()
+    config["nodes"].append(
+        {"id": "up", "type": "source", "config": {"type": "upload", "reference": "Envios"}}
+    )
+    op_id = make_operation(factory, config)
+    video = tmp_path / "meme.mp4"
+    video.write_bytes(b"video de teste")
+    page.goto(f"{server}/operacoes/{op_id}?aba=fontes")
+    page.set_input_files("input[type=file]", str(video))
+    page.wait_for_selector("#upload-log li.ok")
+    assert "meme.mp4: enviado" in page.inner_text("#upload-log")
+    with factory() as s:
+        source = next(x for x in list_sources(s, op_id) if x.type == "upload")
+    storage = LocalStorage("storage")
+    keys = storage.list(f"uploads/{op_id}/{source.id}/")
+    assert len(keys) == 1
+    storage.delete(keys[0])

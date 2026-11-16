@@ -102,7 +102,7 @@ Status: 1
 
 ## Task 5: Fontes e conectores (Buscador)
 Nível: 4
-Status: 0
+Status: 1
 
 - Subtask 5.1: Cadastro de fonte por operação (`type`, `reference`, `permission_note`, `status`, `cursor`, `last_error`).
 - Subtask 5.2: `permission_note` obrigatório. Sem ele, os itens entram como `pending_permission` (REQ-UI-004).
@@ -111,11 +111,11 @@ Status: 0
 - Subtask 5.5: Conector Reddit pela API oficial, só em comunidades com autorização registrada. Vídeo e áudio vêm separados e o FFmpeg junta.
 - Subtask 5.6: Erro temporário: até 3 tentativas com espera crescente.
 - Subtask 5.7: Credencial inválida ou fonte removida: `status=error`, aparece no dashboard, e a execução segue com as outras fontes.
-- Subtask 5.8: Vários Buscadores por operação: cada bloco Fonte é um Buscador próprio, todos soltando na mesma fila de pesca (expansão; MVP só Reddit).
+- Subtask 5.8: Vários Buscadores por operação: cada bloco Fonte é um Buscador próprio, todos soltando na mesma fila de pesca. Pronto para novos conectores em `core/connectors` (MVP: Reddit e upload).
 
 ## Task 6: Execução (Play), modo automático e estoque
 Nível: 5
-Status: -1
+Status: 0
 
 - Subtask 6.1: Tela do Play com quantidade X, orçamento de busca, fontes, critério e prioridade.
 - Subtask 6.2: Criar `executions` com `config_version_id` congelada, X, orçamento e `status=running`.

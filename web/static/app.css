@@ -89,3 +89,7 @@ pre { margin: 0; font: 12px/1.5 ui-monospace, Menlo, monospace; background: #f7f
 #canvas-status { font-size: 13px; color: var(--muted); }
 #canvas-status.error { color: #a33a1e; font-weight: 600; }
 #canvas-status.ok { color: #1e5e3a; font-weight: 600; }
+.upload-log { list-style: none; padding: 0; margin: 8px 0; font-size: 13px; }
+.upload-log .ok { color: #1e5e3a; }
+.upload-log .error { color: #a33a1e; }
+label.btn { cursor: pointer; }

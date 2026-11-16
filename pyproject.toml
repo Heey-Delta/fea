@@ -51,4 +51,4 @@ pythonpath = ["."]
 
 [tool.ruff.lint.flake8-bugbear]
 # Padrão do FastAPI: Depends/Form/Body/Query como valor padrão do parâmetro.
-extend-immutable-calls = ["fastapi.Depends", "fastapi.Form", "fastapi.Body", "fastapi.Query"]
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Form", "fastapi.Body", "fastapi.Query", "fastapi.File"]

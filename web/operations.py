@@ -4,15 +4,21 @@ O canvas (próxima etapa da Task 4) salva o fluxo por POST /operacoes/{id}/confi
 """
 
 import json
+import re
+import shutil
+import tempfile
+import time
+from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, Body, Depends, Form, HTTPException, Request
+from fastapi import APIRouter, Body, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from sqlalchemy.orm import Session
 
 from core import operations as ops
 from core import sources as src
 from core.connectors import SOURCE_TYPES
+from core.connectors.upload import IMAGE_EXT, VIDEO_EXT, upload_prefix
 from core.models import Operation, Source
 from core.states import OPERATION_STATUS
 from web.common import db_session, render, require_user
@@ -176,6 +182,84 @@ def test_source(
     )
     flash(request, "ok" if result.ok else "error", result.message)
     return RedirectResponse(f"/operacoes/{operation_id}?aba=fontes", status_code=303)
+
+
+CONTENT_TYPES = {
+    ".mp4": "video/mp4",
+    ".mov": "video/quicktime",
+    ".webm": "video/webm",
+    ".mkv": "video/x-matroska",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".png": "image/png",
+    ".webp": "image/webp",
+}
+
+
+def upload_source(session: Session, operation_id: int, source_id: int) -> Source:
+    source = session.get(Source, source_id)
+    if source is None or source.operation_id != operation_id or source.type != "upload":
+        raise HTTPException(status_code=404, detail="Fonte de upload não encontrada")
+    return source
+
+
+def upload_key(operation_id: int, source_id: int, filename: str) -> str:
+    """Nome seguro e único: data + nome original limpo. A extensão define o tipo."""
+    name = Path(filename).name
+    ext = Path(name).suffix.lower()
+    if ext not in VIDEO_EXT + IMAGE_EXT:
+        raise HTTPException(status_code=400, detail=f"Formato não aceito: {ext or 'sem extensão'}")
+    stem = re.sub(r"[^A-Za-z0-9_-]+", "_", Path(name).stem).strip("_")[:80] or "arquivo"
+    return f"{upload_prefix(operation_id, source_id)}{int(time.time() * 1000)}_{stem}{ext}"
+
+
+@router.post("/operacoes/{operation_id}/fontes/{source_id}/upload-url")
+def upload_url(
+    request: Request,
+    operation_id: int,
+    source_id: int,
+    filename: str = Body(..., embed=True),
+    session: Session = Depends(db_session),
+) -> JSONResponse:
+    """Com R2: URL assinada para o navegador enviar direto. Sem R2: envio pela interface."""
+    upload_source(session, operation_id, source_id)
+    key = upload_key(operation_id, source_id, filename)
+    content_type = CONTENT_TYPES[Path(key).suffix]
+    url = request.app.state.storage.upload_url(key, content_type)
+    if url:
+        return JSONResponse(
+            {"mode": "direct", "url": url, "key": key, "content_type": content_type}
+        )
+    return JSONResponse(
+        {
+            "mode": "local",
+            "url": f"/operacoes/{operation_id}/fontes/{source_id}/upload",
+            "content_type": content_type,
+        }
+    )
+
+
+@router.post("/operacoes/{operation_id}/fontes/{source_id}/upload")
+def upload_local(
+    request: Request,
+    operation_id: int,
+    source_id: int,
+    file: UploadFile = File(...),
+    session: Session = Depends(db_session),
+) -> JSONResponse:
+    """Envio pela interface, só quando não há R2 (desenvolvimento)."""
+    upload_source(session, operation_id, source_id)
+    storage = request.app.state.storage
+    if storage.upload_url("x.mp4", "video/mp4"):
+        raise HTTPException(status_code=409, detail="Com R2, envie pela URL assinada.")
+    key = upload_key(operation_id, source_id, file.filename or "")
+    with tempfile.NamedTemporaryFile(delete=False) as tmp:
+        shutil.copyfileobj(file.file, tmp)
+    try:
+        storage.put_file(key, Path(tmp.name), CONTENT_TYPES[Path(key).suffix])
+    finally:
+        Path(tmp.name).unlink(missing_ok=True)
+    return JSONResponse({"key": key})
 
 
 @router.post("/operacoes/{operation_id}/duplicar")

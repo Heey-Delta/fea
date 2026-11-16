@@ -74,12 +74,20 @@
         <td><span class="chip">{{ s.status }}</span></td>
         <td>{{ s.last_checked_at.strftime('%d/%m %H:%M') if s.last_checked_at else '—' }}</td>
         <td>{{ s.last_error or '—' }}</td>
-        <td>{% if s.status != 'paused' %}<form method="post" action="/operacoes/{{ op.id }}/fontes/{{ s.id }}/testar"><button class="btn sm" type="submit">Testar conexão</button></form>{% endif %}</td>
+        <td class="row">
+          {% if s.status != 'paused' %}<form method="post" action="/operacoes/{{ op.id }}/fontes/{{ s.id }}/testar"><button class="btn sm" type="submit">Testar conexão</button></form>{% endif %}
+          {% if s.type == 'upload' and s.status != 'paused' %}
+          <label class="btn sm" for="up-{{ s.id }}">Enviar arquivos</label>
+          <input class="sr" id="up-{{ s.id }}" type="file" multiple accept="video/*,image/*" data-upload-url="/operacoes/{{ op.id }}/fontes/{{ s.id }}/upload-url">
+          {% endif %}
+        </td>
       </tr>
     {% endfor %}
     </tbody>
   </table>
 </div>
+<ul id="upload-log" class="upload-log" aria-live="polite"></ul>
+<script src="{{ url_for('static', path='upload.js') }}"></script>
 {% else %}
 <div class="empty"><strong>Nenhuma fonte ainda</strong><span class="sub">Adicione um bloco Fonte no canvas e salve a versão.</span></div>
 {% endif %}

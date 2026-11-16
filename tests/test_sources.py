@@ -421,3 +421,80 @@ def test_connection_test_from_sources_tab(settings, session):
     assert (
         __import__("core.sources", fromlist=["x"]).list_sources(session, op.id)[0].status == "error"
     )
+
+
+# --- upload manual pela interface -------------------------------------------------------
+
+
+def upload_app(settings, session, tmp_path, **overrides):
+    from fastapi.testclient import TestClient
+
+    from core import operations as ops
+    from core.sources import list_sources
+    from tests.conftest import fake_github, github_login
+    from web.main import create_app
+
+    op = ops.create_operation(
+        session,
+        "A",
+        flow_with_sources(
+            ("up", {"type": "upload", "reference": "Meus vídeos"}),
+            ("rd", {"type": "reddit", "reference": "r/x1"}),
+        ),
+    )
+    session.commit()
+    app = create_app(settings.model_copy(update={"storage_dir": str(tmp_path), **overrides}))
+    app.state.http_client_factory = fake_github()
+    client = TestClient(app)
+    github_login(client)
+    upload, reddit = list_sources(session, op.id)
+    return client, app, op, upload, reddit
+
+
+@needs_db
+def test_local_upload_is_found_by_the_connector(settings, session, tmp_path):
+    client, app, op, upload, _ = upload_app(settings, session, tmp_path)
+    plan = client.post(
+        f"/operacoes/{op.id}/fontes/{upload.id}/upload-url", json={"filename": "Meu Meme!.MP4"}
+    ).json()
+    assert plan["mode"] == "local" and plan["content_type"] == "video/mp4"
+    sent = client.post(plan["url"], files={"file": ("Meu Meme!.MP4", b"conteudo", "video/mp4")})
+    assert sent.status_code == 200
+    key = sent.json()["key"]
+    assert key.startswith(f"uploads/{op.id}/{upload.id}/") and key.endswith("_Meu_Meme.mp4")
+    page = UploadConnector(app.state.storage, op.id).fetch(SourceRef(upload.id, "upload", ""), None)
+    assert [i.external_id for i in page.items] == [key]
+
+
+@needs_db
+def test_upload_refuses_bad_format_and_other_sources(settings, session, tmp_path):
+    client, _, op, upload, reddit = upload_app(settings, session, tmp_path)
+    bad = client.post(
+        f"/operacoes/{op.id}/fontes/{upload.id}/upload-url", json={"filename": "virus.exe"}
+    )
+    assert bad.status_code == 400
+    other = client.post(
+        f"/operacoes/{op.id}/fontes/{reddit.id}/upload-url", json={"filename": "a.mp4"}
+    )
+    assert other.status_code == 404
+
+
+@needs_db
+def test_r2_gives_signed_direct_upload(settings, session, tmp_path):
+    r2 = {
+        "r2_account_id": "conta",
+        "r2_access_key_id": "chave",
+        "r2_secret_access_key": "segredo",
+        "r2_bucket": "fea",
+    }
+    client, _, op, upload, _ = upload_app(settings, session, tmp_path, **r2)
+    plan = client.post(
+        f"/operacoes/{op.id}/fontes/{upload.id}/upload-url", json={"filename": "a.mp4"}
+    ).json()
+    assert plan["mode"] == "direct"
+    assert plan["url"].startswith("https://conta.r2.cloudflarestorage.com/fea/uploads/")
+    assert "X-Amz-Signature" in plan["url"]
+    refused = client.post(
+        f"/operacoes/{op.id}/fontes/{upload.id}/upload", files={"file": ("a.mp4", b"x")}
+    )
+    assert refused.status_code == 409
