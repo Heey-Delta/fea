@@ -505,3 +505,49 @@ def cancel_job(session: Session, job: PublishJob) -> None:
         raise OperationError("Este envio não pode ser cancelado agora.")
     job.status, job.status_reason = "cancelled", "cancelado na interface"
     session.add(Event(entity="publish_job", entity_id=job.id, action="cancelled"))
+
+
+def published(
+    session: Session, job: PublishJob, external_id: str, url: str, status: str, now: datetime
+) -> str:
+    job.status, job.status_reason = status, None
+    job.external_id, job.url, job.published_at = external_id, url, now
+    render = session.get(Render, job.render_id)
+    item = session.get(Item, render.item_id)
+    op = session.get(Operation, item.operation_id)
+    minutes = int(
+        (current_config(session, op).config.get("retention") or {}).get("delete_after_minutes", 30)
+    )
+    # X minutos após a última publicação do vídeo (24.5).
+    deadline = now + timedelta(minutes=minutes)
+    item.delete_after = max(item.delete_after or deadline, deadline)
+    session.add(
+        Event(
+            entity="publish_job",
+            entity_id=job.id,
+            operation_id=op.id,
+            action="published",
+            detail={"url": url, "external_id": external_id},
+        )
+    )
+    session.commit()
+    return job.status
+
+
+def resolve_uncertain(session: Session, job: PublishJob, decision: str, url: str = "") -> None:
+    """Decisão manual de um envio incerto (24.3): publicado, tentar de novo ou cancelar."""
+    if job.status not in ("uncertain", "failed"):
+        raise OperationError("Só envios incertos ou com falha aceitam esta decisão.")
+    now = datetime.now(UTC)
+    if decision == "published":
+        if not url.startswith("https://"):
+            raise OperationError("Informe o link do vídeo publicado.")
+        published(session, job, url.rstrip("/").rsplit("/", 1)[-1], url, "published", now)
+    elif decision == "retry":
+        job.status, job.planned_at, job.status_reason = "retry_wait", now, "nova tentativa manual"
+        session.add(Event(entity="publish_job", entity_id=job.id, action="manual_retry"))
+    elif decision == "cancel":
+        job.status, job.status_reason = "cancelled", "cancelado na interface"
+        session.add(Event(entity="publish_job", entity_id=job.id, action="cancelled"))
+    else:
+        raise OperationError("Decisão desconhecida.")

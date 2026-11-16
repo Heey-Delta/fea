@@ -225,7 +225,7 @@ Status: 1
 
 ## Task 16: Títulos e metadados (Postador)
 Nível: 3
-Status: -1
+Status: 1
 
 - Subtask 16.1: Gerados pelo Postador na hora da publicação (decidido).
 - Subtask 16.2: Cadeia de Markov de ordem 2 no corpus, com filtros de tamanho, palavras bloqueadas, cópia e repetição.
@@ -255,7 +255,7 @@ Status: 1
 
 ## Task 19: Contas
 Nível: 5
-Status: -1
+Status: 1
 
 - Subtask 19.1: Tabela `accounts` e vínculo com operações (REQ-ACC-001).
 - Subtask 19.2: Conexão por OAuth oficial, com retorno na interface (Vercel).
@@ -266,15 +266,15 @@ Status: -1
 
 ## Task 20: Adaptador YouTube Shorts
 Nível: 5
-Status: -1
+Status: 1
 
 - Subtask 20.1: Interface `PlatformAdapter` (`publish`, `check`, `capabilities`).
 - Subtask 20.2: Upload com controle da cota (100 por dia por projeto, somando todas as operações).
-- Subtask 20.3: Pedir a auditoria do projeto ao Google (sem ela, os vídeos saem privados).
+- Subtask 20.3: Pedir a auditoria do projeto ao Google (sem ela, os vídeos saem privados). **Ação do usuário** (docs/configuracao.md, seção 7).
 
 ## Task 21: Distribuição
 Nível: 5
-Status: -1
+Status: 1
 
 - Subtask 21.1: Tela Nova publicação (manual): vídeos aprovados, contas, intervalo, primeira imediata, início, prévia da agenda.
 - Subtask 21.2: Distribuição automática quando ligada na operação.
@@ -284,7 +284,7 @@ Status: -1
 
 ## Task 22: Cálculo de horários
 Nível: 5
-Status: -1
+Status: 1
 
 - Subtask 22.1: T0 e horário n = T0 + (n − 1) × intervalo, por conta.
 - Subtask 22.2: No rodízio, espaçamento = janela ÷ vídeos do dia.
@@ -294,7 +294,7 @@ Status: -1
 
 ## Task 23: Criação de envios e idempotência
 Nível: 5
-Status: -1
+Status: 1
 
 - Subtask 23.1: `request_key` única por lote (REQ-DIST-011).
 - Subtask 23.2: Um `publish_job` por par vídeo × conta, após validar aprovação e conta.
@@ -303,7 +303,7 @@ Status: -1
 
 ## Task 24: Estados do envio, falhas, retries e exclusão
 Nível: 5
-Status: -1
+Status: 1
 
 - Subtask 24.1: Máquina de estados do envio (seção 9.4 da v2.1).
 - Subtask 24.2: Rate limit: `retry_wait` de 2, 10 e 30 minutos; depois `failed`.

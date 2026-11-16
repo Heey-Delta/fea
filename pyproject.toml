@@ -48,6 +48,8 @@ pythonpath = ["."]
 [tool.ruff.lint.per-file-ignores]
 # Migrações geradas pelo Alembic têm constraints em uma linha só.
 "migrations/versions/*" = ["E501"]
+# Fixtures do pytest importadas de outro módulo e recebidas como parâmetro.
+"tests/*" = ["F811"]
 
 [tool.ruff.lint.flake8-bugbear]
 # Padrão do FastAPI: Depends/Form/Body/Query como valor padrão do parâmetro.

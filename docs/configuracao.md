@@ -59,5 +59,11 @@ Sem `GITHUB_CLIENT_ID` e `GITHUB_CLIENT_SECRET` a interface sobe, mas o login fi
 
 ## 7. YouTube (Postador)
 
-- [ ] Projeto no Google Cloud com a YouTube Data API v3 ativa e cliente OAuth (variáveis entram com a Task 19).
-- [ ] Pedir a auditoria do projeto: sem ela os vídeos saem privados.
+- [ ] Google Cloud: criar um projeto e ativar a **YouTube Data API v3**.
+- [ ] Tela de consentimento OAuth: tipo "Externo", com o seu e-mail como usuário de teste enquanto o app não for publicado.
+- [ ] Credenciais → Criar ID do cliente OAuth → "Aplicativo da Web". Em "URIs de redirecionamento autorizados": `{PUBLIC_BASE_URL}/contas/youtube/retorno` (ex.: `https://fea-oh-alla.vercel.app/contas/youtube/retorno`).
+- [ ] Variáveis na **Vercel e na VPS**: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` e `TOKEN_ENCRYPTION_KEY` (a mesma chave nos dois lados; gere com `python -m core.security new-keys`). Opcional: `YOUTUBE_DAILY_UPLOAD_LIMIT` (padrão 100).
+- [ ] Na interface, **Contas → Conectar canal do YouTube** para cada canal; depois ligue cada conta à operação com um bloco Conta no canvas. Ajuste o limite diário (padrão 3) e o fuso.
+- [ ] Pedir a auditoria do projeto ("YouTube API Services – Audit and Quota Extension"): sem ela os vídeos enviados pela API ficam **privados**.
+- [ ] No bloco Postagem do canvas: `automatic` (distribuição automática), `mode` (`rotation` ou `all`), `interval_min`, `window`, `privacy` e `titles` (corpus, templates, palavras bloqueadas, hashtags, modelo de descrição).
+- [ ] Na VPS, rodar também `python -m worker postador` e `python -m worker limpeza` (a Limpeza apaga os arquivos `retention.delete_after_minutes` minutos após a última publicação; padrão 30).

@@ -399,7 +399,7 @@ def test_failed_jobs_keep_files_and_rejected_are_cleaned(factory, storage, setti
     with factory() as s:
         assert s.get(m.Item, items[0]).files_deleted_at is not None
         assert s.get(m.Item, items[1]).files_deleted_at is None
-        pub.resolve_uncertain(s, s.get(m.PublishJob, js[-1].id), "cancel")
+        dist.resolve_uncertain(s, s.get(m.PublishJob, js[-1].id), "cancel")
         s.get(m.Item, items[1]).status = "rejected"
         s.commit()
         assert pub.run_cleanup(s, storage, datetime.now(UTC) + timedelta(hours=1)) == 1

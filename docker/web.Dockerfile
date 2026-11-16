@@ -12,6 +12,7 @@ COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev
 
 COPY core ./core
+COPY networks ./networks
 COPY web ./web
 COPY app.py ./
 

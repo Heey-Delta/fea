@@ -300,27 +300,7 @@ def run_publish(
 
     with factory() as session:
         job = session.get(PublishJob, job_id)
-        return published(session, job, result.external_id, result.url, result.status, now)
-
-
-def published(
-    session: Session, job: PublishJob, external_id: str, url: str, status: str, now: datetime
-) -> str:
-    job.status, job.status_reason = status, None
-    job.external_id, job.url, job.published_at = external_id, url, now
-    render = session.get(Render, job.render_id)
-    item = session.get(Item, render.item_id)
-    op = session.get(Operation, item.operation_id)
-    minutes = int(
-        (current_config(session, op).config.get("retention") or {}).get("delete_after_minutes", 30)
-    )
-    # X minutos após a última publicação do vídeo (24.5).
-    deadline = now + timedelta(minutes=minutes)
-    item.delete_after = max(item.delete_after or deadline, deadline)
-    _event(session, job, "published", {"url": url, "external_id": external_id}, op.id)
-    session.commit()
-    log.info("publicado", extra={"publish_job": job.id, "url": url})
-    return job.status
+        return dist.published(session, job, result.external_id, result.url, result.status, now)
 
 
 def auth_failed(
@@ -399,32 +379,11 @@ def run_check(
             session.commit()
             return job.status
         if found is not None:
-            return published(session, job, found.external_id, found.url, "published", now)
+            return dist.published(session, job, found.external_id, found.url, "published", now)
         # Não foi criado: pode reenviar com segurança (conta como tentativa).
         render = session.get(Render, job.render_id)
         op_id = session.get(Item, render.item_id).operation_id
         return retry_or_fail(session, job, "Envio não encontrado na plataforma.", now, op_id)
-
-
-def resolve_uncertain(session: Session, job: PublishJob, decision: str, url: str = "") -> None:
-    """Decisão manual de um envio incerto (24.3): publicado, tentar de novo ou cancelar."""
-    from core.operations import OperationError
-
-    if job.status not in ("uncertain", "failed"):
-        raise OperationError("Só envios incertos ou com falha aceitam esta decisão.")
-    now = datetime.now(UTC)
-    if decision == "published":
-        if not url.startswith("https://"):
-            raise OperationError("Informe o link do vídeo publicado.")
-        published(session, job, url.rstrip("/").rsplit("/", 1)[-1], url, "published", now)
-    elif decision == "retry":
-        job.status, job.planned_at, job.status_reason = "retry_wait", now, "nova tentativa manual"
-        _event(session, job, "manual_retry")
-    elif decision == "cancel":
-        job.status, job.status_reason = "cancelled", "cancelado na interface"
-        _event(session, job, "cancelled")
-    else:
-        raise OperationError("Decisão desconhecida.")
 
 
 @register("publish")

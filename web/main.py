@@ -27,7 +27,8 @@ from core.config import Settings, get_settings
 from core.db import sqlalchemy_url
 from core.logging import configure_logging
 from core.storage import LocalStorage, make_storage
-from web import approval, auth, editing, executions, operations
+from networks import make_adapter
+from web import approval, auth, editing, executions, operations, publishing
 from web.common import MENU, NotLoggedIn, render, require_user
 
 BASE_DIR = Path(__file__).parent
@@ -57,6 +58,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     app.state.session_factory = sessionmaker(bind=engine, expire_on_commit=False)
     app.state.storage = make_storage(settings)
+    app.state.adapter_factory = lambda platform: make_adapter(platform, settings)
     # Os testes injetam aqui um cliente HTTP simulado para os conectores.
     app.state.connector_kwargs = {}
     app.add_middleware(
@@ -138,6 +140,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(executions.router)
     app.include_router(approval.router)
     app.include_router(editing.router)
+    app.include_router(publishing.router)
 
     @app.get("/arquivos/{key:path}")
     def local_file(key: str, user: str = Depends(require_user)) -> Response:
@@ -159,7 +162,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
         return view
 
-    built = {"/", "/operacoes", "/aprovacao"}
+    built = {"/", "/operacoes", "/aprovacao", "/publicacoes", "/contas"}
     for item in MENU:
         if item["href"] not in built:
             app.add_api_route(

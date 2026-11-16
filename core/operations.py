@@ -91,6 +91,18 @@ def default_config() -> dict[str, Any]:
                     "first_immediate": False,
                     "window": {"start": "08:00", "end": "23:00"},
                     "timezone": "America/Sao_Paulo",
+                    # Sem a auditoria do Google, a API deixa os vídeos privados mesmo assim.
+                    "privacy": "public",
+                    # Gerados pelo Postador na hora de publicar (Task 16).
+                    "titles": {
+                        "method": "markov",
+                        "corpus": [],
+                        "templates": ["{texto}"],
+                        "blocked_words": [],
+                        "hashtags": ["shorts"],
+                        "description_template": "{titulo}\n\n{hashtags}",
+                        "min_chars": 15,
+                    },
                 },
             },
             {"id": "rede", "type": "network", "config": {"profile": "youtube_shorts"}},
