@@ -67,8 +67,16 @@ export MATHLIB="m"
 export CARGO_BUILD_JOBS=2
 pip install --upgrade pip wheel setuptools
 # numpy, Pillow e cryptography já vêm do pacote do Termux (python-*); aqui entra só o resto.
-pip install "sqlalchemy>=2.0" "alembic>=1.13" "psycopg>=3.2" "pydantic-settings>=2.4" \
-  "httpx>=0.27" "boto3>=1.35" "itsdangerous>=2.2" "jinja2>=3.1"
+# Só duas bibliotecas não têm versão pronta para Android: MarkupSafe (compila em segundos) e
+# pydantic-core (Rust, 15 a 40 minutos). Por isso o pydantic vem por último, isolado.
+say "Instalando as bibliotecas leves…"
+pip install "sqlalchemy>=2.0" "alembic>=1.13" "psycopg>=3.2" "httpx>=0.27" "boto3>=1.35" \
+  "itsdangerous>=2.2" "jinja2>=3.1" \
+  || die "Falhou uma biblioteca leve. Copie as últimas linhas do erro (sem chaves) e mande ao Claude."
+say "Instalando o pydantic (a parte mais demorada: pode compilar por 15 a 40 minutos)…"
+pkg install -y python-pydantic 2>/dev/null || say "Sem pacote pronto do pydantic: o pip vai compilar."
+pip install "pydantic-settings>=2.4" \
+  || die "Falhou o pydantic. Rode este instalador de novo (ele continua) ou mande as últimas linhas do erro ao Claude."
 
 # 5. Fonte do texto sobre o vídeo
 mkdir -p assets/fonts
