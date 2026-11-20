@@ -139,11 +139,20 @@ class DriveConnector:
         sleep: Callable[[float], None] = time.sleep,
         clock: Callable[[], float] = time.time,
     ):
-        if not settings.google_drive_service_account:
+        # Dois modos. Conta de serviço (pasta privada, compartilhada com o e-mail dela) quando há
+        # a chave JSON. Senão, chave de API (pasta compartilhada como "qualquer pessoa com o
+        # link"), que não depende de chave de conta de serviço (muitas contas a bloqueiam por
+        # política da organização).
+        self.api_key = (settings.google_drive_api_key or "").strip()
+        if settings.google_drive_service_account:
+            self.key = load_key(settings.google_drive_service_account)
+        elif self.api_key:
+            self.key = None
+        else:
             raise SourceError(
-                "Google Drive não configurado: cole a chave JSON da conta de serviço em Acessos."
+                "Google Drive não configurado: em Acessos, cole a chave JSON da conta de serviço "
+                "ou uma chave de API."
             )
-        self.key = load_key(settings.google_drive_service_account)
         self.client = client or httpx.Client(timeout=60, follow_redirects=True)
         self.sleep = sleep
         self.clock = clock
@@ -152,7 +161,21 @@ class DriveConnector:
 
     @property
     def email(self) -> str:
-        return self.key["client_email"]
+        return self.key["client_email"] if self.key else ""
+
+    @property
+    def share_hint(self) -> str:
+        if self.key:
+            return f"Compartilhe a pasta com {self.email} (Leitor)."
+        return 'Compartilhe a pasta como "Qualquer pessoa com o link" (Leitor).'
+
+    def _auth(self, params: dict | None = None) -> tuple[dict, dict]:
+        """(parâmetros, cabeçalhos) de autenticação do modo em uso."""
+        params = dict(params or {})
+        if self.key:
+            return params, {"Authorization": f"Bearer {self.token()}"}
+        params["key"] = self.api_key
+        return params, {}
 
     def token(self) -> str:
         if self._token and self.clock() < self._expires - 60:
@@ -177,12 +200,28 @@ class DriveConnector:
         self._expires = self.clock() + float(body.get("expires_in", 3600))
         return self._token
 
-    def _get(self, url: str, **kwargs) -> httpx.Response:
-        return request_with_retry(
-            lambda: self.client.get(
-                url, headers={"Authorization": f"Bearer {self.token()}"}, **kwargs
-            ),
-            sleep=self.sleep,
+    def _get(self, url: str, params: dict | None = None) -> httpx.Response:
+        def send():
+            query, headers = self._auth(params)
+            return self.client.get(url, params=query, headers=headers)
+
+        return request_with_retry(send, sleep=self.sleep)
+
+    def check_key(self) -> None:
+        """Modo chave de API: uma listagem vazia basta para saber se o Google aceitou a chave."""
+        if self.key:
+            self.token()
+            return
+        response = self._get(f"{API}/files", params={"pageSize": 1})
+        if response.status_code == 200:
+            return
+        if response.status_code == 400:
+            raise SourceError(
+                "O Google recusou a chave de API: confira se ela foi copiada inteira."
+            )
+        raise SourceError(
+            f"A chave de API não tem acesso (HTTP {response.status_code}). Ative a Google Drive "
+            "API no projeto e, se restringiu a chave, permita a Google Drive API nela."
         )
 
     def fetch(self, source: SourceRef, cursor: str | None) -> Page:
@@ -200,22 +239,17 @@ class DriveConnector:
             params["pageToken"] = cursor
         response = self._get(f"{API}/files", params=params)
         if response.status_code == 404:
-            raise SourceError(
-                f"Pasta do Drive não encontrada. Compartilhe a pasta com {self.email} (Leitor)."
-            )
+            raise SourceError(f"Pasta do Drive não encontrada. {self.share_hint}")
         if response.status_code in (401, 403):
             raise SourceError(
-                "Sem acesso ao Drive: ative a Google Drive API no projeto e compartilhe a pasta "
-                f"com {self.email}."
+                f"Sem acesso ao Drive: ative a Google Drive API no projeto. {self.share_hint}"
             )
         if response.status_code != 200:
             raise SourceError(f"Google Drive respondeu {response.status_code}.")
         payload = response.json()
         items = parse(payload.get("files") or [])
         if not items and not cursor and not self._folder_visible(fid):
-            raise SourceError(
-                f"A conta de serviço não enxerga a pasta. Compartilhe-a com {self.email} (Leitor)."
-            )
+            raise SourceError(f"O Google não enxerga a pasta. {self.share_hint}")
         return Page(items=items, next_cursor=payload.get("nextPageToken"))
 
     def _folder_visible(self, fid: str) -> bool:
@@ -230,15 +264,10 @@ class DriveConnector:
     def download(self, item: RawItem, dest: Path) -> Path:
         dest.parent.mkdir(parents=True, exist_ok=True)
         url = f"{API}/files/{item.media_url}"
-        params = {"alt": "media", "supportsAllDrives": "true"}
         for attempt in range(3):
             try:
-                with self.client.stream(
-                    "GET",
-                    url,
-                    params=params,
-                    headers={"Authorization": f"Bearer {self.token()}"},
-                ) as response:
+                params, headers = self._auth({"alt": "media", "supportsAllDrives": "true"})
+                with self.client.stream("GET", url, params=params, headers=headers) as response:
                     if response.status_code == 200:
                         with open(dest, "wb") as out:
                             for chunk in response.iter_bytes(1024 * 1024):
