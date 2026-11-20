@@ -352,7 +352,7 @@ Status: 1
 - Subtask 28.5: Visual revisto: mais limpo, cantos levemente arredondados, sóbrio e minimalista.
 - Subtask 28.6: Limite de uso do R2: a ferramenta conta gravações (Classe A), leituras (Classe B) e o pico de armazenamento do mês, mede o bucket de hora em hora (Limpeza) e para ao chegar no percentual escolhido da franquia grátis (padrão 80%). Painel e ajuste no Dashboard.
 - Subtask 28.7: Páginas públicas com as exigências da auditoria da API do YouTube (aviso de uso dos YouTube API Services, links dos Termos do YouTube e da política do Google, revogação, exclusão e uso limitado) e guia `docs/auditoria-youtube.md` com as respostas do formulário, os arquivos pedidos e o roteiro do screencast.
-- Subtask 28.8: Fonte **Google Drive**: pasta compartilhada com uma conta de serviço (sem escopo restrito no OAuth, sem verificação), com teste da chave em Acessos e download por streaming.
+- Subtask 28.8: Fonte **Google Drive**: pasta lida por conta de serviço (pasta privada) ou por chave de API (pasta com link público, para quem tem a criação de chaves bloqueada por política da organização). Sem escopo restrito no OAuth e sem verificação; teste da chave em Acessos e download por streaming.
 - Subtask 28.9: Workers no próprio computador (Docker Desktop): botão "Baixar .env" em Acessos e guia `docs/workers-no-computador.md`.
 - Subtask 28.10: `docs/rumos.md`: alternativas pesquisadas para fontes, hospedagem dos workers e redes de publicação, com o plano da versão de início.
 - Subtask 28.11: Workers no celular Android (Termux): instalador `web/static/instalar-termux.sh` e guia `docs/workers-no-celular.md`. Não testado em aparelho real.

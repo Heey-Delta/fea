@@ -38,6 +38,7 @@ class Service:
     oauth_platform: str | None = None  # contas conectadas por OAuth (publicação)
     console: str = ""  # onde criar o app
     note: str = ""
+    any_field: bool = False  # pronto com qualquer campo preenchido (opções alternativas)
 
 
 SERVICES: tuple[Service, ...] = (
@@ -82,11 +83,16 @@ SERVICES: tuple[Service, ...] = (
         "drive",
         "Google Drive",
         "busca",
-        (Field("google_drive_service_account", "Chave JSON da conta de serviço"),),
-        console="https://console.cloud.google.com/iam-admin/serviceaccounts",
-        note="Vídeos que caírem numa pasta do Drive viram itens da operação. Crie uma conta de "
-        "serviço, ative a Google Drive API, baixe a chave JSON e cole aqui; depois compartilhe "
-        "a pasta com o e-mail da conta de serviço (Leitor). Grátis e sem verificação do Google.",
+        (
+            Field("google_drive_service_account", "Chave JSON da conta de serviço (opção 1)"),
+            Field("google_drive_api_key", "Chave de API (opção 2, pasta com link público)"),
+        ),
+        console="https://console.cloud.google.com/apis/credentials",
+        note="Vídeos que caírem numa pasta do Drive viram itens da operação. Preencha UMA das "
+        "duas opções. Opção 1: conta de serviço (pasta privada; algumas contas bloqueiam a "
+        'criação da chave). Opção 2: chave de API, com a pasta compartilhada como "qualquer '
+        'pessoa com o link". Grátis e sem verificação do Google.',
+        any_field=True,
     ),
     Service(
         "x",
@@ -225,6 +231,8 @@ class ServiceStatus:
 
     @property
     def ready(self) -> bool:
+        if self.service.any_field:
+            return any(f.source for f in self.fields)
         required = [f for f in self.fields if f.field.name != "reddit_user_agent"]
         return all(f.source for f in required)
 

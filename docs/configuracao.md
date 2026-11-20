@@ -50,14 +50,18 @@ Feito: o Neon está conectado ao projeto e a Vercel gravou `DATABASE_URL` e `DAT
 3. **Reddit** (gratuito, uso não comercial):
    - Em https://www.reddit.com/prefs/apps crie um app do tipo **script**. O redirect (`http://localhost:8080`) não é usado, mas é obrigatório.
    - Cole o Client ID, o Client secret e o User-Agent (ex.: `fea/0.1 (by u/seu_usuario)`) e clique em **Testar**.
-4. **Google Drive** (grátis, recomendado como primeira fonte): vídeos que caírem numa pasta viram itens da operação.
-   - Google Cloud (pode ser o mesmo projeto do YouTube) → **APIs e serviços → Biblioteca** → ative a **Google Drive API**.
-   - **IAM e administrador → Contas de serviço → Criar conta de serviço**, com o nome `fea-drive`. Pule as permissões e toque em Concluir.
-   - Abra a conta criada → **Chaves → Adicionar chave → Criar nova chave → JSON**. Um arquivo é baixado; ele é secreto.
-   - Abra o arquivo num editor de texto, copie **tudo** e cole em Acessos → **Google Drive**. Toque em Salvar e depois em **Testar**. O teste mostra o e-mail da conta de serviço.
-   - No Google Drive, crie a pasta (ex.: `fea-entrada`) → **Compartilhar** → cole o e-mail da conta de serviço como **Leitor**.
+4. **Google Drive** (grátis, recomendado como primeira fonte): vídeos que caírem numa pasta viram itens da operação. Há duas opções; preencha **uma**.
+   - **Opção 2, chave de API (a mais simples e a que não é bloqueada por política da organização):**
+     - Google Cloud, projeto `fea9001` → **APIs e serviços → Biblioteca** → ative a **Google Drive API**.
+     - **APIs e serviços → Credenciais → Criar credenciais → Chave de API**. Copie a chave. Em **Editar chave de API**, em "Restrições de API", escolha **Restringir chave** e marque só a **Google Drive API**.
+     - Cole a chave em Acessos → **Google Drive → Chave de API**. Salve e toque em **Testar**.
+     - No Drive, crie a pasta → **Compartilhar → Acesso geral → Qualquer pessoa com o link → Leitor**. Copie o link da pasta.
+     - Cuidado: quem tiver o link da pasta consegue ver os vídeos. Serve para vídeos que você vai publicar de qualquer forma, não para material sigiloso.
+   - **Opção 1, conta de serviço (pasta privada):** só funciona se o Google Cloud deixar criar a chave JSON (muitas contas novas têm isso bloqueado pela política `iam.disableServiceAccountKeyCreation`).
+     - Ative a Google Drive API. **IAM e administrador → Contas de serviço → Criar conta de serviço** (`fea-drive`) → aba **Chaves → Adicionar chave → JSON**.
+     - Cole o JSON inteiro em Acessos → **Google Drive → Chave JSON**, salve e teste. Compartilhe a pasta com o e-mail da conta de serviço, como Leitor.
    - Na operação, adicione uma fonte do tipo **Google Drive** com o link da pasta e registre a permissão de uso dos vídeos.
-   - Isso não acrescenta escopo nenhum ao login do YouTube, então não atrapalha a auditoria.
+   - Nenhuma das opções acrescenta escopo ao login do YouTube, então não atrapalha a auditoria.
 5. **X** (opcional, pago): crie o app em https://developer.x.com (plano Basic ou superior), cole o Bearer Token e clique em **Testar**.
 
 Os apps das redes de publicação pedem páginas públicas. Elas já existem:

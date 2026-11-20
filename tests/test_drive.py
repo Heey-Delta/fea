@@ -127,3 +127,75 @@ def test_pasta_nao_compartilhada_explica_o_que_fazer():
 
 def test_drive_aparece_como_tipo_de_fonte():
     assert SOURCE_TYPES["drive"] == "Google Drive"
+
+
+def fake_google_public(files, seen=None, folder_public=True, key_ok=True):
+    """Drive aberto a quem tem o link: só chave de API, sem cabeçalho de login."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if seen is not None:
+            seen.append(request)
+        assert "authorization" not in request.headers
+        if request.url.params.get("key") != "AIzaChaveDeTeste":
+            return httpx.Response(400, json={"error": {"message": "API key not valid"}})
+        if not key_ok:
+            return httpx.Response(403, json={"error": {"message": "API disabled"}})
+        if request.url.path == "/drive/v3/files":
+            if "q" not in request.url.params:  # teste da chave
+                return httpx.Response(200, json={"files": []})
+            return httpx.Response(200, json={"files": files if folder_public else []})
+        if request.url.path == f"/drive/v3/files/{FOLDER}":
+            return httpx.Response(200 if folder_public else 404, json={"id": FOLDER})
+        if request.url.path == "/drive/v3/files/vid1" and request.url.params.get("alt"):
+            return httpx.Response(200, content=b"conteudo-publico")
+        return httpx.Response(404)
+
+    return httpx.Client(transport=httpx.MockTransport(handler))
+
+
+def key_settings(key="AIzaChaveDeTeste") -> Settings:
+    return Settings(_env_file=None, google_drive_api_key=key)
+
+
+def test_modo_chave_de_api_lista_e_baixa_sem_login(tmp_path):
+    seen = []
+    conn = DriveConnector(key_settings(), client=fake_google_public(FILES, seen))
+    conn.check_key()
+    page = conn.fetch(SourceRef(1, "drive", FOLDER), None)
+    assert [i.external_id for i in page.items] == ["vid1", "img1"]
+    dest = conn.download(page.items[0], tmp_path / "v.mp4")
+    assert Path(dest).read_bytes() == b"conteudo-publico"
+    assert all(r.url.params["key"] == "AIzaChaveDeTeste" for r in seen)
+    assert not any(r.url.path == "/token" for r in seen)  # sem conta de serviço
+
+
+def test_modo_chave_de_api_explica_o_que_fazer():
+    with pytest.raises(SourceError, match="não foi copiada|recusou a chave"):
+        DriveConnector(key_settings("errada"), client=fake_google_public(FILES)).check_key()
+    with pytest.raises(SourceError, match="não tem acesso"):
+        DriveConnector(key_settings(), client=fake_google_public(FILES, key_ok=False)).check_key()
+    conn = DriveConnector(key_settings(), client=fake_google_public(FILES, folder_public=False))
+    with pytest.raises(SourceError, match="Qualquer pessoa com o link"):
+        conn.fetch(SourceRef(1, "drive", FOLDER), None)
+
+
+def test_conta_de_servico_tem_prioridade_e_sem_nada_falha():
+    both = Settings(
+        _env_file=None,
+        google_drive_service_account=json.dumps(KEY),
+        google_drive_api_key="AIzaChaveDeTeste",
+    )
+    assert DriveConnector(both, client=fake_google()).key is not None
+    with pytest.raises(SourceError, match="não configurado"):
+        DriveConnector(Settings(_env_file=None))
+
+
+def test_acessos_considera_pronto_com_uma_das_duas_opcoes():
+    from core import credentials as creds
+    from core.credentials import FieldStatus, ServiceStatus
+
+    svc = creds.SERVICE_BY_ID["drive"]
+    first, second = svc.fields
+    none = ServiceStatus(svc, [FieldStatus(first, "", ""), FieldStatus(second, "", "")])
+    one = ServiceStatus(svc, [FieldStatus(first, "", ""), FieldStatus(second, "banco", "••••1")])
+    assert not none.ready and one.ready

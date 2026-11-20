@@ -302,12 +302,12 @@ def test_drive(settings, client: httpx.Client) -> str:
 
     try:
         connector = DriveConnector(settings, client=client, sleep=lambda _s: None)
-        connector.token()
+        connector.check_key()
     except SourceError as exc:
         raise ValueError(str(exc)) from exc
+    kind = "a conta de serviço" if connector.key else "a chave de API"
     return (
-        f"Google aceitou a conta de serviço. Compartilhe a pasta do Drive com "
-        f"{connector.email} (Leitor) e use o link da pasta na fonte da operação."
+        f"Google aceitou {kind}. {connector.share_hint} Use o link da pasta na fonte da operação."
     )
 
 
