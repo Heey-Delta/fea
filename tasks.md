@@ -355,6 +355,7 @@ Status: 1
 - Subtask 28.8: Fonte **Google Drive**: pasta compartilhada com uma conta de serviço (sem escopo restrito no OAuth, sem verificação), com teste da chave em Acessos e download por streaming.
 - Subtask 28.9: Workers no próprio computador (Docker Desktop): botão "Baixar .env" em Acessos e guia `docs/workers-no-computador.md`.
 - Subtask 28.10: `docs/rumos.md`: alternativas pesquisadas para fontes, hospedagem dos workers e redes de publicação, com o plano da versão de início.
+- Subtask 28.11: Workers no celular Android (Termux): instalador `web/static/instalar-termux.sh` e guia `docs/workers-no-celular.md`. Não testado em aparelho real.
 
 ## Task 29: Decisões
 Nível: 4
