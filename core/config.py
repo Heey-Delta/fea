@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     github_client_id: str = ""
     github_client_secret: str = ""
     github_allowed_id: str = ""
-    # Endereço fixo da interface (ex.: https://fea-oh-alla.vercel.app). O GitHub só aceita
+    # Endereço fixo da interface (ex.: https://fea-rho.vercel.app). O GitHub só aceita
     # o retorno do login na URL cadastrada no OAuth App; sem isto, usa o endereço acessado.
     public_base_url: str = ""
     # Páginas públicas exigidas pelas plataformas (privacidade, termos, exclusão de dados).

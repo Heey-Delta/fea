@@ -127,10 +127,10 @@ def test_public_base_url_fixes_callback(settings):
 
     from web.main import create_app
 
-    fixed = settings.model_copy(update={"public_base_url": "https://fea-oh-alla.vercel.app/"})
+    fixed = settings.model_copy(update={"public_base_url": "https://fea-rho.vercel.app/"})
     client = TestClient(create_app(fixed))
     url = httpx.URL(client.get("/auth/github", follow_redirects=False).headers["location"])
-    assert url.params["redirect_uri"] == "https://fea-oh-alla.vercel.app/auth/github/callback"
+    assert url.params["redirect_uri"] == "https://fea-rho.vercel.app/auth/github/callback"
 
 
 def test_public_pages_need_no_login(client):

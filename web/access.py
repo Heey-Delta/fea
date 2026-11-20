@@ -66,7 +66,7 @@ def tool_status(request: Request) -> list[dict]:
             "name": "Endereço público",
             "ok": bool(s.public_base_url),
             "env": "PUBLIC_BASE_URL",
-            "hint": s.public_base_url or "Ex.: https://fea-oh-alla.vercel.app",
+            "hint": s.public_base_url or "Ex.: https://fea-rho.vercel.app",
         },
         {
             "name": "Chave de criptografia",

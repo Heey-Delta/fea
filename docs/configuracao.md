@@ -32,7 +32,7 @@ Nenhum segredo vai para o repositório nem para o chat.
 
 ## Etapa 2 · Endereço e login da ferramenta (10 min)
 
-1. Defina o endereço fixo da interface. Com a branch mesclada no `main`, a produção da Vercel fica em algo como `https://fea-oh-alla.vercel.app`. Peça para eu abrir o PR quando quiser.
+1. Defina o endereço fixo da interface. Com a branch mesclada no `main`, a produção da Vercel fica em algo como `https://fea-rho.vercel.app`. Peça para eu abrir o PR quando quiser.
 2. Na Vercel: `PUBLIC_BASE_URL` = esse endereço, sem barra no final.
 3. GitHub → Settings → Developer settings → OAuth Apps → **New OAuth App**:
    - Homepage URL: o endereço da interface.
@@ -54,7 +54,7 @@ Nenhum segredo vai para o repositório nem para o chat.
 4. No bucket → Settings → CORS policy, troque a origem pelo seu endereço:
 
    ```json
-   [{"AllowedOrigins": ["https://fea-oh-alla.vercel.app"], "AllowedMethods": ["PUT", "GET"], "AllowedHeaders": ["Content-Type"], "MaxAgeSeconds": 3600}]
+   [{"AllowedOrigins": ["https://fea-rho.vercel.app"], "AllowedMethods": ["PUT", "GET"], "AllowedHeaders": ["Content-Type"], "MaxAgeSeconds": 3600}]
    ```
 
 O R2 é obrigatório para o Instagram, que baixa o vídeo por uma URL pública temporária.
