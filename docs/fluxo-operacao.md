@@ -1,5 +1,7 @@
 # Fluxo da Operação — Blocos e Canvas
 
+> **Atualização (Task 28):** na interface o fluxo agora são três blocos em sequência, **Pesca → Motor Editor → Publicador**, cada um com o próprio formulário. As fontes ficam dentro da Pesca; a rede social, as contas e a aprovação ficam dentro do Publicador. O JSON salvo continua sendo o grafo descrito abaixo: a tela gera os blocos internos e as ligações ao salvar. Uma operação pode publicar em mais de uma rede (YouTube Shorts, TikTok, Instagram Reels). As chaves e os logins ficam na tela **Acessos**.
+
 Define os três grandes blocos da ferramenta e como uma operação é montada ligando blocos entre si.
 
 Complementa a Especificação v2.1 e o `docs/editor-nivel-1.md`. Tasks correspondentes no `tasks.md`: Task 4 (canvas), Tasks 5 a 8 (Pesca), Tasks 9 a 18 (Edição), Tasks 19 a 24 (Postagem).
