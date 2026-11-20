@@ -9,7 +9,7 @@
 </div>
 {% endmacro %}
 {% block content %}
-<a class="back" href="/operacoes/{{ op.id }}">← {{ op.name }}</a>
+<a class="back" href="/operacoes/{{ op.id }}/fluxo">{{ icon('arrow-left') }} {{ op.name }}</a>
 <h1>Edição</h1>
 <p class="sub">Sem área de edição: todo vídeo sai deste preset ({{ profile.name }}). Salvar cria a versão v{{ config.version + 1 }} da configuração; execuções em andamento continuam com a versão delas.</p>
 {% if flash %}<p class="{{ 'error' if flash.kind == 'error' else 'notice' }}" role="status">{{ flash.text }}</p>{% endif %}

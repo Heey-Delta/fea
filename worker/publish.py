@@ -255,10 +255,15 @@ def start_upload(session: Session, job_id: int, settings: Settings, now: datetim
         job.status_reason = "Cota diária de uploads do projeto Google esgotada."
         return None
     config = current_config(session, op).config
-    if job.title is None:
+    if job.title is None or job.description is None or job.tags is None:
+        # Título escrito à mão na tela Publicações vale; o que faltar é gerado.
         meta = make_metadata(session, job, item, config, account.platform)
-        job.title, job.description, job.tags = meta.title, meta.description, meta.tags
-        job.title_method = meta.method
+        if job.title is None:
+            job.title, job.title_method = meta.title, meta.method
+        if job.description is None:
+            job.description = meta.description.replace(meta.title, job.title, 1)
+        if job.tags is None:
+            job.tags = meta.tags
     job.status, job.status_reason = "uploading", None
     job.attempts += 1
     session.add(

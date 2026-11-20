@@ -42,6 +42,20 @@ class Service:
 
 SERVICES: tuple[Service, ...] = (
     Service(
+        "r2",
+        "Cloudflare R2",
+        "infra",
+        (
+            Field("r2_account_id", "Account ID", secret=False),
+            Field("r2_access_key_id", "Access Key ID", secret=False),
+            Field("r2_secret_access_key", "Secret Access Key"),
+            Field("r2_bucket", "Bucket", secret=False),
+        ),
+        console="https://dash.cloudflare.com/?to=/:account/r2/overview",
+        note="Originais, vídeos editados e máscaras. Sem R2 os arquivos ficam no disco local "
+        "(só desenvolvimento). Obrigatório para o Instagram.",
+    ),
+    Service(
         "reddit",
         "Reddit",
         "busca",

@@ -24,9 +24,17 @@
   <tr>
     <td>{{ j.id }}</td>
     <td>#{{ item.id }}<br><small class="sub">lote {{ b.id }}{% if b.automatic %} · auto{% endif %}</small></td>
-    <td>{{ a.name }}</td>
+    <td><span class="row" style="flex-wrap:nowrap">{{ icon({'youtube': 'youtube', 'tiktok': 'tiktok', 'instagram': 'instagram'}.get(a.platform, 'send')) }}<span>{{ a.name }}</span></span></td>
     <td>{% if j.published_at %}{{ j.published_at.strftime('%d/%m %H:%M') }}{% elif j.planned_at %}{{ j.planned_at.strftime('%d/%m %H:%M') }} UTC{% else %}—{% endif %}</td>
-    <td>{% if j.url %}<a href="{{ j.url }}" target="_blank" rel="noopener">{{ j.title }}</a>{% else %}{{ j.title or '(gerado na hora)' }}{% endif %}{% if j.title_method %}<br><small class="sub">{{ j.title_method }}</small>{% endif %}{% if j.metrics %}<div class="metrics">{% for k, label in (('views', 'views'), ('likes', 'curtidas'), ('comments', 'coment.')) %}{% if j.metrics.get(k) is not none %}<span>{{ '{:,}'.format(j.metrics[k]).replace(',', '.') }} {{ label }}</span>{% endif %}{% endfor %}</div>{% endif %}</td>
+    <td>{% if j.url %}<a href="{{ j.url }}" target="_blank" rel="noopener">{{ j.title }}</a>{% else %}{{ j.title or '(gerado na hora)' }}{% endif %}{% if j.title_method %}<br><small class="sub">{{ j.title_method }}</small>{% endif %}{% if j.metrics %}<div class="metrics">{% for k, label in (('views', 'views'), ('likes', 'curtidas'), ('comments', 'coment.')) %}{% if j.metrics.get(k) is not none %}<span>{{ '{:,}'.format(j.metrics[k]).replace(',', '.') }} {{ label }}</span>{% endif %}{% endfor %}</div>{% endif %}
+      {% if j.status in ('planned', 'pending_capacity', 'retry_wait') %}
+      <details class="sec" style="border:0;padding-top:6px"><summary style="font-size:12px;font-weight:600">{{ icon('text') }}<span class="grow">Editar título</span>{{ icon('chevron-down', 'chev') }}</summary>
+        <form class="sec-body" method="post" action="/publicacoes/{{ j.id }}/editar">
+          <input class="input" name="title" value="{{ j.title or '' }}" maxlength="150" placeholder="vazio = gerado na hora" aria-label="Título">
+          <textarea class="input" name="description" rows="3" placeholder="vazio = modelo da operação" aria-label="Descrição">{{ j.description or '' }}</textarea>
+          <button class="btn sm pri" type="submit">Salvar</button>
+        </form></details>
+      {% endif %}</td>
     <td><span class="chip">{{ labels[j.status] }}</span>{% if j.status_reason %}<br><small class="sub">{{ j.status_reason }}</small>{% endif %}</td>
     <td>
       {% if j.status in ('uncertain', 'failed') %}

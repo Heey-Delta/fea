@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Execução #{{ ex.id }}{% endblock %}
 {% block content %}
-<a class="back" href="/operacoes/{{ op.id }}?aba=execucoes">← {{ op.name }}</a>
+<a class="back" href="/operacoes/{{ op.id }}?aba=execucoes">{{ icon('arrow-left') }} {{ op.name }}</a>
 <div class="top">
   <div>
     <div class="row"><h1>Execução #{{ ex.id }}</h1><span class="chip">{{ label[ex.status] }}</span><span class="chip">prioridade {{ priority_label[ex.priority]|lower }}</span></div>

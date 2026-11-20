@@ -42,10 +42,20 @@
   <div class="status-row">
     <span class="dot {{ 'ok' if t.ok else 'bad' }}" aria-label="{{ 'ok' if t.ok else 'falta' }}"></span>
     <strong>{{ t.name }}</strong>
-    <span><code>{{ t.env }}</code><br><small class="sub">{{ t.hint }}</small></span>
+    <span><code>{{ t.env }}</code><br><small class="sub">{{ t.hint }}</small>
+      {% if t.migrate %}<form method="post" action="/contas/banco/migrar" style="margin-top:8px"><button class="btn sm pri" type="submit">{{ icon('database') }} Aplicar migrações</button></form>{% endif %}</span>
   </div>
   {% endfor %}
 </div>
+{% for st in infra %}
+<section class="card svc" id="{{ st.service.id }}">
+  <div class="svc-head">
+    <div class="svc-title"><span class="ico">{{ icon('database') }}</span><h2>{{ st.service.name }}</h2><span class="chip {{ 'ok' if st.ready else 'bad' }}">{{ 'pronto' if st.ready else 'falta preencher' }}</span></div>
+  </div>
+  <p class="sub">{{ st.service.note }} No bucket, libere o CORS para <code>{{ public_urls['sobre'].rsplit('/', 1)[0] }}</code> (métodos PUT e GET).</p>
+  {{ keys_form(st) }}
+</section>
+{% endfor %}
 
 <div class="section"><h3>2 · Busca de conteúdo</h3><p class="sub">Chaves dos apps usados pelo Buscador. O upload manual não precisa de chave.</p></div>
 <div class="grid-2">

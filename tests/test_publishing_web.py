@@ -137,3 +137,35 @@ def test_access_page_saves_keys_and_blocks_connect_without_app(client, factory):
     assert "removidas" in removed.text
     with factory() as s:
         assert s.get(m.AppCredential, "tiktok_client_key") is None
+
+
+def test_edit_title_before_publishing(client, factory, storage, tmp_path):  # noqa: F811
+    from tests.test_publish import batch
+
+    op_id, _, accounts = make_world(factory, storage, tmp_path, n_items=1)
+    batch(factory, op_id, accounts, first_immediate=True)
+    job = jobs(factory)[0]
+    page = client.get("/publicacoes")
+    assert "Editar título" in page.text
+    saved = client.post(
+        f"/publicacoes/{job.id}/editar", data={"title": "Meu título", "description": ""}
+    )
+    assert "título salvo" in saved.text
+    job = jobs(factory)[0]
+    assert (job.title, job.title_method, job.description) == ("Meu título", "manual", None)
+    # No envio, a descrição e as tags são geradas e o título manual fica.
+    from tests.test_publish import NOW, FakeAdapter, run_publish
+
+    adapter = FakeAdapter()
+    import core.config
+
+    s = core.config.Settings(_env_file=None, token_encryption_key=KEY)
+    assert run_publish(factory, storage, s, adapter, job.id, NOW) == "published"
+    request = adapter.calls[0][1]
+    assert request.title == "Meu título" and request.description.startswith("Meu título")
+
+
+def test_access_page_shows_database_and_r2(client, factory):  # noqa: F811
+    page = client.get("/contas").text
+    assert "Cloudflare R2" in page and "Conectado e atualizado" in page
+    assert client.get("/static/instalar-vps.sh").status_code == 200

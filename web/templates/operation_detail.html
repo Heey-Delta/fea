@@ -1,18 +1,17 @@
 {% extends "base.html" %}
 {% block title %}{{ op.name }}{% endblock %}
 {% block content %}
-<a class="back" href="/operacoes">← Operações</a>
+<a class="back" href="/operacoes">{{ icon('arrow-left') }} Operações</a>
 <div class="top">
   <div>
-    <div class="row"><h1>{{ op.name }}</h1><span class="chip">{{ status_label[op.status] }}</span><span class="chip">config v{{ config.version }}</span></div>
+    <div class="row"><h1>{{ op.name }}</h1><span class="ver">V{{ config.version }}</span><span class="chip {{ 'ok' if op.status == 'active' else ('warn' if op.status == 'paused' else '') }}"><span class="dot {{ 'ok live' if op.status == 'active' else ('warn' if op.status == 'paused' else '') }}"></span>{{ status_label[op.status] }}</span></div>
   </div>
   <div class="row">
-    {% if op.status == 'active' %}<a class="btn pri" href="/operacoes/{{ op.id }}/play">▶ Play</a>{% endif %}
+    <a class="btn pri" href="/operacoes/{{ op.id }}/fluxo">{{ icon('grid') }} {{ 'Ver no editor' if op.status == 'archived' else 'Abrir editor' }}</a>
+    {% if op.status == 'active' %}<a class="btn" href="/operacoes/{{ op.id }}/play">{{ icon('play') }} Executar</a>{% endif %}
     {% for value, label in actions %}
-    <form method="post" action="/operacoes/{{ op.id }}/status"><input type="hidden" name="acao" value="{{ value }}"><button class="btn{% if value == 'active' %} pri{% endif %}" type="submit">{{ label }}</button></form>
+    <form method="post" action="/operacoes/{{ op.id }}/status"><input type="hidden" name="acao" value="{{ value }}"><button class="btn" type="submit">{{ label }}</button></form>
     {% endfor %}
-    <a class="btn" href="/operacoes/{{ op.id }}/fluxo">{{ 'Ver fluxo' if op.status == 'archived' else 'Editar fluxo' }}</a>
-    <a class="btn" href="/operacoes/{{ op.id }}/edicao">Edição e máscaras</a>
     <form method="post" action="/operacoes/{{ op.id }}/duplicar"><button class="btn" type="submit">Duplicar</button></form>
     {% if op.status != 'archived' %}
     <form method="post" action="/operacoes/{{ op.id }}/status" onsubmit="return confirm('Arquivar deixa a operação somente leitura. Continuar?')"><input type="hidden" name="acao" value="archived"><button class="btn" type="submit">Arquivar</button></form>
@@ -28,18 +27,21 @@
 </nav>
 
 {% if tab == 'geral' %}
+{% set counts = {} %}
 <section class="card">
   <h2>Fluxo atual</h2>
   <div class="row">
-    {% for node in config.config.nodes %}<span class="chip">{{ node_label.get(node.type, node.type) }}</span>{% endfor %}
+    <span class="chip">{{ icon('search') }} Busca · {{ config.config.nodes | selectattr('type', 'equalto', 'source') | list | length }} fonte(s)</span>
+    <span class="chip">{{ icon('film') }} Edição</span>
+    <span class="chip">{{ icon('send') }} Publicação · {{ (config.config.nodes | selectattr('type', 'equalto', 'network') | first or {}).get('config', {}).get('profiles', ['youtube_shorts']) | length }} destino(s), {{ config.config.nodes | selectattr('type', 'equalto', 'account') | list | length }} conta(s)</span>
   </div>
-  <a class="btn sm" href="/operacoes/{{ op.id }}/fluxo">Abrir fluxo</a>
+  <div class="row"><a class="btn sm" href="/operacoes/{{ op.id }}/fluxo">{{ icon('grid') }} Abrir editor</a><a class="btn sm ghost" href="/operacoes/{{ op.id }}/edicao">Preset completo da Edição</a></div>
 </section>
 <section class="card">
   <h2>Validação do fluxo</h2>
   {% if not issues %}<p>Fluxo completo. A operação pode ser ativada.</p>{% endif %}
   {% for issue in issues %}
-  <p class="issue {{ issue.level }}"><strong>{{ 'ERRO' if issue.level == 'error' else 'AVISO' }}</strong> {{ issue.message }}</p>
+  <p class="issue {{ issue.level }}"><strong>{{ 'Erro' if issue.level == 'error' else 'Aviso' }}</strong> · {{ issue.message }}</p>
   {% endfor %}
   {% if errors %}<p class="sub">Rascunho pode ser salvo com erros. Ativar fica bloqueado até zerar os erros.</p>{% endif %}
 </section>

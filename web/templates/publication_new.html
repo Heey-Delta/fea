@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Nova publicação{% endblock %}
 {% block content %}
-<a class="back" href="/publicacoes">← Publicações</a>
+<a class="back" href="/publicacoes">{{ icon('arrow-left') }} Publicações</a>
 <h1>Nova publicação</h1>
 <p class="sub">Escolha vídeos aprovados e contas. O Postador gera título, descrição e tags na hora de publicar; o título nunca vai para dentro do vídeo.</p>
 {% if flash %}<p class="{{ 'error' if flash.kind == 'error' else 'notice' }}" role="status">{{ flash.text }}</p>{% endif %}

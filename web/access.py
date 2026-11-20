@@ -80,19 +80,42 @@ def tool_status(request: Request) -> list[dict]:
             "env": "CONTACT_EMAIL, OPERATOR_NAME",
             "hint": "Aparece nas páginas de privacidade e termos que as plataformas pedem.",
         },
-        {
-            "name": "Banco de dados (Neon)",
-            "ok": "localhost" not in s.database_url,
-            "env": "DATABASE_URL",
-            "hint": "Neon pelo Marketplace da Vercel; a mesma URL no .env da VPS.",
-        },
-        {
-            "name": "Armazenamento (Cloudflare R2)",
-            "ok": s.r2_configured,
-            "env": "R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET",
-            "hint": "Sem R2 os arquivos ficam no disco local (só desenvolvimento).",
-        },
+        db_status(request),
     ]
+
+
+def db_status(request: Request) -> dict:
+    from core.migrate import status
+
+    s = request.app.state.settings
+    row = {"name": "Banco de dados (Neon)", "env": "DATABASE_URL", "migrate": False}
+    if "localhost" in s.database_url and s.is_production:
+        return {**row, "ok": False, "hint": "Crie o banco: Vercel → Storage → Neon."}
+    try:
+        st = status(request.app.state.session_factory.kw["bind"])
+    except Exception as exc:  # noqa: BLE001
+        return {**row, "ok": False, "hint": f"Sem conexão com o banco: {str(exc)[:120]}"}
+    if st["up_to_date"]:
+        return {**row, "ok": True, "hint": f"Conectado e atualizado (migração {st['head']})."}
+    current = st["current"] or "nenhuma"
+    return {
+        **row,
+        "ok": False,
+        "migrate": True,
+        "hint": f"Conectado. Migração aplicada: {current}; a mais nova é {st['head']}.",
+    }
+
+
+@router.post("/contas/banco/migrar")
+def migrate(request: Request) -> Response:
+    from core.migrate import upgrade
+
+    try:
+        st = upgrade(request.app.state.session_factory.kw["bind"])
+        flash(request, "ok", f"Banco atualizado até a migração {st['head']}.")
+    except Exception as exc:  # noqa: BLE001
+        flash(request, "error", f"Migração falhou: {str(exc)[:300]}")
+    return RedirectResponse("/contas", status_code=303)
 
 
 @router.get("/contas", response_class=HTMLResponse)
@@ -116,6 +139,7 @@ def page(request: Request, session: Session = Depends(db_session)) -> Response:
         "access.html",
         active="/contas",
         tool=tool_status(request),
+        infra=[s for s in statuses if s.service.group == "infra"],
         search=[s for s in statuses if s.service.group == "busca"],
         publishing=[s for s in statuses if s.service.group == "publicacao"],
         by_platform=by_platform,
@@ -151,6 +175,8 @@ async def save_keys(request: Request, service_id: str, session: Session = Depend
     except creds.CredentialError as exc:
         flash(request, "error", str(exc))
         return RedirectResponse(f"/contas#{service_id}", status_code=303)
+    if service_id == "r2" and hasattr(request.app.state.storage, "refresh"):
+        request.app.state.storage.refresh()
     if saved:
         flash(request, "ok", f"{service.name}: {len(saved)} campo(s) salvo(s).")
     else:
@@ -162,6 +188,8 @@ async def save_keys(request: Request, service_id: str, session: Session = Depend
 def clear_keys(request: Request, service_id: str, session: Session = Depends(db_session)):
     service = get_service(service_id)
     creds.clear(session, service_id)
+    if hasattr(request.app.state.storage, "refresh"):
+        request.app.state.storage.refresh()
     flash(request, "ok", f"{service.name}: chaves salvas pela interface removidas.")
     return RedirectResponse(f"/contas#{service_id}", status_code=303)
 
@@ -195,11 +223,24 @@ def test_x(settings, client: httpx.Client) -> str:
     raise ValueError(f"X recusou o token (HTTP {response.status_code}).")
 
 
+def test_r2(settings, client: httpx.Client) -> str:
+    from core.storage import R2Storage
+
+    if not settings.r2_configured:
+        raise ValueError("preencha as quatro chaves.")
+    storage = R2Storage(settings)
+    try:
+        storage.client.head_bucket(Bucket=settings.r2_bucket)
+    except Exception as exc:  # noqa: BLE001 - botocore tem muitos tipos de erro
+        raise ValueError(f"o R2 recusou o acesso ao bucket ({str(exc)[:160]}).") from exc
+    return f"R2 ok: bucket {settings.r2_bucket} acessível."
+
+
 @router.post("/contas/chaves/{service_id}/testar")
 def test_keys(request: Request, service_id: str, session: Session = Depends(db_session)):
     service = get_service(service_id)
     settings = settings_for(request, session)
-    testers = {"reddit": test_reddit, "x": test_x}
+    testers = {"reddit": test_reddit, "x": test_x, "r2": test_r2}
     if service_id not in testers:
         flash(request, "ok", f"{service.name}: o teste é a própria conexão de uma conta abaixo.")
         return RedirectResponse(f"/contas#{service_id}", status_code=303)

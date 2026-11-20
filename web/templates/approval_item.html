@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Vídeo #{{ c.item.id }}{% endblock %}
 {% block content %}
-<a class="back" href="/aprovacao">← Aprovação</a>
+<a class="back" href="/aprovacao">{{ icon('arrow-left') }} Aprovação</a>
 <div class="top">
   <div class="row"><h1>Vídeo #{{ c.item.id }}</h1><span class="chip">{{ c.item.status }}</span><span class="chip">{{ op.name }}</span>{% if c.item.approved_by %}<span class="chip">aprovado ({{ c.item.approved_by }})</span>{% endif %}</div>
 </div>

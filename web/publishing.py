@@ -237,3 +237,30 @@ def decide(
     except OperationError as exc:
         flash(request, "error", str(exc))
     return RedirectResponse(request.headers.get("referer") or "/publicacoes", status_code=303)
+
+
+@router.post("/publicacoes/{job_id}/editar")
+def edit_metadata(
+    request: Request,
+    job_id: int,
+    title: str = Form(""),
+    description: str = Form(""),
+    session: Session = Depends(db_session),
+) -> Response:
+    """Título e descrição escritos à mão antes do envio (vazio = o Postador gera)."""
+    job = session.get(PublishJob, job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="Envio não encontrado")
+    if job.status not in ("planned", "pending_capacity", "retry_wait"):
+        flash(request, "error", "Só envios que ainda não saíram podem ser editados.")
+    else:
+        title = title.strip()[:150]
+        job.title = title or None
+        job.description = description.strip()[:5000] or None
+        job.title_method = "manual" if title else None
+        if not title:
+            job.tags = None
+        flash(
+            request, "ok", f"Envio #{job.id}: título {'salvo' if title else 'volta a ser gerado'}."
+        )
+    return RedirectResponse(request.headers.get("referer") or "/publicacoes", status_code=303)

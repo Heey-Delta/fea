@@ -149,3 +149,45 @@ def test_daily_token_refresh(factory, storage, settings, tmp_path):  # noqa: F81
     with factory() as s:
         token = TokenCipher(KEY).decrypt(s.get(m.Account, account.id).token_encrypted)
         assert "r0-novo" in token
+
+
+def test_storage_switches_to_r2_saved_in_access_page(factory, settings, tmp_path):  # noqa: F811
+    from core.storage import DynamicStorage, LocalStorage, R2Storage
+
+    settings = settings.model_copy(update={"storage_dir": str(tmp_path)})
+    storage = DynamicStorage(settings, factory, ttl=0)
+    assert isinstance(storage.current(), LocalStorage)
+    with factory() as s:
+        creds.save(
+            s,
+            settings,
+            {
+                "r2_account_id": "conta",
+                "r2_access_key_id": "id",
+                "r2_secret_access_key": "segredo",
+                "r2_bucket": "fea",
+            },
+        )
+        s.commit()
+        assert {st.service.id: st.ready for st in creds.status(s, settings)}["r2"]
+    assert isinstance(storage.current(), R2Storage)
+    assert "fea" in storage.url("a/b.mp4")  # delega para o R2
+
+
+def test_migration_status_and_upgrade(factory):  # noqa: F811
+    from core.migrate import status, upgrade
+
+    engine = factory.kw["bind"]
+    st = status(engine)
+    assert st["up_to_date"] and st["head"] == "0006"
+    assert upgrade(engine)["up_to_date"]
+
+
+def test_vps_installer_is_served_and_valid():
+    import subprocess
+    from pathlib import Path
+
+    script = Path("web/static/instalar-vps.sh")
+    assert subprocess.run(["bash", "-n", str(script)]).returncode == 0
+    text = script.read_text()
+    assert "DATABASE_URL" in text and "TOKEN_ENCRYPTION_KEY" in text and "Deploy keys" in text

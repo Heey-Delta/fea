@@ -3,7 +3,7 @@
   "framework": "fastapi",
   "functions": {
     "app.py": {
-      "excludeFiles": "{tests/**,worker/**,docker/**,docs/**,migrations/**,.github/**}"
+      "excludeFiles": "{tests/**,worker/**,docker/**,docs/**,deploy/**,.github/**}"
     }
   }
 }

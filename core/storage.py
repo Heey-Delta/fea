@@ -8,6 +8,7 @@ Chaves seguem a organização da especificação:
 """
 
 import shutil
+import time
 from functools import lru_cache
 from pathlib import Path
 from typing import Protocol
@@ -139,6 +140,63 @@ def make_storage(settings: Settings) -> Storage:
     return R2Storage(settings) if settings.r2_configured else LocalStorage(settings.storage_dir)
 
 
+class DynamicStorage:
+    """Armazenamento escolhido na hora: R2 se as chaves existem (variável de ambiente ou tela
+    Acessos), senão o disco local. Relê as chaves no banco a cada `ttl` segundos, então salvar
+    o R2 na interface vale para a interface e para os workers sem reiniciar nada.
+    """
+
+    def __init__(self, settings: Settings, session_factory=None, ttl: float = 60.0):
+        self.settings = settings
+        self.session_factory = session_factory
+        self.ttl = ttl
+        self._inner: Storage | None = None
+        self._key: tuple | None = None
+        self._at = -1e9
+
+    def _effective(self) -> Settings:
+        if self.session_factory is None:
+            return self.settings
+        try:
+            from core.credentials import effective
+
+            with self.session_factory() as session:
+                return effective(session, self.settings)
+        except Exception:  # noqa: BLE001 - sem banco: só as variáveis de ambiente
+            return self.settings
+
+    def current(self) -> Storage:
+        now = time.monotonic()
+        if self._inner is not None and now - self._at < self.ttl:
+            return self._inner
+        eff = self._effective()
+        key = (
+            eff.r2_account_id,
+            eff.r2_access_key_id,
+            eff.r2_secret_access_key,
+            eff.r2_bucket,
+            eff.storage_dir,
+        )
+        if key != self._key or self._inner is None:
+            self._inner = make_storage(eff)
+            self._key = key
+        self._at = now
+        return self._inner
+
+    def refresh(self) -> None:
+        self._at = -1e9
+
+    def __getattr__(self, name: str):
+        return getattr(self.current(), name)
+
+
+def unwrap(storage) -> Storage:
+    return storage.current() if isinstance(storage, DynamicStorage) else storage
+
+
 @lru_cache
 def get_storage() -> Storage:
-    return make_storage(get_settings())
+    """Workers: R2 da variável de ambiente ou da tela Acessos."""
+    from core.db import get_sessionmaker
+
+    return DynamicStorage(get_settings(), get_sessionmaker())

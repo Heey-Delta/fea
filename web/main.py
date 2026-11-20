@@ -28,7 +28,7 @@ from core import dashboard as dash
 from core.config import Settings, get_settings
 from core.db import sqlalchemy_url
 from core.logging import configure_logging
-from core.storage import LocalStorage, make_storage
+from core.storage import DynamicStorage, LocalStorage, unwrap
 from networks import make_adapter
 from web import (
     access,
@@ -71,7 +71,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         sqlalchemy_url(settings.database_url), pool_pre_ping=True, pool_size=2, max_overflow=2
     )
     app.state.session_factory = sessionmaker(bind=engine, expire_on_commit=False)
-    app.state.storage = make_storage(settings)
+    app.state.storage = DynamicStorage(settings, app.state.session_factory)
     app.state.adapter_factory = lambda platform, current=None: make_adapter(
         platform, current or settings
     )
@@ -186,7 +186,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.get("/arquivos/{key:path}")
     def local_file(key: str, user: str = Depends(require_user)) -> Response:
         """Serve arquivos do disco local em desenvolvimento. Com R2, as URLs são assinadas."""
-        storage = app.state.storage
+        storage = unwrap(app.state.storage)
         if not isinstance(storage, LocalStorage):
             return Response(status_code=404)
         try:

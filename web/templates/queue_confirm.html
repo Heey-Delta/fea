@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Confirmar · Fila{% endblock %}
 {% block content %}
-<a class="back" href="/fila">← Fila</a>
+<a class="back" href="/fila">{{ icon('arrow-left') }} Fila</a>
 <h1>{{ s.label }}</h1>
 <div class="card">
   <p><strong>{{ s.ok | length }}</strong> itens entram{% if s.by_status %}: {% for k, v in s.by_status.items() %}{{ v }} {{ k }}{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}.</p>
