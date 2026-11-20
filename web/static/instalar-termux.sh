@@ -71,7 +71,7 @@ pip install --upgrade pip wheel setuptools
 # pydantic-core (Rust, 15 a 40 minutos). Por isso o pydantic vem por último, isolado.
 say "Instalando as bibliotecas leves…"
 pip install "sqlalchemy>=2.0" "alembic>=1.13" "psycopg>=3.2" "httpx>=0.27" "boto3>=1.35" \
-  "itsdangerous>=2.2" "jinja2>=3.1" \
+  "itsdangerous>=2.2" "jinja2>=3.1" "tzdata" \
   || die "Falhou uma biblioteca leve. Copie as últimas linhas do erro (sem chaves) e mande ao Claude."
 say "Instalando o pydantic (a parte mais demorada: pode compilar por 15 a 40 minutos)…"
 pkg install -y python-pydantic 2>/dev/null || say "Sem pacote pronto do pydantic: o pip vai compilar."
@@ -129,6 +129,10 @@ grep -q '.local/bin' "$HOME/.bashrc" 2>/dev/null || echo 'export PATH="$HOME/.lo
 export PATH="$HOME/.local/bin:$PATH"
 
 # 7. Verificação e migrações
+# O Termux não traz o banco de fusos horários do sistema: o pacote tzdata do pip supre isso.
+say "Verificando se os módulos dos workers carregam…"
+python -c "import worker.handlers, worker.publish, worker.render, worker.collect" \
+  || die "Um módulo dos workers não carregou (erro acima). Copie as últimas linhas, sem chaves, e mande ao Claude."
 say "Verificando FFmpeg e o banco…"
 python -m worker check
 say "Aplicando migrações do banco…"
