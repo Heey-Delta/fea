@@ -11,10 +11,10 @@ from fastapi.responses import HTMLResponse, Response
 router = APIRouter()
 
 PAGES = {
-    "sobre": ("Sobre", "public/about.html"),
-    "privacidade": ("Política de privacidade", "public/privacy.html"),
-    "termos": ("Termos de uso", "public/terms.html"),
-    "exclusao-de-dados": ("Exclusão de dados", "public/deletion.html"),
+    "sobre": ("Sobre", "legal/about.html"),
+    "privacidade": ("Política de privacidade", "legal/privacy.html"),
+    "termos": ("Termos de uso", "legal/terms.html"),
+    "exclusao-de-dados": ("Exclusão de dados", "legal/deletion.html"),
 }
 UPDATED = "20/11/2026"
 
