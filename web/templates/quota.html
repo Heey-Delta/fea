@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block title %}Limite do R2{% endblock %}
+{% block content %}
+<h1>Limite de uso atingido</h1>
+<p class="callout" role="alert">{{ message }}</p>
+<p class="sub">Para não gerar cobrança, a ferramenta parou de gravar e ler arquivos no Cloudflare R2 neste mês. <a href="/#uso">Ver o uso e ajustar o limite no Dashboard</a>.</p>
+{% endblock %}

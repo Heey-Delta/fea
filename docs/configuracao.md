@@ -37,8 +37,8 @@ Feito: o Neon está conectado ao projeto e a Vercel gravou `DATABASE_URL` e `DAT
 ## 3 · Tela Acessos (dentro da ferramenta)
 
 1. **Banco de dados**: já deve aparecer "Conectado e atualizado". Se pedir, clique em **Aplicar migrações**.
-2. **Cloudflare R2** (15 min):
-   - Cloudflare → R2 → **Create bucket** (ex.: `fea`).
+2. **Cloudflare R2** (15 min). R2 ativado no plano grátis e bucket `fea` criado ✓.
+   - **Limite de uso:** a Cloudflare não tem teto de gastos para o R2. A ferramenta conta cada gravação, leitura e o tamanho do bucket, e para sozinha ao chegar em 80% da franquia grátis (1 milhão de gravações, 10 milhões de leituras e 10 GB por mês). O uso e o percentual ficam no **Dashboard → Limite de uso do R2**. Apagar arquivos é grátis e nunca é bloqueado.
    - **Manage API Tokens** → crie um token com *Object Read & Write* só nesse bucket.
    - Cole na tela Acessos o Account ID, o Access Key ID, o Secret Access Key e o nome do bucket, e clique em **Testar**.
    - No bucket → Settings → CORS policy:

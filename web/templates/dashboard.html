@@ -30,6 +30,30 @@
     {% else %}<p class="sub">Nada publicado ainda.</p>{% endfor %}
   </section>
 </div>
+{% if r2_usage %}
+<section class="card" id="uso">
+  <div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <h2>Limite de uso do R2 · {{ r2_usage.month }}</h2>
+    <span class="chip {{ 'bad' if r2_usage.blocked else 'ok' }}">{{ 'travado até o mês que vem' if r2_usage.blocked else 'dentro do grátis' }}</span>
+  </div>
+  <p class="sub" style="margin:0">A Cloudflare não tem teto de gastos: passou da franquia grátis, cobra. Por isso a ferramenta conta o que faz no bucket e para sozinha ao chegar em {{ r2_usage.pct }}% da franquia. Nada é cobrado; o que ficar parado volta no mês seguinte.</p>
+  {% for r in r2_usage.rows %}
+  <div class="usage-row">
+    <strong>{{ r.label }}</strong>
+    <span class="mono">{{ r.fmt(r.value) }} / {{ r.fmt(r.limit) }}</span>
+    <div class="usage-bar {{ r.level }}" role="progressbar" aria-label="{{ r.label }}" aria-valuenow="{{ r.pct_of_limit }}" aria-valuemin="0" aria-valuemax="100"><span style="width:{{ r.pct_of_limit }}%"></span></div>
+    <small>grátis até {{ r.fmt(r.free) }} por mês</small>
+  </div>
+  {% endfor %}
+  <form class="usage-form" method="post" action="/uso/limite">
+    <label for="pct">Parar em</label>
+    <input class="input" id="pct" name="pct" type="number" min="10" max="100" step="5" value="{{ r2_usage.pct }}">
+    <span>% da franquia grátis</span>
+    <button class="btn sm" type="submit">Salvar</button>
+    <small class="sub" style="margin:0">Armazenamento medido {{ r2_usage.measured_at.strftime('%d/%m %H:%M') ~ ' UTC' if r2_usage.measured_at else 'quando os workers estiverem no ar' }} (de hora em hora).</small>
+  </form>
+</section>
+{% endif %}
 <section class="card">
   <h2>Falhas e alertas recentes</h2>
   {% if errors %}

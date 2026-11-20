@@ -394,3 +394,13 @@ details.sec > .sec-body { display: flex; flex-direction: column; gap: 14px; padd
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
 }
+
+/* Limite de uso do R2 (dashboard) */
+.usage-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; align-items: baseline; }
+.usage-row small { color: var(--muted); }
+.usage-bar { grid-column: 1 / -1; height: 8px; border-radius: 99px; background: var(--line); overflow: hidden; }
+.usage-bar > span { display: block; height: 100%; border-radius: inherit; background: var(--ok); transition: width .6s var(--ease); }
+.usage-bar.warn > span { background: var(--warn); }
+.usage-bar.bad > span { background: var(--error); }
+.usage-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.usage-form .input { width: 84px; }

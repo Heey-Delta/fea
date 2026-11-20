@@ -20,6 +20,7 @@ from core import masks, queue
 from core import operations as ops
 from core.editor import preset as pr
 from core.models import Event, Item, Operation
+from core.storage import is_remote
 from networks import PROFILES, profile_of_config
 from web.common import db_session, render, require_user
 
@@ -316,7 +317,7 @@ def asset_upload_local(
 ) -> JSONResponse:
     get_op(session, operation_id)
     storage = request.app.state.storage
-    if storage.upload_url("x.png", "image/png"):
+    if is_remote(storage):
         raise HTTPException(status_code=409, detail="Com R2, envie pela URL assinada.")
     key = asset_key(operation_id, file.filename or "")
     with tempfile.NamedTemporaryFile(delete=False) as tmp:
