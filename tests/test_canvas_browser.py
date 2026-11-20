@@ -109,48 +109,56 @@ def saved_config(factory, op_id):
         return ops.current_config(s, s.get(ops.Operation, op_id)).config
 
 
-def test_flow_shows_three_blocks_and_issues(page, server, factory):
+def test_editor_shows_nodes_and_validation(page, server, factory):
     op_id = make_operation(factory)
     page.goto(f"{server}/operacoes/{op_id}/fluxo")
-    page.wait_for_selector("[data-block]")
-    names = page.locator(".block .name").all_inner_texts()
-    assert names == ["Pesca", "Motor Editor", "Publicador"]
-    assert "Fontes de busca" in page.text_content("#panel")  # Pesca aberta por padrão
-    assert "Adicione ao menos uma fonte de busca na Pesca." in page.inner_text("#canvas-issues")
-    assert "bad" in page.get_attribute('[data-dot="pesca"]', "class")
+    page.wait_for_selector(".node")
+    ids = page.eval_on_selector_all(".node", "els => els.map(e => e.dataset.id)")
+    assert ids == ["busca", "edicao", "dest:youtube_shorts"]
+    assert page.locator("path.edge").count() == 2
+    assert page.inner_text("#val-title") == "Fluxo com erros"
+    assert "Adicione ao menos uma fonte" in page.inner_text("#val-msg")
+    assert page.is_disabled("#activate")
+    page.click("#val-state")
+    assert "Escolha ao menos uma conta" in page.inner_text("#issues")
 
 
-def test_configure_all_blocks_and_save(page, server, factory):
+def test_configure_all_modules_and_save(page, server, factory):
     op_id = make_operation(factory)
     youtube = make_account(factory, "youtube", "Canal YT")
     tiktok = make_account(factory, "tiktok", "Perfil TT")
     page.goto(f"{server}/operacoes/{op_id}/fluxo")
-    page.wait_for_selector("[data-block]")
-    # Pesca: fonte do Reddit e do X, tags.
+    page.wait_for_selector(".node")
+    # Busca: duas fontes (Reddit e X) e tags.
+    page.click('.node[data-id="busca"]')
     page.click("#add-source")
     page.fill('[data-source="0"] [data-src="reference"]', "r/teste")
     page.fill('[data-source="0"] [data-src="permission_note"]', "autorizado")
-    page.click("#add-source")
-    page.select_option('[data-source="1"] [data-src="type"]', "x")
+    page.click('[data-pop="library"]')
+    page.click('[data-add-source="x"]')
     page.fill('[data-source="1"] [data-src="reference"]', "@criador")
+    page.click("summary:has-text('Filtros e tags')")
     page.fill('[data-bind="fishing.tags"]', "academia, treino")
-    assert "r/teste" in page.inner_text('[data-summary="pesca"]')
-    # Motor Editor: resolução e enquadramento.
-    page.click('[data-block="editor"]')
+    # Edição: formato e enquadramento.
+    page.click('.node[data-id="edicao"]')
     page.select_option("#resolution", "720x1280")
+    page.click("summary:has-text('Enquadramento')")
     page.select_option('[data-bind="edit.preset.video.fit"]', "cover")
-    # Publicador: YouTube + TikTok, as duas contas, aprovação automática.
-    page.click('[data-block="publicador"]')
-    page.check('[data-profile="tiktok"]')
-    page.check(f'[data-account="{youtube}"]')
+    # Publicação: novo destino TikTok em ramificação, contas e aprovação automática.
+    page.click('[data-pop="library"]')
+    page.click('[data-add-dest="tiktok"]')
+    assert page.locator("path.edge").count() == 3
     page.check(f'[data-account="{tiktok}"]')
+    page.click('.node[data-id="dest:youtube_shorts"]')
+    page.check(f'[data-account="{youtube}"]')
     page.check('input[name="approval"][value="auto"]')
+    page.click("summary:has-text('Título e descrição')")
     page.fill('[data-bind="publish.titles.hashtags"]', "shorts, academia")
+    assert page.inner_text("#val-title") == "Fluxo válido" or "aviso" in page.inner_text("#val-msg")
     page.click("#save")
-    page.wait_for_function("document.querySelector('#canvas-status').textContent.includes('salva')")
-    assert page.inner_text("#version") == "v2"
+    page.wait_for_function("document.querySelector('#version').textContent === 'V2'")
     config = saved_config(factory, op_id)
-    assert ops.linked_account_ids(config) == [youtube, tiktok]
+    assert sorted(ops.linked_account_ids(config)) == sorted([youtube, tiktok])
     assert [i for i in ops.validate_graph(config) if i.level == "error"] == []
     by_type = {}
     for node in config["nodes"]:
@@ -163,39 +171,78 @@ def test_configure_all_blocks_and_save(page, server, factory):
     assert (preset["video"]["width"], preset["video"]["fit"]) == (720, "cover")
     assert by_type["approval"][0]["config"]["auto_approve"] is True
     assert by_type["publish"][0]["config"]["titles"]["hashtags"] == ["shorts", "academia"]
-    # Ao desmarcar a rede, a conta dela sai junto.
-    page.uncheck('[data-profile="tiktok"]')
-    assert page.locator(f'[data-account="{tiktok}"]').count() == 0
+    assert "dest:tiktok" in config["layout"]
+    # Remover o destino leva a conta dele junto.
+    page.click('.node[data-id="dest:tiktok"]')
+    page.click("#remove-dest")
+    assert page.locator('.node[data-id="dest:tiktok"]').count() == 0
+    assert tiktok not in page.evaluate("window.feaFlow.model.accountIds")
 
 
-def test_mask_upload_from_editor_block(page, server, factory, tmp_path):
+def test_drag_undo_and_redo(page, server, factory):
+    op_id = make_operation(factory)
+    page.goto(f"{server}/operacoes/{op_id}/fluxo")
+    page.wait_for_selector(".node")
+    before = page.evaluate("window.feaFlow.model.layout.edicao")
+    box = page.locator('.node[data-id="edicao"]').bounding_box()
+    page.mouse.move(box["x"] + 60, box["y"] + 40)
+    page.mouse.down()
+    page.mouse.move(box["x"] + 160, box["y"] + 140, steps=8)
+    page.mouse.up()
+    moved = page.evaluate("window.feaFlow.model.layout.edicao")
+    assert moved["x"] > before["x"] and moved["y"] > before["y"]
+    page.wait_for_function("!document.querySelector('#undo').disabled")
+    page.click("#undo")
+    assert page.evaluate("window.feaFlow.model.layout.edicao") == before
+    page.click("#redo")
+    assert page.evaluate("window.feaFlow.model.layout.edicao") == moved
+
+
+def test_mask_upload_from_edicao(page, server, factory, tmp_path):
     from PIL import Image
 
     op_id = make_operation(factory)
     png = tmp_path / "moldura.png"
     Image.new("RGBA", (1080, 1920), (0, 0, 0, 0)).save(png)
     page.goto(f"{server}/operacoes/{op_id}/fluxo")
-    page.click('[data-block="editor"]')
+    page.wait_for_selector(".node")
+    page.click('.node[data-id="edicao"]')
     page.set_input_files("#mask-file", str(png))
-    page.wait_for_function(
-        "document.querySelector('#mask-status').textContent.includes('importada')"
-    )
-    assert page.is_checked('input[name="mask"]:not([value=""])')
-    assert "moldura" in page.inner_text('[data-summary="editor"]')
+    page.wait_for_selector('input[name="mask"]:not([value=""]):checked')
     page.click("#save")
-    page.wait_for_function("document.querySelector('#canvas-status').textContent.includes('salva')")
-    preset = next(n for n in saved_config(factory, op_id)["nodes"] if n["type"] == "edit")
-    assert preset["config"]["preset"]["mask"]["mask_id"]
+    page.wait_for_function("document.querySelector('#version').textContent === 'V2'")
+    edit = next(n for n in saved_config(factory, op_id)["nodes"] if n["type"] == "edit")
+    assert edit["config"]["preset"]["mask"]["mask_id"]
+
+
+def test_tabs_logs_and_version_restore(page, server, factory):
+    op_id = make_operation(factory)
+    page.goto(f"{server}/operacoes/{op_id}/fluxo")
+    page.wait_for_selector(".node")
+    page.click('.node[data-id="busca"]')
+    page.click("#add-source")
+    page.fill('[data-source="0"] [data-src="reference"]', "r/nova")
+    page.click("#save")
+    page.wait_for_function("document.querySelector('#version').textContent === 'V2'")
+    page.click('[data-tab="logs"]')
+    assert "Últimos eventos" in page.inner_text("#view-logs")
+    page.click('[data-tab="config"]')
+    page.click('[data-restore="1"]')
+    page.wait_for_function("(document.querySelector('#version') || {}).textContent === 'V3'")
+    config = saved_config(factory, op_id)
+    assert not [n for n in config["nodes"] if n["type"] == "source"]
 
 
 def test_archived_operation_is_read_only(page, server, factory):
     op_id = make_operation(factory, complete_config(), status="archived")
     page.goto(f"{server}/operacoes/{op_id}/fluxo")
-    page.wait_for_selector("[data-block]")
+    page.wait_for_selector(".node")
     assert page.locator("#save").count() == 0
-    assert page.locator("#add-source").count() == 0
+    assert page.locator('[data-pop="library"]').count() == 0
+    assert page.get_attribute("#op-name", "contenteditable") is None
+    page.click('.node[data-id="busca"]')
+    page.click("summary:has-text('Filtros e tags')")
     assert page.is_disabled('[data-bind="fishing.tags"]')
-    assert "Somente leitura" in page.inner_text(".top")
 
 
 def test_manual_upload_from_sources_tab(page, server, factory, tmp_path):

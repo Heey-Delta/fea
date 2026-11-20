@@ -82,4 +82,4 @@ def test_dashboard_counts_link_to_filtered_queues(factory, logged_client, tmp_pa
     page = logged_client.get("/").text
     block = page.split('href="/fila?estado=pending_permission"')[1][:200]
     assert '<span class="num">1</span>' in block
-    assert "Operações ativas" in page and "Erros recentes" in page
+    assert "Operações ativas" in page and "Falhas e alertas recentes" in page

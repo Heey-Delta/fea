@@ -140,13 +140,13 @@ Na própria tela Acessos, ajuste em cada conta o **limite diário** (padrão 3) 
 
 ## Etapa 8 · Primeira operação (15 min)
 
-1. Operações → **Nova operação**.
-2. **Fluxo** → clique em cada bloco:
-   - **Pesca**: adicione as fontes (rede de busca, comunidade ou @, e a permissão de uso), as tags, a meta por Play e, se quiser, o Play diário automático.
-   - **Motor Editor**: escolha a resolução e o enquadramento, e importe a máscara PNG (1080×1920 com transparência). Em "Textos, logo, áudio e Testar preset", configure o resto e rode um teste.
-   - **Publicador**: marque as redes e as contas, a aprovação (manual ou automática), a distribuição e o modelo de título e hashtags.
-3. **Salvar versão** e confira a "Validação do fluxo".
-4. Na operação: **Ativar** → **▶ Play**.
+1. Operações → dê um nome → **Nova operação**. O editor abre em seguida.
+2. Na malha, clique em cada nó; as configurações aparecem no painel **Propriedades**, à direita:
+   - **Busca**: as fontes (Reddit, X ou upload, com a comunidade ou @ e a permissão de uso), os filtros e tags, a quantidade por Play e a automação.
+   - **Edição**: o formato, a máscara PNG ("Selecionar arquivo"), a marca d'água própria, o áudio e o enquadramento. Em "Avançado" ficam os textos e o teste de render.
+   - **Publicação**: as contas de cada rede, a aprovação, o agendamento, o título e a descrição, e a limpeza. Para publicar em mais redes, use **+** no nó Edição (ou a biblioteca de módulos) e adicione o destino.
+3. **Salvar** (Ctrl+S) e confira a barra **Validação** embaixo.
+4. **Ativar operação** (barra inferior) → **Executar**.
 5. Acompanhe em Fila → Aprovação → Publicações. O Dashboard mostra o resumo e os erros.
 
 ## Decisões que continuam com você

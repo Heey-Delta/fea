@@ -1,50 +1,94 @@
 {% extends "base.html" %}
-{% block title %}Fluxo · {{ op.name }}{% endblock %}
+{% block title %}{{ op.name }}{% endblock %}
+{% block body_class %}editor-page{% endblock %}
 {% block content %}
-<a class="back" href="/operacoes/{{ op.id }}">← {{ op.name }}</a>
-<div class="top">
-  <div>
-    <div class="row">
-      <h1>Fluxo da operação</h1>
-      <span class="chip" id="version">v{{ config.version }}</span>
-      {% if read_only %}<span class="chip warn">Somente leitura</span>{% endif %}
+{% set st = op.status %}
+<div class="editor" id="editor">
+  <header class="ed-head">
+    <div>
+      <a class="back" href="/operacoes">{{ icon('arrow-left') }} Voltar</a>
+      <div class="ed-title">
+        <h1 id="op-name" {% if not read_only %}contenteditable="true" spellcheck="false" title="Clique para renomear"{% endif %}>{{ op.name }}</h1>
+        <span class="ver" id="version">V{{ config.version }}</span>
+        <span class="chip {{ 'ok' if st == 'active' else ('warn' if st == 'paused' else '') }}" id="op-status">
+          <span class="dot {{ 'ok live' if st == 'active' else ('warn' if st == 'paused' else '') }}"></span>{{ status_label[st] }}
+        </span>
+      </div>
+      <p class="ed-desc" id="op-desc">{{ config.config.get('description') or 'Fluxo para busca, edição e publicação de vídeos automaticamente.' }}</p>
     </div>
-    <p class="sub">Três blocos ligados em sequência. Clique em um bloco para configurar: de onde a Pesca busca, como o Motor Editor padroniza e onde o Publicador posta. Salvar cria uma versão nova.</p>
+    <div class="ed-actions">
+      <button class="btn icon lg" type="button" id="undo" title="Desfazer (Ctrl+Z)" aria-label="Desfazer" disabled>{{ icon('undo') }}</button>
+      <button class="btn icon lg" type="button" id="redo" title="Refazer (Ctrl+Shift+Z)" aria-label="Refazer" disabled>{{ icon('redo') }}</button>
+      <span class="vsep" aria-hidden="true"></span>
+      {% if not read_only %}<button class="btn lg" type="button" id="save" title="Salvar versão (Ctrl+S)">{{ icon('save') }} Salvar</button>{% endif %}
+      <a class="btn lg pri" id="run" href="/operacoes/{{ op.id }}/play" {% if st != 'active' %}aria-disabled="true" title="Ative a operação para executar"{% endif %}>{{ icon('play') }} Executar</a>
+    </div>
+  </header>
+
+  <div class="ed-bar">
+    <div class="seg" role="tablist" aria-label="Seções do editor">
+      <button type="button" role="tab" class="on" data-tab="flow" aria-selected="true">{{ icon('grid') }} Fluxo</button>
+      <button type="button" role="tab" data-tab="config" aria-selected="false">{{ icon('settings') }} Configurações</button>
+      <button type="button" role="tab" data-tab="logs" aria-selected="false">{{ icon('log') }} Logs</button>
+    </div>
+    <div class="zoombar" id="zoombar">
+      <div class="zoom">
+        <button type="button" id="zoom-out" aria-label="Diminuir zoom">{{ icon('minus') }}</button>
+        <output id="zoom-level">100%</output>
+        <button type="button" id="zoom-in" aria-label="Aumentar zoom">{{ icon('plus') }}</button>
+      </div>
+      <button class="btn icon" type="button" id="fit-top" title="Enquadrar fluxo" aria-label="Enquadrar fluxo">{{ icon('fit') }}</button>
+      <button class="btn icon" type="button" id="mm-toggle" title="Minimapa" aria-label="Mostrar ou esconder o minimapa">{{ icon('map') }}</button>
+    </div>
   </div>
+
+  <div class="ed-body tab-flow" id="ed-body">
+    <section class="stage" id="stage" aria-label="Malha do fluxo">
+      <div class="tools" role="toolbar" aria-label="Ferramentas">
+        <button class="tool on" type="button" id="tool-select" title="Selecionar e mover" aria-label="Selecionar e mover">{{ icon('cursor') }}</button>
+        {% if not read_only %}<button class="tool" type="button" data-pop="library" title="Adicionar módulo" aria-label="Adicionar módulo">{{ icon('plus') }}</button>{% endif %}
+        <button class="tool" type="button" data-pop="layers" title="Módulos do fluxo" aria-label="Módulos do fluxo">{{ icon('layers') }}</button>
+        <button class="tool" type="button" data-pop="history" title="Histórico de versões" aria-label="Histórico de versões">{{ icon('history') }}</button>
+        <span class="tool-sep"></span>
+        <button class="tool" type="button" id="fit" title="Enquadrar fluxo" aria-label="Enquadrar fluxo">{{ icon('fit') }}</button>
+      </div>
+      <div class="popover" id="pop-library" hidden></div>
+      <div class="popover" id="pop-layers" hidden></div>
+      <div class="popover" id="pop-history" hidden></div>
+      <div class="world" id="world">
+        <svg class="edges" id="edges" aria-hidden="true">
+          <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#8a8a86"/></marker></defs>
+        </svg>
+      </div>
+      <div class="minimap" id="minimap"><svg id="mm" aria-label="Minimapa"></svg></div>
+    </section>
+    <aside class="inspector" aria-label="Propriedades do módulo">
+      <div class="ins-head">
+        <h2>Propriedades</h2>
+        <button class="ins-toggle" type="button" id="ins-toggle" aria-label="Recolher painel">{{ icon('chevron-right') }}</button>
+      </div>
+      <div class="ins-body" id="ins-body"></div>
+    </aside>
+    <section class="view" id="view-config" role="tabpanel" aria-label="Configurações"></section>
+    <section class="view" id="view-logs" role="tabpanel" aria-label="Logs"></section>
+  </div>
+
+  <footer class="ed-bottom">
+    <span class="val">{{ icon('check-box') }} Validação</span>
+    <button class="state" type="button" id="val-state" aria-expanded="false" aria-controls="issues"><span class="dot ok"></span><span id="val-title">Fluxo válido</span></button>
+    <span class="msg" id="val-msg">Sem erros ou avisos.</span>
+    <span class="when" id="canvas-status"></span>
+    {% if not read_only %}
+    <form method="post" action="/operacoes/{{ op.id }}/status" id="status-form">
+      <input type="hidden" name="acao" value="{{ 'paused' if st == 'active' else 'active' }}">
+      <input type="hidden" name="voltar" value="/operacoes/{{ op.id }}/fluxo">
+      <button class="btn lg pri" type="submit" id="activate">{{ 'Pausar operação' if st == 'active' else 'Ativar operação' }}</button>
+    </form>
+    {% endif %}
+    <div class="issues-pop" id="issues" hidden></div>
+  </footer>
 </div>
-
-<div class="flow" role="list" aria-label="Blocos da operação">
-  <button class="block" type="button" role="listitem" data-block="pesca" aria-controls="panel">
-    <span class="step"><span>1 · Busca</span><span class="dot" data-dot="pesca"></span></span>
-    <span class="name">Pesca</span>
-    <ul data-summary="pesca"></ul>
-  </button>
-  <span class="link" aria-hidden="true"></span>
-  <button class="block" type="button" role="listitem" data-block="editor" aria-controls="panel">
-    <span class="step"><span>2 · Edição</span><span class="dot" data-dot="editor"></span></span>
-    <span class="name">Motor Editor</span>
-    <ul data-summary="editor"></ul>
-  </button>
-  <span class="link" aria-hidden="true"></span>
-  <button class="block" type="button" role="listitem" data-block="publicador" aria-controls="panel">
-    <span class="step"><span>3 · Publicação</span><span class="dot" data-dot="publicador"></span></span>
-    <span class="name">Publicador</span>
-    <ul data-summary="publicador"></ul>
-  </button>
-</div>
-
-<section class="panel" id="panel" aria-live="polite"></section>
-
-<section class="card">
-  <h2>Validação do fluxo</h2>
-  <div id="canvas-issues"></div>
-</section>
-
-<div class="savebar">
-  <span id="canvas-status" role="status">Nenhuma alteração.</span>
-  {% if not read_only %}<button class="btn pri" type="button" id="save">Salvar versão</button>{% endif %}
-</div>
-
 <script id="canvas-data" type="application/json">{{ boot | tojson }}</script>
-<script src="{{ url_for('static', path='canvas.js') }}"></script>
+{% if flash %}<script id="flash-data" type="application/json">{{ flash | tojson }}</script>{% endif %}
+<script src="{{ url_for('static', path='editor.js') }}"></script>
 {% endblock %}

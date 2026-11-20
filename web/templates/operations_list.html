@@ -4,47 +4,68 @@
 <div class="top">
   <div>
     <h1>Operações</h1>
-    <p class="sub">Cada operação tem seu fluxo de blocos, sua configuração versionada e seu Play.</p>
+    <p class="sub">Cada operação é um fluxo de Busca, Edição e Publicação, com versões e execução própria.</p>
   </div>
-  <form class="row" method="post" action="/operacoes">
+  <form class="row" method="post" action="/operacoes" style="flex-wrap:nowrap">
     <label class="sr" for="name">Nome da nova operação</label>
-    <input class="input" id="name" name="name" placeholder="Nome da nova operação" required>
-    <button class="btn pri" type="submit">+ Nova operação</button>
+    <input class="input" id="name" name="name" placeholder="Nome da nova operação" required style="min-width:240px">
+    <button class="btn pri" type="submit">{{ icon('plus') }} Nova operação</button>
   </form>
 </div>
 {% if flash %}<p class="{{ 'error' if flash.kind == 'error' else 'notice' }}" role="status">{{ flash.text }}</p>{% endif %}
 
-<nav class="row chips" aria-label="Filtrar por estado">
-  <a class="chip{% if not status %} on{% endif %}" href="/operacoes">Todas</a>
-  {% for key, label in status_label.items() %}
-  <a class="chip{% if status == key %} on{% endif %}" href="/operacoes?status={{ key }}">{{ label }}</a>
-  {% endfor %}
-</nav>
+<div class="grid" style="margin-bottom:18px">
+  <a class="card kpi" href="/operacoes"><span class="lbl">Total</span><span class="num">{{ counts.values() | sum }}</span></a>
+  <a class="card kpi" href="/operacoes?status=active"><span class="lbl">Ativas</span><span class="num">{{ counts.get('active', 0) }}</span></a>
+  <a class="card kpi" href="/operacoes?status=draft"><span class="lbl">Rascunhos</span><span class="num">{{ counts.get('draft', 0) }}</span></a>
+  <a class="card kpi" href="/operacoes?status=paused"><span class="lbl">Pausadas</span><span class="num">{{ counts.get('paused', 0) }}</span></a>
+</div>
+
+<div class="row" style="justify-content:space-between;margin-bottom:14px">
+  <nav class="row" aria-label="Filtrar por estado">
+    <a class="chip{% if not status %} on{% endif %}" href="/operacoes">Todas</a>
+    {% for key, label in status_label.items() %}
+    <a class="chip{% if status == key %} on{% endif %}" href="/operacoes?status={{ key }}">{{ label }}</a>
+    {% endfor %}
+  </nav>
+  <label class="searchbox">{{ icon('search') }}<span class="sr">Buscar operação</span>
+    <input class="input" type="search" id="op-search" placeholder="Buscar operação" autocomplete="off"></label>
+</div>
 
 {% if operations %}
 <div class="tbl">
   <table>
-    <thead><tr><th>Operação</th><th>Estado</th><th>Config</th><th>Atualizada</th><th>Ações</th></tr></thead>
-    <tbody>
+    <thead><tr><th>Operação</th><th>Estado</th><th>Versão</th><th>Atualizada</th><th style="text-align:right">Ações</th></tr></thead>
+    <tbody id="op-rows">
     {% for op in operations %}
-      <tr>
-        <td><a href="/operacoes/{{ op.id }}"><strong>{{ op.name }}</strong></a></td>
-        <td><span class="chip">{{ status_label[op.status] }}</span></td>
-        <td>#{{ op.current_config_id }}</td>
+      <tr data-name="{{ op.name | lower }}">
+        <td><a class="op-name" href="/operacoes/{{ op.id }}/fluxo"><span class="ico">{{ icon('operations') }}</span><strong>{{ op.name }}</strong></a></td>
+        <td><span class="chip {{ 'ok' if op.status == 'active' else ('warn' if op.status == 'paused' else '') }}"><span class="dot {{ 'ok live' if op.status == 'active' else ('warn' if op.status == 'paused' else '') }}"></span>{{ status_label[op.status] }}</span></td>
+        <td class="mono">#{{ op.current_config_id }}</td>
         <td>{{ op.updated_at.strftime('%d/%m %H:%M') }}</td>
-        <td class="row">
-          {% if op.status == 'active' %}<a class="btn sm pri" href="/operacoes/{{ op.id }}/play">▶ Play</a>{% endif %}
-          <a class="btn sm" href="/operacoes/{{ op.id }}">Abrir</a>
-        </td>
+        <td><div class="row" style="justify-content:flex-end">
+          <a class="btn sm pri" href="/operacoes/{{ op.id }}/fluxo">{{ icon('grid') }} Editor</a>
+          {% if op.status == 'active' %}<a class="btn sm" href="/operacoes/{{ op.id }}/play">{{ icon('play') }} Play</a>{% endif %}
+          <a class="btn sm ghost" href="/operacoes/{{ op.id }}">Detalhes</a>
+        </div></td>
       </tr>
     {% endfor %}
     </tbody>
   </table>
 </div>
+<script>
+  (function () {
+    const input = document.getElementById("op-search");
+    input.addEventListener("input", () => {
+      const q = input.value.trim().toLowerCase();
+      document.querySelectorAll("#op-rows tr").forEach((tr) => { tr.hidden = q && !tr.dataset.name.includes(q); });
+    });
+  })();
+</script>
 {% else %}
 <div class="empty">
   <strong>Nenhuma operação {% if status %}neste estado{% else %}ainda{% endif %}</strong>
-  <span class="sub">Crie a primeira dando um nome acima.</span>
+  <span class="sub">Dê um nome acima e crie a primeira. O editor abre em seguida.</span>
 </div>
 {% endif %}
 {% endblock %}

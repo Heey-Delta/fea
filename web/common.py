@@ -8,12 +8,12 @@ from sqlalchemy.orm import Session
 
 # Menu lateral (Task 25.1). As telas ainda não construídas mostram a task que as entrega.
 MENU = [
-    {"label": "Dashboard", "href": "/", "task": "Task 25"},
-    {"label": "Operações", "href": "/operacoes", "task": "Task 4"},
-    {"label": "Fila", "href": "/fila", "task": "Task 8"},
-    {"label": "Aprovação", "href": "/aprovacao", "task": "Task 18"},
-    {"label": "Publicações", "href": "/publicacoes", "task": "Task 21"},
-    {"label": "Acessos", "href": "/contas", "task": "Task 19"},
+    {"label": "Dashboard", "icon": "home", "href": "/", "task": "Task 25"},
+    {"label": "Operações", "icon": "operations", "href": "/operacoes", "task": "Task 4"},
+    {"label": "Fila", "icon": "queue", "href": "/fila", "task": "Task 8"},
+    {"label": "Aprovação", "icon": "approval", "href": "/aprovacao", "task": "Task 18"},
+    {"label": "Publicações", "icon": "chart", "href": "/publicacoes", "task": "Task 21"},
+    {"label": "Acessos", "icon": "users", "href": "/contas", "task": "Task 19"},
 ]
 
 

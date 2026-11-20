@@ -206,13 +206,15 @@ def test_actions_are_logged(session):
 def test_web_flow(logged_client, session):
     response = logged_client.post("/operacoes", data={"name": "Memes"}, follow_redirects=False)
     assert response.status_code == 303
-    detail_url = response.headers["location"]
-    page = logged_client.get(detail_url)
-    assert "Memes" in page.text and "Rascunho" in page.text
+    editor_url = response.headers["location"]
+    assert editor_url.endswith("/fluxo")  # criar abre direto o editor
+    op_id = int(editor_url.split("/")[2])
+    editor = logged_client.get(editor_url)
+    assert "Memes" in editor.text and "Rascunho" in editor.text
+    page = logged_client.get(f"/operacoes/{op_id}")
     assert "Adicione ao menos uma fonte de busca na Pesca." in page.text
 
     # Ativar com erro: recusado com mensagem.
-    op_id = int(detail_url.rsplit("/", 1)[1])
     refused = logged_client.post(f"/operacoes/{op_id}/status", data={"acao": "active"})
     assert "O fluxo tem erros" in refused.text
     assert "Rascunho" in refused.text
@@ -226,7 +228,7 @@ def test_web_flow(logged_client, session):
     assert "Memes" in listing.text and "Play" in listing.text
 
     # Histórico mostra as duas versões.
-    history = logged_client.get(f"{detail_url}?aba=historico&v=1")
+    history = logged_client.get(f"/operacoes/{op_id}?aba=historico&v=1")
     assert "v2 (vigente)" in history.text and "Configuração v1" in history.text
 
 

@@ -50,6 +50,8 @@ pythonpath = ["."]
 "migrations/versions/*" = ["E501"]
 # Fixtures do pytest importadas de outro módulo e recebidas como parâmetro.
 "tests/*" = ["F811"]
+# Desenhos SVG dos ícones em uma linha cada.
+"web/icons.py" = ["E501"]
 
 [tool.ruff.lint.flake8-bugbear]
 # Padrão do FastAPI: Depends/Form/Body/Query como valor padrão do parâmetro.

@@ -114,3 +114,26 @@ def link_for(event: Event) -> str:
         "render": "/fila?estado=needs_fix",
         "item": f"/aprovacao/{event.entity_id}",
     }.get(event.entity, "/")
+
+
+def active_operations(session: Session, limit: int = 6) -> list[Operation]:
+    return list(
+        session.scalars(
+            select(Operation)
+            .where(Operation.status == "active")
+            .order_by(Operation.updated_at.desc())
+            .limit(limit)
+        )
+    )
+
+
+def recent_publications(session: Session, limit: int = 8) -> list[tuple]:
+    return list(
+        session.execute(
+            select(PublishJob, Account)
+            .join(Account, Account.id == PublishJob.account_id)
+            .where(PublishJob.status == "published")
+            .order_by(PublishJob.published_at.desc())
+            .limit(limit)
+        ).all()
+    )

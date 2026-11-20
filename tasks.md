@@ -93,9 +93,9 @@ Status: 1
 - Subtask 4.5: Tela de detalhe com abas: Visão geral, Configuração, Fontes, Contas, Execuções, Histórico de versões.
 - Subtask 4.6: Lista de operações com botão Play em cada linha.
 - Subtask 4.7: Teste: duas operações com configurações diferentes rodando nos mesmos motores (critério 1 da v2.1).
-- Subtask 4.8: Fluxo da operação em três blocos ligados em sequência: **Pesca → Motor Editor → Publicador** (substituiu o canvas livre do Drawflow a pedido). Fontes ficam dentro da Pesca; rede, contas e aprovação dentro do Publicador; os blocos internos e as ligações são gerados ao salvar. Só configura o fluxo; não edita vídeo (decidido).
+- Subtask 4.8: **Editor de operação** num lugar só: barra superior (nome editável, versão, estado, desfazer/refazer, Salvar, Executar), abas Fluxo/Configurações/Logs, malha pontilhada com nós compactos (Busca → Edição → destinos de Publicação em ramificação), ferramentas (selecionar, biblioteca de módulos, lista de módulos, histórico de versões, enquadrar), zoom, minimapa, arrastar nós, inspector contextual à direita e barra de validação com "Ativar operação". Só configura o fluxo; não edita vídeo (decidido).
 - Subtask 4.9: Ligações fora da tabela de tipos de porta são recusadas com motivo.
-- Subtask 4.10: Clicar no bloco abre o painel com formulário: Pesca (redes de busca, onde buscar, permissão, tags, quantidade, modo automático), Motor Editor (resolução, FPS, enquadramento, máscara PNG com importação, áudio) e Publicador (redes, contas, aprovação, distribuição, título/legenda, limpeza).
+- Subtask 4.10: Clicar no nó abre o inspector: Busca (fontes Reddit/X/upload com teste de conexão, filtros e tags, quantidade, automação), Edição (formato, máscara PNG com importação, marca d'água própria, áudio, enquadramento, avançado) e cada destino de Publicação (contas da rede, privacidade, aprovação, agendamento, título e descrição, limpeza). Versões podem ser restauradas (vira uma versão nova).
 - Subtask 4.11: Validação antes de ativar: Fonte → Pesca → Edição → Aprovação → Postagem; uma Rede ligada a Edição e Postagem; ao menos uma Conta; sem ciclos.
 - Subtask 4.12: Grafo (nós, arestas e configs) salvo como JSON versionado em `operation_configs`. Cada execução guarda snapshot.
 - Subtask 4.13: Operação arquivada abre o canvas em somente leitura, com opção de duplicar.

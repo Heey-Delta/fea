@@ -52,7 +52,7 @@
   {% for st in search %}
   <section class="card svc" id="{{ st.service.id }}">
     <div class="svc-head">
-      <div class="svc-title"><h2>{{ st.service.name }}</h2><span class="chip {{ 'ok' if st.ready else 'bad' }}">{{ 'pronto' if st.ready else 'falta preencher' }}</span></div>
+      <div class="svc-title"><span class="ico">{{ icon({'reddit': 'reddit', 'x': 'x-logo', 'youtube': 'youtube', 'tiktok': 'tiktok', 'instagram': 'instagram'}.get(st.service.id, 'key')) }}</span><h2>{{ st.service.name }}</h2><span class="chip {{ 'ok' if st.ready else 'bad' }}">{{ 'pronto' if st.ready else 'falta preencher' }}</span></div>
     </div>
     <p class="sub">{{ st.service.note }}</p>
     {{ keys_form(st) }}
@@ -73,7 +73,7 @@
 {% set p = st.service.oauth_platform %}
 <section class="card svc" id="{{ p }}">
   <div class="svc-head">
-    <div class="svc-title"><h2>{{ st.service.name }}</h2><span class="chip {{ 'ok' if st.ready else 'bad' }}">{{ 'app pronto' if st.ready else 'falta preencher' }}</span>
+    <div class="svc-title"><span class="ico">{{ icon({'reddit': 'reddit', 'x': 'x-logo', 'youtube': 'youtube', 'tiktok': 'tiktok', 'instagram': 'instagram'}.get(st.service.id, 'key')) }}</span><h2>{{ st.service.name }}</h2><span class="chip {{ 'ok' if st.ready else 'bad' }}">{{ 'app pronto' if st.ready else 'falta preencher' }}</span>
       <span class="chip">{{ by_platform.get(p, []) | length }} conta(s)</span></div>
     <a class="btn sm {{ 'pri' if st.ready and can_save else '' }}" href="/contas/{{ p }}/conectar" {% if not (st.ready and can_save) %}aria-disabled="true"{% endif %}>Conectar conta {{ platform_label[p] }}</a>
   </div>

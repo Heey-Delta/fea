@@ -36,6 +36,7 @@ from web import (
     auth,
     editing,
     executions,
+    icons,
     operations,
     public,
     publishing,
@@ -62,6 +63,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     app.state.settings = settings
     app.state.templates = Jinja2Templates(directory=BASE_DIR / "templates")
+    app.state.templates.env.globals.update(icon=icons.icon, icon_sprite=icons.sprite)
     # Os testes trocam este cliente por um que simula o GitHub.
     app.state.http_client_factory = lambda: httpx.Client(timeout=10)
     # A conexão só abre na primeira consulta; pool pequeno para funções serverless.
@@ -151,13 +153,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         try:
             with app.state.session_factory() as session:
                 kpis, errors = dash.kpis(session), dash.recent_errors(session)
+                active_ops = dash.active_operations(session)
+                recent = dash.recent_publications(session)
                 pending = [
                     st.service.name for st in credentials.status(session, settings) if not st.ready
                 ]
         except OperationalError:
             # Sem banco, o painel abre com o aviso (as outras telas mostram a página de erro).
             log.exception("banco indisponível no dashboard")
-            kpis, errors, pending = None, [], []
+            kpis, errors, pending, active_ops, recent = None, [], [], [], []
         return render(
             request,
             "dashboard.html",
@@ -165,6 +169,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             kpis=kpis,
             errors=errors,
             pending=pending,
+            active_ops=active_ops,
+            recent=recent,
             link_for=dash.link_for,
         )
 

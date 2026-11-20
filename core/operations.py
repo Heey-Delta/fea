@@ -328,6 +328,11 @@ def list_operations(session: Session, status: str | None = None) -> list[Operati
     return list(session.scalars(stmt))
 
 
+def status_counts(session: Session) -> dict[str, int]:
+    rows = session.execute(select(Operation.status, func.count()).group_by(Operation.status))
+    return {status: count for status, count in rows}
+
+
 def versions(session: Session, op: Operation) -> list[OperationConfig]:
     return list(
         session.scalars(

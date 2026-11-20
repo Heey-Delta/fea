@@ -22,7 +22,7 @@ from core import operations as ops
 from core import sources as src
 from core.connectors import SOURCE_TYPES
 from core.connectors.upload import IMAGE_EXT, VIDEO_EXT, upload_prefix
-from core.models import Account, Operation, Source
+from core.models import Account, Event, Operation, Source
 from core.states import OPERATION_STATUS
 from networks import PLATFORM_LABEL, PROFILES
 from web import editing
@@ -74,6 +74,7 @@ def list_page(
         "operations_list.html",
         active="/operacoes",
         operations=ops.list_operations(session, status or None),
+        counts=ops.status_counts(session),
         status=status,
         status_label=STATUS_LABEL,
         flash=request.session.pop("flash", None),
@@ -87,7 +88,7 @@ def create(request: Request, name: str = Form(""), session: Session = Depends(db
     except ops.OperationError as exc:
         flash(request, "error", str(exc))
         return RedirectResponse("/operacoes", status_code=303)
-    return RedirectResponse(f"/operacoes/{op.id}", status_code=303)
+    return RedirectResponse(f"/operacoes/{op.id}/fluxo", status_code=303)
 
 
 @router.get("/operacoes/{operation_id}", response_class=HTMLResponse)
@@ -164,7 +165,32 @@ def canvas_page(
         "masks": editing.mask_list(request, session, op.id),
         "maskUploadUrl": f"/operacoes/{op.id}/mascaras",
         "presetUrl": f"/operacoes/{op.id}/edicao",
+        "assetUploadUrl": f"/operacoes/{op.id}/arquivos/upload-url",
         "ready": ready,
+        "op": {"id": op.id, "name": op.name, "status": op.status},
+        "statusLabel": STATUS_LABEL,
+        "version": config.version,
+        "lastModified": config.created_at.isoformat() if config.created_at else None,
+        "versions": [
+            {"version": v.version, "at": v.created_at.isoformat(), "current": v.id == config.id}
+            for v in ops.versions(session, op)[:30]
+        ],
+        "sourceIds": {
+            s.node_id: s.id
+            for s in session.scalars(select(Source).where(Source.operation_id == op.id))
+        },
+        "events": [
+            {
+                "at": e.at.isoformat(),
+                "entity": e.entity,
+                "entity_id": e.entity_id,
+                "action": e.action,
+                "detail": e.detail,
+            }
+            for e in session.scalars(
+                select(Event).where(Event.operation_id == op.id).order_by(Event.id.desc()).limit(60)
+            )
+        ],
     }
     return render(
         request,
@@ -174,7 +200,36 @@ def canvas_page(
         config=config,
         boot=boot,
         read_only=read_only,
+        status_label=STATUS_LABEL,
+        flash=request.session.pop("flash", None),
     )
+
+
+@router.post("/operacoes/{operation_id}/versoes/{version}/restaurar")
+def restore_version(operation_id: int, version: int, session: Session = Depends(db_session)):
+    """Recupera uma versão antiga: vira a versão nova (as anteriores nunca mudam)."""
+    op = get_operation(session, operation_id)
+    old = next((v for v in ops.versions(session, op) if v.version == version), None)
+    if old is None:
+        raise HTTPException(status_code=404, detail="Versão não encontrada")
+    try:
+        saved = ops.save_config(session, op, old.config)
+    except ops.OperationError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=409)
+    return JSONResponse({"version": saved.version, "restored": version})
+
+
+@router.post("/operacoes/{operation_id}/renomear")
+def rename(
+    operation_id: int, name: str = Body(..., embed=True), session: Session = Depends(db_session)
+):
+    op = get_operation(session, operation_id)
+    name = name.strip()[:200]
+    if not name:
+        return JSONResponse({"error": "Dê um nome à operação."}, status_code=400)
+    op.name = name
+    session.add(Event(entity="operation", entity_id=op.id, operation_id=op.id, action="renamed"))
+    return JSONResponse({"name": op.name})
 
 
 @router.post("/operacoes/{operation_id}/status")
@@ -182,6 +237,7 @@ def change_status(
     request: Request,
     operation_id: int,
     acao: str = Form(...),
+    voltar: str = Form(""),
     session: Session = Depends(db_session),
 ):
     op = get_operation(session, operation_id)
@@ -190,7 +246,8 @@ def change_status(
         flash(request, "ok", f"Operação agora está {STATUS_LABEL[acao].lower()}.")
     except ops.OperationError as exc:
         flash(request, "error", str(exc))
-    return RedirectResponse(f"/operacoes/{operation_id}", status_code=303)
+    target = voltar if voltar.startswith(f"/operacoes/{operation_id}") else ""
+    return RedirectResponse(target or f"/operacoes/{operation_id}", status_code=303)
 
 
 @router.post("/operacoes/{operation_id}/fontes/{source_id}/testar")
@@ -206,6 +263,8 @@ def test_source(
     state = request.app.state
     settings = credentials.effective(session, state.settings)
     result = src.test_connection(session, source, settings, state.storage, **state.connector_kwargs)
+    if "application/json" in request.headers.get("accept", ""):
+        return JSONResponse({"ok": result.ok, "message": result.message})
     flash(request, "ok" if result.ok else "error", result.message)
     return RedirectResponse(f"/operacoes/{operation_id}?aba=fontes", status_code=303)
 
