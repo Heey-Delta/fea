@@ -131,3 +131,15 @@ def test_public_base_url_fixes_callback(settings):
     client = TestClient(create_app(fixed))
     url = httpx.URL(client.get("/auth/github", follow_redirects=False).headers["location"])
     assert url.params["redirect_uri"] == "https://fea-oh-alla.vercel.app/auth/github/callback"
+
+
+def test_public_pages_need_no_login(client):
+    for path, text in (
+        ("/sobre", "ferramenta interna"),
+        ("/privacidade", "Limited Use"),
+        ("/termos", "marca d'água"),
+        ("/exclusao-de-dados", "Data deletion"),
+    ):
+        response = client.get(path)
+        assert response.status_code == 200 and text in response.text, path
+    assert 'href="/privacidade"' in client.get("/login").text

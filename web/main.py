@@ -37,6 +37,7 @@ from web import (
     editing,
     executions,
     operations,
+    public,
     publishing,
     queue_view,
 )
@@ -171,6 +172,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(executions.router)
     app.include_router(approval.router)
     app.include_router(editing.router)
+    app.include_router(public.router)
     app.include_router(access.router)
     app.include_router(publishing.router)
     app.include_router(queue_view.router)

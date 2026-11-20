@@ -94,12 +94,21 @@ Depois desta etapa, abra a ferramenta → **Acessos**. A seção "Ferramenta" de
 
 ## Etapa 7 · Redes de publicação (tela Acessos → Publicação)
 
+As plataformas pedem páginas públicas ao cadastrar o app. A ferramenta já tem essas páginas, e a tela Acessos mostra os endereços prontos para copiar:
+
+- Página inicial: `{endereço}/sobre`
+- Política de privacidade: `{endereço}/privacidade`
+- Termos de uso: `{endereço}/termos`
+- Exclusão de dados (Meta): `{endereço}/exclusao-de-dados`
+
+Opcional: defina `CONTACT_EMAIL` (e `OPERATOR_NAME`) na Vercel para o seu contato aparecer nessas páginas.
+
 Para cada rede, faça nesta ordem: criar o app → cadastrar o **endereço de retorno** que a tela Acessos mostra → colar as chaves em Acessos → **Conectar conta** (um clique em "Permitir" por canal ou perfil).
 
 ### YouTube Shorts (30 min + auditoria)
 
 1. https://console.cloud.google.com → novo projeto → APIs e serviços → Biblioteca → ative a **YouTube Data API v3**.
-2. Tela de consentimento OAuth, tipo **Externo**:
+2. Tela de consentimento OAuth, tipo **Externo**. Preencha a página inicial, a política de privacidade e os termos com os endereços acima:
    - Adicione os escopos `youtube.upload` e `youtube.readonly`.
    - Depois **Publique o app** ("Em produção"). Em "Teste", o Google derruba o acesso a cada 7 dias.
    - Sem verificação, o login mostra "app não verificado": clique em Avançado → Continuar. Para uso próprio, com menos de 100 usuários, é aceito.
@@ -109,7 +118,7 @@ Para cada rede, faça nesta ordem: criar o app → cadastrar o **endereço de re
 
 ### TikTok (30 min + auditoria)
 
-1. https://developers.tiktok.com → Manage apps → **Connect an app**.
+1. https://developers.tiktok.com → Manage apps → **Connect an app**. Em "Terms of Service URL" e "Privacy Policy URL", use `/termos` e `/privacidade`.
 2. Adicione os produtos **Login Kit** e **Content Posting API** (ative "Direct Post").
 3. Escopos: `user.info.basic`, `video.publish` e `video.list`.
 4. Redirect URI: `{endereço}/contas/tiktok/retorno`. O TikTok pode pedir para verificar o domínio: siga a instrução do console.
@@ -120,7 +129,7 @@ Para cada rede, faça nesta ordem: criar o app → cadastrar o **endereço de re
 
 1. A conta do Instagram precisa ser **profissional**: Configurações → Tipo de conta → Criador ou Empresa.
 2. https://developers.facebook.com → Criar app (tipo **Empresa**) → adicione o produto **Instagram** → "API setup with Instagram login".
-3. Permissões: `instagram_business_basic` e `instagram_business_content_publish`. Cadastre o redirect `{endereço}/contas/instagram/retorno`.
+3. Permissões: `instagram_business_basic` e `instagram_business_content_publish`. Cadastre o redirect `{endereço}/contas/instagram/retorno`. Em Configurações básicas do app, preencha a URL da política de privacidade (`/privacidade`) e a das instruções de exclusão de dados (`/exclusao-de-dados`).
 4. Em modo de desenvolvimento, adicione a sua conta do Instagram como **testadora** (Funções do app) e aceite o convite no Instagram.
 5. Em Acessos → Instagram Reels: o **Instagram App ID** e o **Instagram App Secret** (da tela do produto Instagram) → **Salvar chaves** → **Conectar conta Instagram**.
 6. Para contas que não são testadoras, o app precisa passar pela revisão da Meta.

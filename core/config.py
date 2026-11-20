@@ -20,6 +20,9 @@ class Settings(BaseSettings):
     # Endereço fixo da interface (ex.: https://fea-oh-alla.vercel.app). O GitHub só aceita
     # o retorno do login na URL cadastrada no OAuth App; sem isto, usa o endereço acessado.
     public_base_url: str = ""
+    # Páginas públicas exigidas pelas plataformas (privacidade, termos, exclusão de dados).
+    operator_name: str = "Ferramenta de Operações"
+    contact_email: str = ""
 
     # Neon em produção; Postgres local em desenvolvimento.
     database_url: str = "postgresql://fea:fea@localhost:5432/fea"

@@ -22,6 +22,7 @@ from core.operations import OperationError
 from networks import PLATFORM_LABEL
 from networks.base import AdapterError
 from web.common import db_session, render, require_user
+from web.public import public_urls
 
 router = APIRouter(dependencies=[Depends(require_user)])
 
@@ -74,6 +75,12 @@ def tool_status(request: Request) -> list[dict]:
             "hint": "A mesma na Vercel e na VPS. Gere com: python -m core.security new-keys",
         },
         {
+            "name": "Contato público (opcional)",
+            "ok": bool(s.contact_email),
+            "env": "CONTACT_EMAIL, OPERATOR_NAME",
+            "hint": "Aparece nas páginas de privacidade e termos que as plataformas pedem.",
+        },
+        {
             "name": "Banco de dados (Neon)",
             "ok": "localhost" not in s.database_url,
             "env": "DATABASE_URL",
@@ -115,6 +122,9 @@ def page(request: Request, session: Session = Depends(db_session)) -> Response:
         platform_label=PLATFORM_LABEL,
         today=today,
         redirect_uri=lambda p: redirect_uri(request, p),
+        public_urls=public_urls(
+            request.app.state.settings.public_base_url or str(request.base_url)
+        ),
         can_save=bool(settings.token_encryption_key),
         timezones=TIMEZONES,
         flash=request.session.pop("flash", None),

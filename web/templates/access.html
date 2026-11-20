@@ -61,6 +61,14 @@
 </div>
 
 <div class="section"><h3>3 · Publicação</h3><p class="sub">Primeiro as chaves do app de cada rede; depois conecte cada conta/canal pelo login oficial (OAuth). O endereço de retorno precisa estar cadastrado no app.</p></div>
+<div class="card">
+  <h2>Endereços para o cadastro dos apps</h2>
+  <p class="sub">Google, TikTok e Meta pedem estas páginas públicas ao criar ou revisar o app.</p>
+  <div class="kv"><span>Página inicial</span><code>{{ public_urls['sobre'] }}</code></div>
+  <div class="kv"><span>Política de privacidade</span><code>{{ public_urls['privacidade'] }}</code></div>
+  <div class="kv"><span>Termos de uso</span><code>{{ public_urls['termos'] }}</code></div>
+  <div class="kv"><span>Exclusão de dados (Meta)</span><code>{{ public_urls['exclusao-de-dados'] }}</code></div>
+</div>
 {% for st in publishing %}
 {% set p = st.service.oauth_platform %}
 <section class="card svc" id="{{ p }}">

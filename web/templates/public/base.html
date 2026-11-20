@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title }} · {{ operator }}</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="{{ url_for('static', path='app.css') }}">
+</head>
+<body>
+  <main class="main" style="max-width:760px;margin:0 auto">
+    <div class="brand" style="padding:0 0 16px"><span class="brand-mark" aria-hidden="true">FO</span>{{ operator }}</div>
+    <nav class="row chips" aria-label="Páginas públicas">
+      {% for s, (label, _) in pages.items() %}<a class="chip{% if s == slug %} on{% endif %}" href="/{{ s }}">{{ label }}</a>{% endfor %}
+      <a class="chip" href="/login">Entrar</a>
+    </nav>
+    <article class="card" style="gap:14px">
+      <h1>{{ title }}</h1>
+      <p class="sub">Atualizado em {{ updated }}.</p>
+      {% block body %}{% endblock %}
+      <p class="sub">Contato: {% if contact %}<a href="mailto:{{ contact }}">{{ contact }}</a>{% else %}pelo contato informado no cadastro do aplicativo em cada plataforma{% endif %}.</p>
+    </article>
+  </main>
+</body>
+</html>

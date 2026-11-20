@@ -1,0 +1,27 @@
+{% extends "public/base.html" %}
+{% block body %}
+<h2>1. Quem usa</h2>
+<p>A ferramenta é usada por um único operador, dono das contas conectadas. Não há cadastro de público, venda de dados nem publicidade.</p>
+<h2>2. Dados que tratamos</h2>
+<ul>
+  <li><strong>Login da ferramenta:</strong> o identificador numérico e o nome de usuário do GitHub do operador, só para conferir se o acesso é permitido.</li>
+  <li><strong>Contas conectadas (YouTube, TikTok, Instagram):</strong> o identificador e o nome público da conta, e os tokens de acesso concedidos pelo login oficial. Os tokens ficam criptografados no banco de dados.</li>
+  <li><strong>Conteúdo:</strong> vídeos e imagens de fontes autorizadas, o texto público do post de origem e o link para ele; os vídeos editados; títulos, descrições e hashtags gerados; e métricas públicas dos vídeos publicados (visualizações, curtidas, comentários).</li>
+</ul>
+<h2>3. Para que usamos</h2>
+<p>Exclusivamente para buscar, editar, agendar e publicar vídeos nas contas do próprio operador e acompanhar o desempenho deles. Os dados das plataformas não são compartilhados com terceiros nem usados para outra finalidade.</p>
+<h2>4. Permissões das plataformas</h2>
+<ul>
+  <li><strong>YouTube (Google):</strong> enviar vídeos e ler informações do canal (<code>youtube.upload</code>, <code>youtube.readonly</code>). O uso de dados das APIs do Google segue a Política de Dados do Usuário dos Serviços de API do Google, inclusive os requisitos de uso limitado.</li>
+  <li><strong>TikTok:</strong> informações básicas do perfil, publicação de vídeos e leitura das métricas dos vídeos publicados (<code>user.info.basic</code>, <code>video.publish</code>, <code>video.list</code>).</li>
+  <li><strong>Instagram (Meta):</strong> informações básicas da conta profissional e publicação de Reels (<code>instagram_business_basic</code>, <code>instagram_business_content_publish</code>).</li>
+</ul>
+<h2>5. Retenção</h2>
+<p>Arquivos de vídeo são apagados automaticamente pouco depois da publicação (padrão: 30 minutos). Registros de publicação, links e métricas ficam enquanto a operação existir. Tokens ficam até a conta ser desconectada.</p>
+<h2>6. Segurança</h2>
+<p>Acesso por login único autorizado, tokens e chaves criptografados, conexões apenas por HTTPS e armazenamento em provedores com controle de acesso.</p>
+<h2>7. Seus direitos e exclusão</h2>
+<p>Qualquer conta conectada pode ser desconectada pela própria plataforma ou pela ferramenta, e os dados podem ser apagados conforme a página <a href="/exclusao-de-dados">Exclusão de dados</a>. Titulares podem pedir acesso, correção ou exclusão pelo contato abaixo, nos termos da LGPD.</p>
+<h2>Privacy policy (English summary)</h2>
+<p>This private tool is used by a single operator. It stores the connected accounts' public IDs and names, encrypted OAuth tokens, the videos it publishes and their public metrics, only to publish to the operator's own accounts. Data is not sold or shared. Video files are deleted shortly after publishing. Use of Google API data complies with the Google API Services User Data Policy, including the Limited Use requirements. See <a href="/exclusao-de-dados">Data deletion</a> to remove data.</p>
+{% endblock %}
