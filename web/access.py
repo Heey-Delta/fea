@@ -72,10 +72,11 @@ def tool_status(request: Request) -> list[dict]:
             "name": "Chave de criptografia",
             "ok": bool(s.token_encryption_key),
             "env": "TOKEN_ENCRYPTION_KEY",
-            "hint": "A mesma na Vercel e na VPS. Gere com: python -m core.security new-keys",
+            "hint": "Já definida na Vercel. A VPS recebe pelo comando de instalação (Workers).",
         },
         {
             "name": "Contato público (opcional)",
+            "optional": True,
             "ok": bool(s.contact_email),
             "env": "CONTACT_EMAIL, OPERATOR_NAME",
             "hint": "Aparece nas páginas de privacidade e termos que as plataformas pedem.",

@@ -36,11 +36,11 @@
 {% if flash %}<p class="{{ 'error' if flash.kind == 'error' else 'notice' }}" role="status">{{ flash.text }}</p>{% endif %}
 {% if not can_save %}<p class="callout" role="alert">Defina <code>TOKEN_ENCRYPTION_KEY</code> (Vercel e VPS) para salvar chaves e conectar contas pela interface.</p>{% endif %}
 
-<div class="section"><h3>1 · Ferramenta</h3><p class="sub">Variáveis de ambiente da Vercel (interface) e do <code>deploy/.env</code> da VPS (workers).</p></div>
+<div class="section"><h3>1 · Ferramenta</h3><p class="sub">Variáveis de ambiente da Vercel. A VPS recebe o que precisa pelo comando de instalação.</p></div>
 <div class="card">
   {% for t in tool %}
   <div class="status-row">
-    <span class="dot {{ 'ok' if t.ok else 'bad' }}" aria-label="{{ 'ok' if t.ok else 'falta' }}"></span>
+    <span class="dot {{ 'ok' if t.ok else ('' if t.get('optional') else 'bad') }}" aria-label="{{ 'ok' if t.ok else 'falta' }}"></span>
     <strong>{{ t.name }}</strong>
     <span><code>{{ t.env }}</code><br><small class="sub">{{ t.hint }}</small>
       {% if t.migrate %}<form method="post" action="/contas/banco/migrar" style="margin-top:8px"><button class="btn sm pri" type="submit">{{ icon('database') }} Aplicar migrações</button></form>{% endif %}</span>
