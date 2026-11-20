@@ -23,7 +23,7 @@ termux-wake-lock 2>/dev/null || true
 pkg update -y
 pkg install -y python git openssh ffmpeg tesseract libpq openssl libffi \
   clang make pkg-config rust binutils libjpeg-turbo freetype \
-  python-numpy python-pillow python-cryptography curl
+  python-numpy python-pillow python-cryptography curl bzip2
 
 # 2. Código (repositório privado: chave de implantação só de leitura)
 if [ ! -d "$DIR/.git" ]; then
@@ -78,12 +78,19 @@ pkg install -y python-pydantic 2>/dev/null || say "Sem pacote pronto do pydantic
 pip install "pydantic-settings>=2.4" \
   || die "Falhou o pydantic. Rode este instalador de novo (ele continua) ou mande as últimas linhas do erro ao Claude."
 
-# 5. Fonte do texto sobre o vídeo
+# 5. Fonte do texto sobre o vídeo (o pacote oficial do DejaVu traz o arquivo dentro)
 mkdir -p assets/fonts
 if [ ! -f assets/fonts/DejaVuSans-Bold.ttf ]; then
-  curl -fsSL -o assets/fonts/DejaVuSans-Bold.ttf \
-    https://github.com/dejavu-fonts/dejavu-fonts/raw/version_2_37/ttf/DejaVuSans-Bold.ttf \
-    || say "Não consegui baixar a fonte; textos sobre o vídeo podem falhar."
+  FONT_TMP="$(mktemp -d)"
+  if curl -fsSL -o "$FONT_TMP/dejavu.tar.bz2" \
+      https://github.com/dejavu-fonts/dejavu-fonts/releases/download/version_2_37/dejavu-fonts-ttf-2.37.tar.bz2 \
+    && tar -xjf "$FONT_TMP/dejavu.tar.bz2" -C "$FONT_TMP" dejavu-fonts-ttf-2.37/ttf/DejaVuSans-Bold.ttf \
+    && cp "$FONT_TMP/dejavu-fonts-ttf-2.37/ttf/DejaVuSans-Bold.ttf" assets/fonts/; then
+    say "Fonte instalada."
+  else
+    say "Não consegui instalar a fonte; textos sobre o vídeo podem falhar."
+  fi
+  rm -rf "$FONT_TMP"
 fi
 
 # 6. Atalhos para ligar, desligar e ver os workers
