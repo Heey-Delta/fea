@@ -685,10 +685,33 @@ def run_cleanup(session: Session, storage: Storage, now: datetime | None = None)
     return cleaned
 
 
+def measure_bucket(session: Session, storage, now: datetime | None = None) -> int | None:
+    """De hora em hora mede o bucket do R2 para o limite de armazenamento (core/usage.py)."""
+    from core import usage
+    from core.storage import is_remote, unwrap
+
+    now = now or datetime.now(UTC)
+    if not is_remote(storage):
+        return None
+    last = usage.get_setting(session, usage.MEASURED_KEY)
+    if last and now - datetime.fromisoformat(last) < timedelta(hours=1):
+        return None
+    size = unwrap(storage).total_bytes()
+    usage.set_storage(session, size, now)
+    return size
+
+
 @register("cleanup")
 def cleanup_job(ctx: JobContext) -> None:
     with ctx.session_factory() as session:
-        cleaned = run_cleanup(session, get_storage())
+        storage = get_storage()
+        cleaned = run_cleanup(session, storage)
         session.commit()
+        try:
+            measure_bucket(session, storage)
+            session.commit()
+        except Exception:  # noqa: BLE001 - a medição volta a tentar na próxima rodada
+            session.rollback()
+            log.exception("falha ao medir o bucket")
     if cleaned:
         log.info("limpeza", extra={"items": cleaned})

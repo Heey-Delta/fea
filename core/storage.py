@@ -79,10 +79,20 @@ class LocalStorage:
 class R2Storage:
     """Cloudflare R2 pela API compatível com S3, com URLs assinadas."""
 
-    def __init__(self, settings: Settings):
+    # Arquivos até 256 MB vão numa operação só (vídeos curtos sempre cabem). Acima disso,
+    # partes de 64 MB, contadas uma a uma no limite de uso.
+    MULTIPART = 256 * 1024 * 1024
+    CHUNK = 64 * 1024 * 1024
+
+    def __init__(self, settings: Settings, meter=None):
         import boto3
+        from boto3.s3.transfer import TransferConfig
         from botocore.config import Config
 
+        self.meter = meter
+        self.transfer = TransferConfig(
+            multipart_threshold=self.MULTIPART, multipart_chunksize=self.CHUNK
+        )
         self.bucket = settings.r2_bucket
         self.client = boto3.client(
             "s3",
@@ -93,17 +103,41 @@ class R2Storage:
             config=Config(signature_version="s3v4", retries={"max_attempts": 3}),
         )
 
+    def _ops(self, size: int, extra: int) -> int:
+        if size < self.MULTIPART:
+            return 1
+        return -(-size // self.CHUNK) + extra
+
+    def _check(self, metric: str, extra: int = 0) -> None:
+        if self.meter is not None:
+            self.meter.check(metric, extra)
+
+    def _count(self, metric: str, amount: int = 1) -> None:
+        if self.meter is not None:
+            self.meter.add(metric, amount)
+
     def put_file(self, key: str, path: Path, content_type: str | None = None) -> None:
+        size = path.stat().st_size
+        self._check("class_a")
+        self._check("storage_bytes", size)
         extra = {"ContentType": content_type} if content_type else None
-        self.client.upload_file(str(path), self.bucket, _safe_key(key), ExtraArgs=extra)
+        self.client.upload_file(
+            str(path), self.bucket, _safe_key(key), ExtraArgs=extra, Config=self.transfer
+        )
+        self._count("class_a", self._ops(size, 2))
+        self._count("storage_bytes", size)
 
     def get_file(self, key: str, path: Path) -> None:
+        self._check("class_b")
         path.parent.mkdir(parents=True, exist_ok=True)
-        self.client.download_file(self.bucket, _safe_key(key), str(path))
+        self.client.download_file(self.bucket, _safe_key(key), str(path), Config=self.transfer)
+        self._count("class_b", self._ops(path.stat().st_size, 1))
 
     def exists(self, key: str) -> bool:
         from botocore.exceptions import ClientError
 
+        self._check("class_b")
+        self._count("class_b")
         try:
             self.client.head_object(Bucket=self.bucket, Key=_safe_key(key))
             return True
@@ -111,24 +145,41 @@ class R2Storage:
             return False
 
     def delete(self, key: str) -> None:
-        self.client.delete_object(Bucket=self.bucket, Key=_safe_key(key))
+        self.client.delete_object(Bucket=self.bucket, Key=_safe_key(key))  # grátis
 
-    def list(self, prefix: str, after: str | None = None) -> list[str]:
-        keys: list[str] = []
+    def _pages(self, prefix: str, after: str | None = None):
         paginator = self.client.get_paginator("list_objects_v2")
         kwargs = {"Bucket": self.bucket, "Prefix": prefix}
         if after:
             kwargs["StartAfter"] = after
         for page in paginator.paginate(**kwargs):
+            self._count("class_a")
+            yield page
+
+    def list(self, prefix: str, after: str | None = None) -> list[str]:
+        self._check("class_a")
+        keys: list[str] = []
+        for page in self._pages(prefix, after):
             keys += [obj["Key"] for obj in page.get("Contents", [])]
         return keys
 
+    def total_bytes(self) -> int:
+        """Tamanho do bucket inteiro (1 operação Classe A a cada 1.000 arquivos)."""
+        self._check("class_a")
+        return sum(obj["Size"] for page in self._pages("") for obj in page.get("Contents", []))
+
     def url(self, key: str, expires_s: int = 3600) -> str:
+        # Cada link gerado conta como uma leitura (o navegador ou a rede baixa o arquivo).
+        self._check("class_b")
+        self._count("class_b")
         return self.client.generate_presigned_url(
             "get_object", Params={"Bucket": self.bucket, "Key": _safe_key(key)}, ExpiresIn=expires_s
         )
 
     def upload_url(self, key: str, content_type: str, expires_s: int = 3600) -> str | None:
+        self._check("class_a")
+        self._check("storage_bytes")
+        self._count("class_a")
         return self.client.generate_presigned_url(
             "put_object",
             Params={"Bucket": self.bucket, "Key": _safe_key(key), "ContentType": content_type},
@@ -136,8 +187,15 @@ class R2Storage:
         )
 
 
-def make_storage(settings: Settings) -> Storage:
-    return R2Storage(settings) if settings.r2_configured else LocalStorage(settings.storage_dir)
+def make_storage(settings: Settings, meter=None) -> Storage:
+    if settings.r2_configured:
+        return R2Storage(settings, meter)
+    return LocalStorage(settings.storage_dir)
+
+
+def is_remote(storage) -> bool:
+    """True com R2 (envio direto do navegador por URL assinada)."""
+    return isinstance(unwrap(storage), R2Storage)
 
 
 class DynamicStorage:
@@ -153,6 +211,11 @@ class DynamicStorage:
         self._inner: Storage | None = None
         self._key: tuple | None = None
         self._at = -1e9
+        self.meter = None
+        if session_factory is not None:
+            from core.usage import UsageMeter
+
+            self.meter = UsageMeter(session_factory)
 
     def _effective(self) -> Settings:
         if self.session_factory is None:
@@ -178,7 +241,7 @@ class DynamicStorage:
             eff.storage_dir,
         )
         if key != self._key or self._inner is None:
-            self._inner = make_storage(eff)
+            self._inner = make_storage(eff, self.meter)
             self._key = key
         self._at = now
         return self._inner

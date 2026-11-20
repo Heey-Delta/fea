@@ -399,3 +399,23 @@ class WorkerHeartbeat(Base):
     role: Mapped[str] = mapped_column(String(20))
     host: Mapped[str] = mapped_column(String(100))
     at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class R2Usage(Base):
+    """Uso do Cloudflare R2 no mês (Classe A, Classe B e o pico de armazenamento em bytes)."""
+
+    __tablename__ = "r2_usage"
+    __table_args__ = (PrimaryKeyConstraint("month", "metric"),)
+
+    month: Mapped[str] = mapped_column(String(7))
+    metric: Mapped[str] = mapped_column(String(20))
+    value: Mapped[int] = mapped_column(BigInteger, default=0)
+
+
+class AppSetting(Base):
+    """Preferência simples da ferramenta (ex.: percentual da franquia grátis do R2)."""
+
+    __tablename__ = "app_settings"
+
+    name: Mapped[str] = mapped_column(String(60), primary_key=True)
+    value: Mapped[str] = mapped_column(Text)

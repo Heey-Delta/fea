@@ -8,7 +8,7 @@ import secrets
 from pathlib import Path
 
 import httpx
-from fastapi import Depends, FastAPI, Request
+from fastapi import Depends, FastAPI, Form, Request
 from fastapi.responses import (
     FileResponse,
     HTMLResponse,
@@ -23,7 +23,7 @@ from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import sessionmaker
 from starlette.middleware.sessions import SessionMiddleware
 
-from core import credentials
+from core import credentials, usage
 from core import dashboard as dash
 from core.config import Settings, get_settings
 from core.db import sqlalchemy_url
@@ -91,6 +91,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.exception_handler(NotLoggedIn)
     def to_login(request: Request, exc: NotLoggedIn) -> Response:
         return RedirectResponse("/login", status_code=303)
+
+    @app.exception_handler(usage.QuotaExceeded)
+    def quota_exceeded(request: Request, exc: usage.QuotaExceeded) -> Response:
+        log.warning("limite do R2", extra={"error": str(exc)})
+        if "application/json" in request.headers.get("accept", "") or request.url.path.endswith(
+            "upload-url"
+        ):
+            return JSONResponse({"detail": str(exc)}, status_code=429)
+        return render(request, "quota.html", message=str(exc), status_code=429)
 
     @app.exception_handler(OperationalError)
     def database_down(request: Request, exc: OperationalError) -> Response:
@@ -180,6 +189,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             # Sem banco, o painel abre com o aviso (as outras telas mostram a página de erro).
             log.exception("banco indisponível no dashboard")
             kpis, errors, pending, active_ops, recent = None, [], [], [], []
+        r2_usage = None
+        if kpis is not None:
+            try:
+                with app.state.session_factory() as session:
+                    r2_usage = usage.report(session)
+            except Exception:  # noqa: BLE001 - migração 0008 ainda não aplicada
+                log.exception("uso do R2 indisponível")
         return render(
             request,
             "dashboard.html",
@@ -189,8 +205,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             pending=pending,
             active_ops=active_ops,
             recent=recent,
+            r2_usage=r2_usage,
             link_for=dash.link_for,
         )
+
+    @app.post("/uso/limite")
+    def usage_limit(
+        request: Request, pct: int = Form(...), user: str = Depends(require_user)
+    ) -> Response:
+        """Percentual da franquia grátis do R2 em que a ferramenta para (10 a 100)."""
+        with app.state.session_factory() as session:
+            usage.set_setting(session, usage.PCT_KEY, str(max(10, min(100, pct))))
+            session.commit()
+        return RedirectResponse("/#uso", status_code=303)
 
     app.include_router(operations.router)
     app.include_router(executions.router)

@@ -24,6 +24,7 @@ from core.connectors import SOURCE_TYPES
 from core.connectors.upload import IMAGE_EXT, VIDEO_EXT, upload_prefix
 from core.models import Account, Event, Operation, Source
 from core.states import OPERATION_STATUS
+from core.storage import is_remote
 from networks import PLATFORM_LABEL, PROFILES
 from web import editing
 from web.common import db_session, render, require_user
@@ -335,7 +336,7 @@ def upload_local(
     """Envio pela interface, só quando não há R2 (desenvolvimento)."""
     upload_source(session, operation_id, source_id)
     storage = request.app.state.storage
-    if storage.upload_url("x.mp4", "video/mp4"):
+    if is_remote(storage):
         raise HTTPException(status_code=409, detail="Com R2, envie pela URL assinada.")
     key = upload_key(operation_id, source_id, file.filename or "")
     with tempfile.NamedTemporaryFile(delete=False) as tmp:

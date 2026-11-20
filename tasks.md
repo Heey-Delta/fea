@@ -350,6 +350,7 @@ Status: 1
 - Subtask 28.3: Métricas por envio (views, curtidas, comentários) atualizadas a cada 6 h por 30 dias, na tela Publicações.
 - Subtask 28.4: Tela **Acessos**: estado das variáveis da ferramenta, chaves de Reddit, X, Google, TikTok e Instagram preenchidas pela interface (criptografadas no banco, valem para interface e workers), endereços de retorno e login OAuth de cada conta.
 - Subtask 28.5: Visual revisto: mais limpo, cantos levemente arredondados, sóbrio e minimalista.
+- Subtask 28.6: Limite de uso do R2: a ferramenta conta gravações (Classe A), leituras (Classe B) e o pico de armazenamento do mês, mede o bucket de hora em hora (Limpeza) e para ao chegar no percentual escolhido da franquia grátis (padrão 80%). Painel e ajuste no Dashboard.
 
 ## Task 29: Decisões
 Nível: 4
@@ -369,6 +370,7 @@ Status: 0
 - Subtask 29.12: Pendente: plano da Vercel (Hobby é só para uso não comercial).
 - Subtask 29.13: Pendente: se o Google aceita `.vercel.app` no OAuth em produção.
 - Subtask 29.14: Pendente: limites gratuitos do Neon.
+- Subtask 29.16: R2 só dentro da franquia grátis: trava em 80% por padrão (decidido, ajustável no Dashboard).
 - Subtask 29.15: Tentativas automáticas do render: **2** (padrão do preset, `max_retries`); permissão do áudio substituto: campo no preset (decidido, ajustável).
 
 ---

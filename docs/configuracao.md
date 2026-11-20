@@ -4,7 +4,7 @@ O código está pronto e publicado na Vercel. O que falta só pode ser feito por
 
 Onde cada coisa entra:
 
-- **Vercel** (projeto `fea` → Settings → Environment Variables): apenas o login do GitHub. O resto já está configurado.
+- **Vercel**: já está tudo configurado (banco, endereço, chaves).
 - **Tela Acessos** da ferramenta: chaves do R2, Reddit, X, Google, TikTok e Instagram, e o login de cada conta. Ficam criptografadas no banco e valem na hora para a interface e para os workers.
 - **VPS**: um comando gerado na tela Acessos instala tudo. Não é preciso copiar nenhuma chave.
 
@@ -23,24 +23,22 @@ Nenhum segredo vai para o repositório nem para o chat.
 
 ---
 
-## 1 · Banco (1 min)
+## 1 · Banco ✓
 
-Na Vercel, abra o projeto `fea` → **Storage** → **Create Database** → **Neon** (plano Free) → conecte ao projeto `fea` nos ambientes Production e Preview. A Vercel cria `DATABASE_URL` sozinha.
+Feito: o Neon está conectado ao projeto e a Vercel gravou `DATABASE_URL` e `DATABASE_URL_UNPOOLED`.
 
-## 2 · Login da ferramenta (5 min)
+## 2 · Login da ferramenta (1 clique)
 
-1. GitHub → Settings → Developer settings → OAuth Apps → **New OAuth App**:
-   - Homepage URL: `https://fea-rho.vercel.app`
-   - Authorization callback URL: `https://fea-rho.vercel.app/auth/github/callback`
-2. Na Vercel, crie `GITHUB_CLIENT_ID` e `GITHUB_CLIENT_SECRET` (marque como *Sensitive*) com os valores do OAuth App. `GITHUB_ALLOWED_ID`, `PUBLIC_BASE_URL`, `SECRET_KEY` e `TOKEN_ENCRYPTION_KEY` já estão lá.
-3. Vercel → Deployments → no último deploy de produção, **Redeploy**.
-4. Abra `https://fea-rho.vercel.app` e clique em **Entrar com GitHub**.
+1. Abra `https://fea-rho.vercel.app/login`, logado no GitHub como **Heey-Delta**.
+2. Clique em **Configurar login com GitHub** e depois em **Criar o app de login no GitHub**. A ferramenta cria as tabelas do banco nesse passo.
+3. No GitHub, confira o nome do app e clique em **Create GitHub App**. Você volta para a ferramenta com "Login configurado".
+4. Clique em **Entrar com GitHub** e depois em **Authorize**. Só a sua conta (ID 84813286) entra.
 
 ## 3 · Tela Acessos (dentro da ferramenta)
 
-1. **Banco de dados** → clique em **Aplicar migrações**.
-2. **Cloudflare R2** (15 min):
-   - Cloudflare → R2 → **Create bucket** (ex.: `fea`).
+1. **Banco de dados**: já deve aparecer "Conectado e atualizado". Se pedir, clique em **Aplicar migrações**.
+2. **Cloudflare R2** (15 min). R2 ativado no plano grátis e bucket `fea` criado ✓.
+   - **Limite de uso:** a Cloudflare não tem teto de gastos para o R2. A ferramenta conta cada gravação, leitura e o tamanho do bucket, e para sozinha ao chegar em 80% da franquia grátis (1 milhão de gravações, 10 milhões de leituras e 10 GB por mês). O uso e o percentual ficam no **Dashboard → Limite de uso do R2**. Apagar arquivos é grátis e nunca é bloqueado.
    - **Manage API Tokens** → crie um token com *Object Read & Write* só nesse bucket.
    - Cole na tela Acessos o Account ID, o Access Key ID, o Secret Access Key e o nome do bucket, e clique em **Testar**.
    - No bucket → Settings → CORS policy:

@@ -34,6 +34,8 @@ TABLES = {
     "events",
     "app_credentials",
     "worker_heartbeats",
+    "r2_usage",
+    "app_settings",
 }
 
 
