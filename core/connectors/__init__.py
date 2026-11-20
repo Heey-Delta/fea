@@ -4,7 +4,12 @@ from core.config import Settings
 from core.connectors.base import Page, RawItem, SourceConnector, SourceError, SourceRef
 from core.storage import Storage
 
-SOURCE_TYPES = {"reddit": "Reddit", "x": "X (Twitter)", "upload": "Upload manual"}
+SOURCE_TYPES = {
+    "drive": "Google Drive",
+    "upload": "Upload manual",
+    "reddit": "Reddit",
+    "x": "X (Twitter)",
+}
 
 
 def make_connector(
@@ -18,6 +23,10 @@ def make_connector(
         from core.connectors.x import XConnector
 
         return XConnector(settings, **kwargs)
+    if source_type == "drive":
+        from core.connectors.drive import DriveConnector
+
+        return DriveConnector(settings, **kwargs)
     if source_type == "upload":
         from core.connectors.upload import UploadConnector
 

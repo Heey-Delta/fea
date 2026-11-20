@@ -79,6 +79,16 @@ SERVICES: tuple[Service, ...] = (
         note='App do tipo "script". Uso não comercial na API gratuita.',
     ),
     Service(
+        "drive",
+        "Google Drive",
+        "busca",
+        (Field("google_drive_service_account", "Chave JSON da conta de serviço"),),
+        console="https://console.cloud.google.com/iam-admin/serviceaccounts",
+        note="Vídeos que caírem numa pasta do Drive viram itens da operação. Crie uma conta de "
+        "serviço, ative a Google Drive API, baixe a chave JSON e cole aqui; depois compartilhe "
+        "a pasta com o e-mail da conta de serviço (Leitor). Grátis e sem verificação do Google.",
+    ),
+    Service(
         "x",
         "X (Twitter)",
         "busca",

@@ -190,6 +190,18 @@ def test_vps_install_command_is_single_use(client, factory, tmp_path):  # noqa: 
     assert client.get("/vps/instalar/falso").status_code == 404
 
 
+def test_worker_env_download_for_own_computer(client, factory):  # noqa: F811
+    response = client.post("/contas/vps/env")
+    assert response.status_code == 200
+    assert "attachment" in response.headers["content-disposition"]
+    assert response.headers["cache-control"].startswith("no-store")
+    lines = dict(
+        line.split("=", 1) for line in response.text.splitlines() if line and line[0] != "#"
+    )
+    assert lines["APP_ENV"] == "production"
+    assert lines["DATABASE_URL"] and lines["TOKEN_ENCRYPTION_KEY"]
+
+
 def test_worker_heartbeat_status(factory):  # noqa: F811
     from datetime import UTC, datetime, timedelta
 
