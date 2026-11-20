@@ -10,6 +10,7 @@ from networks.base import NetworkProfile, OutputSpec
 PROFILE = NetworkProfile(
     id="youtube_shorts",
     name="YouTube Shorts",
+    platform="youtube",
     output=OutputSpec(width=1080, height=1920, fps=30),
     max_duration_s=180,
     allowed_resolutions=((1080, 1920), (720, 1280)),

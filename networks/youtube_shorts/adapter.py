@@ -89,6 +89,9 @@ class YouTubeAdapter(PlatformAdapter):
 
     # --- OAuth ---------------------------------------------------------------------------
 
+    def authorize_url(self, redirect_uri: str, state: str) -> str:
+        return authorize_url(self.client_id, redirect_uri, state)
+
     def exchange_code(self, code: str, redirect_uri: str) -> str:
         """Troca o código do retorno do OAuth pelas credenciais (JSON com o refresh token)."""
         with self.client_factory() as client:
@@ -251,3 +254,20 @@ class YouTubeAdapter(PlatformAdapter):
                     external_id=video_id, url=f"https://youtube.com/shorts/{video_id}"
                 )
         return None
+
+    def metrics(self, credentials: str, external_ids: list[str]) -> dict[str, dict]:
+        """Estatísticas públicas (1 unidade de cota a cada 50 vídeos)."""
+        out: dict[str, dict] = {}
+        with self.client_factory() as client:
+            token = self.access_token(client, credentials)
+            for start in range(0, len(external_ids), 50):
+                chunk = external_ids[start : start + 50]
+                data = self._get(client, token, "videos", part="statistics", id=",".join(chunk))
+                for video in data.get("items") or []:
+                    stats = video.get("statistics") or {}
+                    out[video["id"]] = {
+                        "views": int(stats.get("viewCount", 0)),
+                        "likes": int(stats.get("likeCount", 0)),
+                        "comments": int(stats.get("commentCount", 0)),
+                    }
+        return out

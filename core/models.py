@@ -1,4 +1,7 @@
-"""As 14 tabelas da ferramenta (Task 2, seção 12 da v2.1 com os ajustes da seção 18)."""
+"""As tabelas da ferramenta (Task 2, seção 12 da v2.1 com os ajustes da seção 18).
+
+As 14 do MVP mais `app_credentials` (chaves das redes preenchidas pela interface, Task 28).
+"""
 
 from datetime import datetime
 from typing import Any
@@ -313,6 +316,9 @@ class PublishJob(Base):
     external_id: Mapped[str | None] = mapped_column(String(200))
     url: Mapped[str | None] = mapped_column(Text)
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Métricas da plataforma (visualizações, curtidas…), atualizadas pelo Postador (Task 28.3).
+    metrics: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    metrics_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = created_at()
     updated_at: Mapped[datetime] = updated_at()
 
@@ -369,3 +375,16 @@ class Event(Base):
     )
     action: Mapped[str] = mapped_column(String(60))
     detail: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+
+
+class AppCredential(Base):
+    """Chave de serviço (Reddit, X, Google, TikTok, Instagram) preenchida na tela Acessos.
+
+    O valor fica criptografado com TOKEN_ENCRYPTION_KEY. Variável de ambiente tem precedência.
+    """
+
+    __tablename__ = "app_credentials"
+
+    name: Mapped[str] = mapped_column(String(60), primary_key=True)
+    value_encrypted: Mapped[str] = mapped_column(Text)
+    updated_at: Mapped[datetime] = updated_at()

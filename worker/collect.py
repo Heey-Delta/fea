@@ -21,7 +21,7 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session, sessionmaker
 
-from core import executions, fishing, queue, watermark
+from core import credentials, executions, fishing, queue, watermark
 from core.config import Settings, get_settings
 from core.connectors import RawItem, SourceRef, make_connector
 from core.connectors.base import SourceError
@@ -394,7 +394,8 @@ def run_release(
 
 @register("collect")
 def collect(ctx: JobContext) -> None:
+    settings = credentials.load(ctx.session_factory, get_settings())
     if (ctx.payload or {}).get("release_item"):
-        run_release(ctx.session_factory, ctx.payload["release_item"], get_settings(), get_storage())
+        run_release(ctx.session_factory, ctx.payload["release_item"], settings, get_storage())
         return
-    run_collect(ctx.session_factory, ctx.ref_id, get_settings(), get_storage())
+    run_collect(ctx.session_factory, ctx.ref_id, settings, get_storage())

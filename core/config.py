@@ -41,12 +41,25 @@ class Settings(BaseSettings):
     reddit_client_secret: str = ""
     reddit_user_agent: str = "fea/0.1 (ferramenta de operacoes)"
 
+    # X (Buscador): Bearer Token do app no portal de desenvolvedor do X (API v2, plano pago).
+    x_bearer_token: str = ""
+
     # YouTube (Postador): cliente OAuth do Google Cloud com a YouTube Data API v3 ativa.
     # O retorno do OAuth é {PUBLIC_BASE_URL}/contas/youtube/retorno.
     google_client_id: str = ""
     google_client_secret: str = ""
     # Uploads por dia no projeto do Google, somando todas as contas e operações (Task 20.2).
     youtube_daily_upload_limit: int = 100
+
+    # TikTok (Postador): app no TikTok for Developers com Login Kit e Content Posting API.
+    # Retorno do OAuth: {PUBLIC_BASE_URL}/contas/tiktok/retorno.
+    tiktok_client_key: str = ""
+    tiktok_client_secret: str = ""
+
+    # Instagram Reels (Postador): app da Meta com "Instagram API with Instagram Login".
+    # Retorno do OAuth: {PUBLIC_BASE_URL}/contas/instagram/retorno. Conta profissional.
+    instagram_app_id: str = ""
+    instagram_app_secret: str = ""
 
     # Workers: espera por avisos do banco (LISTEN/NOTIFY) e intervalo máximo sem tarefas.
     worker_listen: bool = True

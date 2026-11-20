@@ -15,6 +15,7 @@ from fastapi import APIRouter, Body, Depends, File, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from sqlalchemy.orm import Session
 
+from core import credentials
 from core import executions as exe
 from core import operations as ops
 from core import sources as src
@@ -179,9 +180,8 @@ def test_source(
     if source is None or source.operation_id != operation_id:
         raise HTTPException(status_code=404, detail="Fonte não encontrada")
     state = request.app.state
-    result = src.test_connection(
-        session, source, state.settings, state.storage, **state.connector_kwargs
-    )
+    settings = credentials.effective(session, state.settings)
+    result = src.test_connection(session, source, settings, state.storage, **state.connector_kwargs)
     flash(request, "ok" if result.ok else "error", result.message)
     return RedirectResponse(f"/operacoes/{operation_id}?aba=fontes", status_code=303)
 

@@ -36,7 +36,12 @@ def factory():
     command.upgrade(cfg, "head")
     engine = create_engine(sqlalchemy_url(DATABASE_URL))
     with engine.begin() as conn:
-        conn.execute(text("TRUNCATE operations, accounts, jobs, events RESTART IDENTITY CASCADE"))
+        conn.execute(
+            text(
+                "TRUNCATE operations, accounts, jobs, events, app_credentials"
+                " RESTART IDENTITY CASCADE"
+            )
+        )
     yield sessionmaker(bind=engine, expire_on_commit=False)
     engine.dispose()
 

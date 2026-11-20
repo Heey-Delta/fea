@@ -4,7 +4,7 @@ from core.config import Settings
 from core.connectors.base import Page, RawItem, SourceConnector, SourceError, SourceRef
 from core.storage import Storage
 
-SOURCE_TYPES = {"reddit": "Reddit", "upload": "Upload manual"}
+SOURCE_TYPES = {"reddit": "Reddit", "x": "X (Twitter)", "upload": "Upload manual"}
 
 
 def make_connector(
@@ -14,6 +14,10 @@ def make_connector(
         from core.connectors.reddit import RedditConnector
 
         return RedditConnector(settings, **kwargs)
+    if source_type == "x":
+        from core.connectors.x import XConnector
+
+        return XConnector(settings, **kwargs)
     if source_type == "upload":
         from core.connectors.upload import UploadConnector
 

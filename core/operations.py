@@ -20,9 +20,9 @@ from core.sources import sync_sources
 NODE_TYPES = {
     "source": "Fonte",
     "fishing": "Pesca",
-    "edit": "Edição",
+    "edit": "Motor Editor",
     "approval": "Aprovação",
-    "publish": "Postagem",
+    "publish": "Publicador",
     "network": "Rede",
     "account": "Conta",
 }
@@ -182,14 +182,14 @@ def validate_graph(config: dict[str, Any]) -> list[Issue]:
         if any(by_id[t]["type"] == "fishing" for t in outgoing[sid])
     ]
     if not connected_sources:
-        issues.append(Issue("error", "Ligue ao menos uma Fonte à Pesca."))
+        issues.append(Issue("error", "Adicione ao menos uma fonte de busca na Pesca."))
     for required, message in (
-        (("fishing", "edit"), "Ligue a Pesca à Edição."),
-        (("edit", "approval"), "Ligue a Edição à Aprovação."),
-        (("approval", "publish"), "Ligue a Aprovação à Postagem."),
-        (("network", "edit"), "Ligue a Rede à Edição."),
-        (("network", "publish"), "Ligue a Rede à Postagem."),
-        (("account", "publish"), "Ligue ao menos uma Conta à Postagem."),
+        (("fishing", "edit"), "Ligue a Pesca ao Motor Editor."),
+        (("edit", "approval"), "Ligue o Motor Editor à Aprovação."),
+        (("approval", "publish"), "Ligue a Aprovação ao Publicador."),
+        (("network", "edit"), "Ligue a Rede ao Motor Editor."),
+        (("network", "publish"), "Ligue a Rede ao Publicador."),
+        (("account", "publish"), "Escolha ao menos uma conta no Publicador."),
     ):
         if required not in links:
             issues.append(Issue("error", message))
@@ -201,6 +201,8 @@ def validate_graph(config: dict[str, Any]) -> list[Issue]:
             issues.append(Issue("error", f"Tipo de fonte desconhecido: {source_type}.", sid))
         elif source_type == "reddit" and not (cfg.get("reference") or "").strip():
             issues.append(Issue("error", "Fonte do Reddit sem comunidade (ex.: r/nome).", sid))
+        elif source_type == "x" and not (cfg.get("reference") or "").strip():
+            issues.append(Issue("error", "Fonte do X sem @usuario ou termo de busca.", sid))
     for sid in by_type["source"]:
         if not (by_id[sid].get("config") or {}).get("permission_note"):
             issues.append(

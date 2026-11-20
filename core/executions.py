@@ -45,6 +45,7 @@ def start_execution(
     priority: str = "normal",
     source_ids: list[int] | None = None,
     trigger: str = "manual",
+    now: datetime | None = None,
 ) -> Execution:
     """Play: só em operação ativa (Task 4.4). Valores vazios vêm do bloco Pesca."""
     if op.status != "active":
@@ -70,6 +71,8 @@ def start_execution(
         status="running",
         stats={},
     )
+    if now is not None:
+        ex.started_at = now  # automação: o horário do tick, não o do banco
     session.add(ex)
     session.flush()
     queue.enqueue(

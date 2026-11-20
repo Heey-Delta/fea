@@ -30,6 +30,7 @@ class OutputSpec:
 class NetworkProfile:
     id: str
     name: str
+    platform: str  # plataforma das contas que publicam neste perfil (accounts.platform)
     output: OutputSpec
     max_duration_s: float
     allowed_resolutions: tuple[tuple[int, int], ...]
@@ -68,6 +69,7 @@ class PublishRequest:
     tags: list[str]
     privacy: str = "public"
     publish_at: str | None = None  # ISO 8601, agendamento nativo da plataforma
+    file_url: str | None = None  # URL pública e temporária do arquivo (Instagram)
 
 
 @dataclass
@@ -102,10 +104,33 @@ class PublishFailed(AdapterError):
 
 
 class PlatformAdapter:
-    """Interface comum (20.1). `credentials` é o token já descriptografado."""
+    """Interface comum (20.1). `credentials` é o token já descriptografado (JSON)."""
 
     platform: str = ""
     capabilities: frozenset[str] = frozenset()
+
+    # --- Conexão da conta (OAuth) ---------------------------------------------------------
+
+    def authorize_url(self, redirect_uri: str, state: str) -> str:
+        raise NotImplementedError
+
+    def exchange_code(self, code: str, redirect_uri: str) -> str:
+        """Troca o código do retorno do OAuth pelas credenciais (JSON)."""
+        raise NotImplementedError
+
+    def fresh_credentials(self, credentials: str) -> str:
+        """Renova o token se a plataforma exigir. Se mudar, o Postador grava o novo valor."""
+        return credentials
+
+    # --- Envio ----------------------------------------------------------------------------
+
+    def status(self, credentials: str, external_id: str) -> PublishResult | None:
+        """Envio assíncrono: resultado final, ou None se ainda processa. Falha → PublishFailed."""
+        raise NotImplementedError
+
+    def metrics(self, credentials: str, external_ids: list[str]) -> dict[str, dict]:
+        """Métricas por vídeo publicado (Task 28.3): views, likes, comments…"""
+        return {}
 
     def publish(self, credentials: str, request: PublishRequest) -> PublishResult:
         raise NotImplementedError

@@ -99,7 +99,7 @@ def test_canvas_loads_saved_flow(page, server, factory):
     page.wait_for_selector(".drawflow-node")
     assert page.locator(".drawflow-node").count() == 5
     assert page.locator(".connection").count() == 5
-    assert "Ligue ao menos uma Fonte à Pesca." in page.inner_text("#canvas-issues")
+    assert "Adicione ao menos uma fonte de busca na Pesca." in page.inner_text("#canvas-issues")
 
 
 def test_forbidden_connection_is_removed(page, server, factory):

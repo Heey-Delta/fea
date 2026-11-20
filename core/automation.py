@@ -83,6 +83,7 @@ def daily_play_due(
             Execution.operation_id == op.id,
             Execution.trigger == "scheduled",
             Execution.started_at >= start_of_day,
+            Execution.started_at < start_of_day + timedelta(days=1),
         )
     )
     return not already
@@ -97,7 +98,7 @@ def automation_tick(session: Session, now: datetime | None = None) -> list[int]:
         if has_open_execution(session, op.id):
             continue
         if daily_play_due(session, op, auto, tz, now):
-            ex = exe.start_execution(session, op, trigger="scheduled")
+            ex = exe.start_execution(session, op, trigger="scheduled", now=now)
             started.append(ex.id)
             log.info("play diário", extra={"operation_id": op.id, "execution_id": ex.id})
             continue
@@ -105,7 +106,9 @@ def automation_tick(session: Session, now: datetime | None = None) -> list[int]:
             target = int(auto.get("daily_target") or 0) * int(auto.get("stock_min_days") or 0)
             stock = ready_stock(session, op.id)
             if target and stock < target:
-                ex = exe.start_execution(session, op, target_x=target - stock, trigger="stock")
+                ex = exe.start_execution(
+                    session, op, target_x=target - stock, trigger="stock", now=now
+                )
                 started.append(ex.id)
                 log.info(
                     "reposição de estoque",

@@ -20,6 +20,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from core import accounts as acc
+from core import credentials as creds
 from core import distribution as dist
 from core import queue, titles
 from core.config import Settings, get_settings
@@ -27,7 +28,7 @@ from core.models import Account, Event, Item, Operation, PublishJob, Render
 from core.operations import current_config
 from core.security import TokenCipher
 from core.storage import Storage, get_storage
-from networks import make_adapter, profile_of_config
+from networks import make_adapter, profile_for_platform
 from networks.base import (
     AuthError,
     PlatformAdapter,
@@ -120,6 +121,21 @@ def scheduler_tick(session: Session, now: datetime | None = None) -> dict:
     due = due_jobs(session, now)
     for job in due:
         enqueue_publish(session, job)
+    # Envios em processamento sem consulta na fila (ex.: worker reiniciado).
+    for job in session.scalars(select(PublishJob).where(PublishJob.status == "processing")):
+        enqueue_status(session, job, now)
+    # Métricas: uma tarefa por conta a cada hora, quando há vídeos com métrica vencida.
+    hour = now.strftime("%Y%m%d%H")
+    for account_id in metrics_due(session, now):
+        queue.enqueue(
+            session,
+            "publish",
+            f"metrics:{account_id}:{hour}",
+            ref_id=account_id,
+            priority="low",
+            max_attempts=1,
+            payload={"metrics": True},
+        )
     return {"batches": created, "pending_moved": moved, "enqueued": len(due)}
 
 
@@ -157,9 +173,14 @@ def next_quota_reset(now: datetime) -> datetime:
     return (tomorrow + timedelta(minutes=5)).astimezone(UTC)
 
 
-def make_metadata(session: Session, job: PublishJob, item: Item, config: dict) -> titles.Metadata:
-    """Título na hora da publicação (16.1), com o corpus da operação e sem repetir a conta."""
-    profile = profile_of_config(config)
+def make_metadata(
+    session: Session, job: PublishJob, item: Item, config: dict, platform: str = "youtube"
+) -> titles.Metadata:
+    """Título na hora da publicação (16.1), com o corpus da operação e sem repetir a conta.
+
+    Os limites de título, legenda e tags são os da rede da conta (Task 28.2).
+    """
+    profile = profile_for_platform(platform)
     publish = dist.publish_config(config)
     corpus = [
         t
@@ -187,7 +208,7 @@ def make_metadata(session: Session, job: PublishJob, item: Item, config: dict) -
         title_max=profile.title_max_chars,
         description_max=profile.description_max_chars,
         tags_max=profile.tags_max_chars,
-        platform_tags=["shorts"],
+        platform_tags=["shorts"] if platform == "youtube" else [],
         seed=job.id,
     )
 
@@ -210,13 +231,16 @@ def start_upload(session: Session, job_id: int, settings: Settings, now: datetim
         job.status, job.status_reason = "failed", "Render indisponível para envio."
         _event(session, job, "failed", {"reason": job.status_reason}, op.id)
         return None
-    if uploads_today(session, account.platform, now) >= settings.youtube_daily_upload_limit:
+    if (
+        account.platform == "youtube"
+        and uploads_today(session, account.platform, now) >= settings.youtube_daily_upload_limit
+    ):
         job.planned_at = next_quota_reset(now)
         job.status_reason = "Cota diária de uploads do projeto Google esgotada."
         return None
     config = current_config(session, op).config
     if job.title is None:
-        meta = make_metadata(session, job, item, config)
+        meta = make_metadata(session, job, item, config, account.platform)
         job.title, job.description, job.tags = meta.title, meta.description, meta.tags
         job.title_method = meta.method
     job.status, job.status_reason = "uploading", None
@@ -250,6 +274,18 @@ def run_publish(
             credentials = acc.credentials(cipher, account)
         except Exception as exc:  # noqa: BLE001 - token ilegível conta como erro da conta
             return auth_failed(session, job, account, op.id, str(exc), now)
+        adapter = adapters(account.platform)
+        try:
+            fresh = adapter.fresh_credentials(credentials)
+        except AuthError as exc:
+            return auth_failed(session, job, account, op.id, str(exc), now)
+        except (RateLimited, TemporaryError) as exc:
+            return retry_or_fail(session, job, str(exc), now, op.id)
+        if fresh != credentials:
+            # Token renovado (TikTok e Instagram): grava o novo antes de usar.
+            account.token_encrypted = cipher.encrypt(fresh)
+            session.commit()
+            credentials = fresh
         request = PublishRequest(
             file_path="",
             title=job.title,
@@ -257,10 +293,14 @@ def run_publish(
             tags=job.tags or [],
             privacy=privacy,
         )
-        render_key, platform = render.output_file, account.platform
+        render_key = render.output_file
         op_id, account_id = op.id, account.id
 
-    adapter = adapters(platform)
+    if "needs_public_url" in adapter.capabilities:
+        try:
+            request.file_url = storage.url(render_key, expires_s=6 * 3600)
+        except Exception:  # noqa: BLE001
+            request.file_url = None
     with tempfile.TemporaryDirectory() as tmpdir:
         path = Path(tmpdir) / "video.mp4"
         try:
@@ -300,7 +340,124 @@ def run_publish(
 
     with factory() as session:
         job = session.get(PublishJob, job_id)
+        if result.status == "processing":
+            return mark_processing(session, job, result.external_id, now, op_id)
         return dist.published(session, job, result.external_id, result.url, result.status, now)
+
+
+def mark_processing(
+    session: Session, job: PublishJob, external_id: str, now: datetime, operation_id: int | None
+) -> str:
+    """Envio aceito, a plataforma ainda processa (TikTok, Instagram). O agendador consulta."""
+    job.status, job.external_id = "processing", external_id
+    job.status_reason = "Enviado; a plataforma está processando."
+    _event(session, job, "processing", {"external_id": external_id}, operation_id)
+    enqueue_status(session, job, now + timedelta(minutes=1))
+    session.commit()
+    return job.status
+
+
+def enqueue_status(session: Session, job: PublishJob, run_at: datetime) -> None:
+    queue.enqueue(
+        session,
+        "publish",
+        f"status:{job.id}:{int(run_at.timestamp()) // 60}",
+        ref_id=job.id,
+        run_at=run_at,
+        max_attempts=1,
+        payload={"status": True},
+    )
+
+
+PROCESSING_TIMEOUT = timedelta(hours=2)
+
+
+def run_status(
+    factory: sessionmaker,
+    job_id: int,
+    settings: Settings,
+    adapters: AdapterFactory,
+    now: datetime | None = None,
+) -> str | None:
+    """Consulta o processamento na plataforma: publicado, falhou ou ainda processando."""
+    now = now or datetime.now(UTC)
+    with factory() as session:
+        job = session.get(PublishJob, job_id)
+        if job is None or job.status != "processing":
+            return None
+        account = session.get(Account, job.account_id)
+        render = session.get(Render, job.render_id)
+        op_id = session.get(Item, render.item_id).operation_id
+        try:
+            credentials = acc.credentials(TokenCipher(settings.token_encryption_key), account)
+            result = adapters(account.platform).status(credentials, job.external_id)
+        except PublishFailed as exc:
+            job.status, job.status_reason = "failed", str(exc)[:500]
+            _event(session, job, "failed", {"reason": job.status_reason}, op_id)
+            session.commit()
+            return job.status
+        except Exception as exc:  # noqa: BLE001 - erro passageiro: tenta na próxima rodada
+            job.status_reason = f"Consulta falhou ({str(exc)[:200]}); tentando de novo."
+            enqueue_status(session, job, now + timedelta(minutes=5))
+            session.commit()
+            return job.status
+        if result is not None:
+            return dist.published(session, job, result.external_id, result.url, "published", now)
+        if job.updated_at and now - job.updated_at > PROCESSING_TIMEOUT:
+            job.status = "uncertain"
+            job.status_reason = "A plataforma não terminou de processar em 2 h: confira e decida."
+            _event(session, job, "uncertain", {"reason": job.status_reason}, op_id)
+        else:
+            enqueue_status(session, job, now + timedelta(minutes=2))
+        session.commit()
+        return job.status
+
+
+METRICS_EVERY = timedelta(hours=6)
+METRICS_WINDOW = timedelta(days=30)
+
+
+def metrics_due(session: Session, now: datetime) -> dict[int, list[int]]:
+    """Envios publicados nos últimos 30 dias com métricas vencidas, por conta (Task 28.3)."""
+    rows = session.execute(
+        select(PublishJob.account_id, PublishJob.id).where(
+            PublishJob.status == "published",
+            PublishJob.external_id.is_not(None),
+            PublishJob.published_at >= now - METRICS_WINDOW,
+            (PublishJob.metrics_at.is_(None)) | (PublishJob.metrics_at <= now - METRICS_EVERY),
+        )
+    )
+    out: dict[int, list[int]] = {}
+    for account_id, job_id in rows:
+        out.setdefault(account_id, []).append(job_id)
+    return out
+
+
+def run_metrics(
+    factory: sessionmaker,
+    account_id: int,
+    settings: Settings,
+    adapters: AdapterFactory,
+    now: datetime | None = None,
+) -> int:
+    now = now or datetime.now(UTC)
+    with factory() as session:
+        account = session.get(Account, account_id)
+        jobs = [session.get(PublishJob, i) for i in metrics_due(session, now).get(account_id, [])]
+        if not jobs or not acc.usable(account):
+            return 0
+        try:
+            credentials = acc.credentials(TokenCipher(settings.token_encryption_key), account)
+            stats = adapters(account.platform).metrics(credentials, [j.external_id for j in jobs])
+        except Exception as exc:  # noqa: BLE001 - métrica nunca derruba nada
+            log.warning("métricas indisponíveis", extra={"account": account_id, "error": str(exc)})
+            return 0
+        for job in jobs:
+            if job.external_id in stats:
+                job.metrics = stats[job.external_id]
+            job.metrics_at = now
+        session.commit()
+        return sum(1 for j in jobs if j.external_id in stats)
 
 
 def auth_failed(
@@ -388,10 +545,15 @@ def run_check(
 
 @register("publish")
 def publish_job(ctx: JobContext) -> None:
-    settings = get_settings()
+    settings = creds.load(ctx.session_factory, get_settings())
     adapters = default_adapters(settings)
-    if (ctx.payload or {}).get("check"):
+    payload = ctx.payload or {}
+    if payload.get("check"):
         run_check(ctx.session_factory, ctx.ref_id, settings, adapters)
+    elif payload.get("status"):
+        run_status(ctx.session_factory, ctx.ref_id, settings, adapters)
+    elif payload.get("metrics"):
+        run_metrics(ctx.session_factory, ctx.ref_id, settings, adapters)
     else:
         run_publish(ctx.session_factory, ctx.ref_id, get_storage(), settings, adapters)
 

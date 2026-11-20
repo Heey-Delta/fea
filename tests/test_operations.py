@@ -48,21 +48,21 @@ def test_complete_flow_has_no_issues():
 
 def test_default_flow_needs_source_and_account():
     errors = messages(ops.default_config())
-    assert "Ligue ao menos uma Fonte à Pesca." in errors
-    assert "Ligue ao menos uma Conta à Postagem." in errors
+    assert "Adicione ao menos uma fonte de busca na Pesca." in errors
+    assert "Escolha ao menos uma conta no Publicador." in errors
     assert len(errors) == 2
 
 
 def test_forbidden_edge_is_refused():
     config = complete_config()
     config["edges"].append({"from": "reddit", "to": "postagem"})
-    assert "Fonte não pode ligar em Postagem." in messages(config)
+    assert "Fonte não pode ligar em Publicador." in messages(config)
 
 
 def test_skipping_a_stage_is_an_error():
     config = complete_config()
     config["edges"] = [e for e in config["edges"] if e != {"from": "edicao", "to": "aprovacao"}]
-    assert "Ligue a Edição à Aprovação." in messages(config)
+    assert "Ligue o Motor Editor à Aprovação." in messages(config)
 
 
 def test_single_blocks_must_be_unique():
@@ -209,7 +209,7 @@ def test_web_flow(logged_client, session):
     detail_url = response.headers["location"]
     page = logged_client.get(detail_url)
     assert "Memes" in page.text and "Rascunho" in page.text
-    assert "Ligue ao menos uma Fonte à Pesca." in page.text
+    assert "Adicione ao menos uma fonte de busca na Pesca." in page.text
 
     # Ativar com erro: recusado com mensagem.
     op_id = int(detail_url.rsplit("/", 1)[1])

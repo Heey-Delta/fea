@@ -1,4 +1,4 @@
-"""Banco: as 14 tabelas, o sincronismo entre modelos e migração e as constraints (Task 2)."""
+"""Banco: as 14 tabelas do MVP mais app_credentials, modelos x migração e constraints (Task 2)."""
 
 import os
 
@@ -32,6 +32,7 @@ TABLES = {
     "publish_jobs",
     "jobs",
     "events",
+    "app_credentials",
 }
 
 
