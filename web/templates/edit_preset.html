@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block title %}Edição · {{ op.name }}{% endblock %}
+{% macro opt(value, current, label) %}<option value="{{ value }}"{% if value == current %} selected{% endif %}>{{ label }}</option>{% endmacro %}
+{% macro asset(id, label, value, accept) %}
+<div class="field">{{ label }}
+  <input class="input" id="{{ id }}" name="{{ id }}" value="{{ value or '' }}" placeholder="chave do arquivo" {% if read_only %}readonly{% endif %}>
+  {% if not read_only %}<input type="file" accept="{{ accept }}" aria-label="Enviar {{ label }}" data-asset-target="{{ id }}" data-asset-url="/operacoes/{{ op.id }}/arquivos/upload-url">{% endif %}
+  <small class="sub" id="{{ id }}-status" role="status"></small>
+</div>
+{% endmacro %}
+{% block content %}
+<a class="back" href="/operacoes/{{ op.id }}/fluxo">{{ icon('arrow-left') }} {{ op.name }}</a>
+<h1>Edição</h1>
+<p class="sub">Sem área de edição: todo vídeo sai deste preset ({{ profile.name }}). Salvar cria a versão v{{ config.version + 1 }} da configuração; execuções em andamento continuam com a versão delas.</p>
+{% if flash %}<p class="{{ 'error' if flash.kind == 'error' else 'notice' }}" role="status">{{ flash.text }}</p>{% endif %}
+
+<form class="card form" method="post" action="/operacoes/{{ op.id }}/edicao" id="preset">
+<fieldset {% if read_only %}disabled{% endif %}>
+  <h2>Vídeo</h2>
+  <div class="grid">
+    <label class="field">Resolução
+      <select class="input" name="resolution">{% for w, h in profile.allowed_resolutions %}{{ opt(w ~ 'x' ~ h, p.video.width ~ 'x' ~ p.video.height, w ~ '×' ~ h) }}{% endfor %}</select></label>
+    <label class="field">FPS
+      <select class="input" name="fps">{% for f in profile.allowed_fps %}{{ opt(f, p.video.fps, f) }}{% endfor %}</select></label>
+    <label class="field">Enquadramento
+      <select class="input" name="fit">{{ opt('cover', p.video.fit, 'A · preencher (corta)') }}{{ opt('contain', p.video.fit, 'B · ajustar (barras)') }}{{ opt('blur', p.video.fit, 'C · fundo desfocado') }}</select></label>
+    <label class="field">Posição do corte
+      <select class="input" name="crop_position">{{ opt('center', p.video.crop_position, 'centro') }}{{ opt('top', p.video.crop_position, 'topo') }}{{ opt('bottom', p.video.crop_position, 'base') }}</select></label>
+    <label class="field">Cor de fundo <input class="input" type="color" name="background" value="{{ p.video.background }}"></label>
+    <label class="field">Desfoque <input class="input" type="number" name="blur" min="0" max="100" value="{{ p.video.blur }}"></label>
+    <label class="field">Duração de imagens (s) <input class="input" type="number" step="0.5" min="1" name="image_duration_s" value="{{ p.video.image_duration_s }}"></label>
+    <label class="field">Qualidade (CRF, menor = melhor) <input class="input" type="number" min="14" max="32" name="crf" value="{{ p.export.crf }}"></label>
+  </div>
+
+  <h2>Máscara</h2>
+  <div class="grid">
+    <label class="field">Máscara
+      <select class="input" name="mask_id"><option value="">Sem máscara</option>
+      {% for mask, versions in masks %}{{ opt(mask.id, p.mask.mask_id, mask.name ~ ' (v' ~ versions[0].version ~ ')') }}{% endfor %}</select></label>
+    <label class="field">Opacidade (%) <input class="input" type="number" min="0" max="100" name="mask_opacity_pct" value="{{ (p.mask.opacity * 100) | round | int }}"></label>
+    <label class="field">Escala (%) <input class="input" type="number" min="1" max="400" name="mask_scale_pct" value="{{ (p.mask.scale * 100) | round | int }}"></label>
+    <label class="field">Alinhamento
+      <select class="input" name="mask_align">{{ opt('center', p.mask.align, 'centro') }}{{ opt('top', p.mask.align, 'topo') }}{{ opt('bottom', p.mask.align, 'base') }}</select></label>
+    <input type="hidden" name="mask_x" value="{{ p.mask.x }}"><input type="hidden" name="mask_y" value="{{ p.mask.y }}">
+    <input type="hidden" name="mask_width_pct" value="{{ p.mask.width_pct }}"><input type="hidden" name="mask_height_pct" value="{{ p.mask.height_pct }}">
+  </div>
+
+  <h2>Textos fixos</h2>
+  <p class="sub">Texto fixo do vídeo (ex.: chamada, @ do canal). O título vai só na publicação, nunca no vídeo.</p>
+  {% for i in range(text_slots) %}{% set t = p.texts[i] if p.texts|length > i else default_text %}
+  <div class="grid">
+    <label class="field">Texto {{ i + 1 }} <input class="input" name="t{{ i }}_content" value="{{ t.content or '' }}" placeholder="vazio = sem texto"></label>
+    <label class="field">Posição
+      <select class="input" name="t{{ i }}_position">{{ opt('top', t.position or 'top', 'topo') }}{{ opt('center', t.position, 'centro') }}{{ opt('bottom', t.position, 'base') }}</select></label>
+    <label class="field">Tamanho <input class="input" type="number" min="12" max="200" name="t{{ i }}_size" value="{{ t.size or 64 }}"></label>
+    <label class="field">Cor <input class="input" type="color" name="t{{ i }}_color" value="{{ t.color or '#FFFFFF' }}"></label>
+    <label class="field">Contorno <input class="input" type="number" min="0" max="20" name="t{{ i }}_outline" value="{{ t.outline }}"></label>
+    <label class="field">Cor do contorno <input class="input" type="color" name="t{{ i }}_outline_color" value="{{ t.outline_color or '#000000' }}"></label>
+    <label class="field">Margem <input class="input" type="number" min="0" name="t{{ i }}_margin" value="{{ t.margin or 120 }}"></label>
+    <label class="field">Linhas máx. <input class="input" type="number" min="1" max="6" name="t{{ i }}_max_lines" value="{{ t.max_lines or 3 }}"></label>
+    <label class="check"><input type="checkbox" name="t{{ i }}_shadow" {% if t.shadow %}checked{% endif %}> Sombra</label>
+  </div>
+  {% endfor %}
+
+  <h2>Elementos (logo, marca d'água própria)</h2>
+  {% for i in range(element_slots) %}{% set e = p.elements[i] if p.elements|length > i else default_element %}
+  <div class="grid">
+    {{ asset('e' ~ i ~ '_file_key', 'Imagem ' ~ (i + 1), e.file_key, 'image/png,image/jpeg,image/webp') }}
+    <label class="field">Posição
+      <select class="input" name="e{{ i }}_position">{% for pos, label in [('top_left','sup. esq.'),('top_right','sup. dir.'),('bottom_left','inf. esq.'),('bottom_right','inf. dir.'),('center','centro')] %}{{ opt(pos, e.position or 'bottom_right', label) }}{% endfor %}</select></label>
+    <label class="field">Largura (% do vídeo) <input class="input" type="number" min="1" max="100" name="e{{ i }}_scale_pct" value="{{ (e.scale * 100) | round | int }}"></label>
+    <label class="field">Opacidade (%) <input class="input" type="number" min="0" max="100" name="e{{ i }}_opacity_pct" value="{{ (e.opacity * 100) | round | int }}"></label>
+    <label class="field">Margem <input class="input" type="number" min="0" name="e{{ i }}_margin" value="{{ e.margin or 60 }}"></label>
+  </div>
+  {% endfor %}
+
+  <h2>Áudio</h2>
+  <div class="grid">
+    <label class="field">Modo
+      <select class="input" name="audio_mode">{{ opt('keep', p.audio.mode, 'manter original') }}{{ opt('remove', p.audio.mode, 'remover') }}{{ opt('replace', p.audio.mode, 'substituir') }}</select></label>
+    {{ asset('audio_file_key', 'Áudio de substituição', p.audio.file_key, 'audio/*') }}
+    <label class="field">Permissão do áudio <input class="input" name="audio_permission" value="{{ p.audio.permission_note }}" placeholder="licença ou origem"></label>
+    <label class="field">Volume (%) <input class="input" type="number" min="0" max="200" name="audio_volume_pct" value="{{ (p.audio.volume * 100) | round | int }}"></label>
+    <label class="field">Fade in (s) <input class="input" type="number" step="0.1" min="0" name="audio_fade_in" value="{{ p.audio.fade_in_s }}"></label>
+    <label class="field">Fade out (s) <input class="input" type="number" step="0.1" min="0" name="audio_fade_out" value="{{ p.audio.fade_out_s }}"></label>
+    <label class="check"><input type="checkbox" name="audio_normalize" {% if p.audio.normalize %}checked{% endif %}> Normalizar volume</label>
+    <label class="check"><input type="checkbox" name="audio_required" {% if p.audio.required %}checked{% endif %}> Exigir áudio</label>
+  </div>
+</fieldset>
+  {% if not read_only %}<div class="row"><button class="btn pri" type="submit">Salvar preset</button></div>{% endif %}
+</form>
+
+<section class="card" id="mascaras">
+  <h2>Máscaras PNG</h2>
+  <p class="sub">Crie a máscara fora da ferramenta ({{ profile.output.width }}×{{ profile.output.height }}, com transparência) e importe. Cada envio vira uma versão; vídeos já feitos guardam a versão usada.</p>
+  {% for mask, versions in masks %}
+  <div class="row"><strong>{{ mask.name }}</strong>
+    {% for v in versions %}<a href="{{ url(v.file_key) }}" target="_blank" rel="noopener">v{{ v.version }}</a> <small class="sub">{{ v.width }}×{{ v.height }}{% if not v.has_alpha %}, sem transparência{% endif %}</small>{% endfor %}
+  </div>
+  {% else %}
+  <p class="sub">Nenhuma máscara ainda.</p>
+  {% endfor %}
+  {% if not read_only %}
+  <form class="form" method="post" action="/operacoes/{{ op.id }}/mascaras" enctype="multipart/form-data">
+    <div class="grid">
+      <label class="field">Arquivo PNG <input class="input" type="file" name="file" accept="image/png" required></label>
+      <label class="field">Nome <input class="input" name="name" placeholder="ex.: moldura padrão"></label>
+      <label class="field">Nova versão de
+        <select class="input" name="mask_id"><option value="">(máscara nova)</option>{% for mask, _ in masks %}<option value="{{ mask.id }}">{{ mask.name }}</option>{% endfor %}</select></label>
+    </div>
+    <div class="row"><button class="btn" type="submit">Importar máscara</button></div>
+  </form>
+  {% endif %}
+</section>
+
+<section class="card" id="testes">
+  <h2>Testar preset</h2>
+  <p class="sub">Renderiza uma amostra com o preset salvo (v{{ config.version }}) na fila do Editor. Precisa do worker Editor rodando.</p>
+  {% if not read_only %}
+  <form class="form" method="post" action="/operacoes/{{ op.id }}/edicao/testar">
+    <div class="grid">
+      <label class="field">Amostra pescada
+        <select class="input" id="sample_pick" onchange="document.getElementById('sample_key').value=this.value"><option value="">(escolha ou envie)</option>
+        {% for s in samples %}<option value="{{ s.original_file }}">#{{ s.id }} · {{ (s.text or s.external_id or '')[:50] }}</option>{% endfor %}</select></label>
+      {{ asset('sample_key', 'Ou envie um vídeo/imagem', '', 'video/*,image/*') }}
+    </div>
+    <div class="row"><button class="btn pri" type="submit">Testar preset</button></div>
+  </form>
+  {% endif %}
+  {% for t in tests %}{% set d = t.detail or {} %}
+  <div class="row">
+    {% if d.ok %}<video src="{{ url(d.output_file) }}" controls preload="metadata" width="180"></video>{% endif %}
+    <div><strong>{{ 'OK' if d.ok else 'Falhou' }}</strong> · {{ t.at.strftime('%d/%m %H:%M') }}
+      {% if d.elapsed_s is not none %} · {{ d.elapsed_s }} s{% endif %}{% if d.size_bytes %} · {{ (d.size_bytes / 1048576) | round(1) }} MB{% endif %}
+      {% if d.error %}<p class="error">{{ d.error }}</p>{% endif %}
+      {% if d.qa %}<ul>{% for w in (d.qa.warnings or []) %}<li>{{ w }}</li>{% endfor %}{% for e in (d.qa.errors or []) %}<li class="error">{{ e }}</li>{% endfor %}</ul>{% endif %}
+    </div>
+  </div>
+  {% else %}<p class="sub">Nenhum teste ainda.</p>{% endfor %}
+</section>
+<script src="/static/assets.js" defer></script>
+{% endblock %}

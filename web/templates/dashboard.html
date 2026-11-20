@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="top">
+  <div>
+    <h1>Dashboard</h1>
+    <p class="sub">Visão operacional. Cada indicador abre a fila já filtrada.</p>
+  </div>
+  <a class="btn pri" href="/operacoes">{{ icon('operations') }} Operações</a>
+</div>
+{% if kpis is none %}<p class="error" role="alert">Banco de dados indisponível: confira o DATABASE_URL.</p>{% endif %}
+{% if pending %}<p class="callout">Acessos ainda não preenchidos: {{ pending | join(', ') }}. Só precisa das redes que você vai usar. <a href="/contas">Abrir Acessos</a>.</p>{% endif %}
+<div class="grid">
+  {% for k in kpis or [] %}
+  <a class="card kpi{% if k.alert and k.value %} alert{% endif %}" href="{{ k.href }}"><span class="lbl">{{ k.label }}</span><span class="num">{{ k.value }}</span></a>
+  {% endfor %}
+</div>
+<div class="grid-2" style="margin-top:16px">
+  <section class="card">
+    <div class="row" style="justify-content:space-between"><h2>Operações ativas</h2><a class="btn sm ghost" href="/operacoes?status=active">Ver todas {{ icon('chevron-right') }}</a></div>
+    {% for op in active_ops %}
+    <div class="kv"><a class="op-name" href="/operacoes/{{ op.id }}/fluxo"><span class="ico">{{ icon('operations') }}</span><strong>{{ op.name }}</strong></a><span class="chip ok"><span class="dot ok live"></span>Ativa</span></div>
+    {% else %}<p class="sub">Nenhuma operação ativa.</p>{% endfor %}
+  </section>
+  <section class="card">
+    <div class="row" style="justify-content:space-between"><h2>Publicações recentes</h2><a class="btn sm ghost" href="/publicacoes?status=published">Ver todas {{ icon('chevron-right') }}</a></div>
+    {% for j, a in recent %}
+    <div class="kv"><span>{% if j.url %}<a href="{{ j.url }}" target="_blank" rel="noopener">{{ (j.title or 'Vídeo')[:60] }}</a>{% else %}{{ (j.title or 'Vídeo')[:60] }}{% endif %}<br><small class="sub">{{ a.name }} · {{ j.published_at.strftime('%d/%m %H:%M') if j.published_at else '' }}</small></span>
+      {% if j.metrics %}<span class="metrics">{% if j.metrics.get('views') is not none %}<span>{{ j.metrics['views'] }} views</span>{% endif %}</span>{% endif %}</div>
+    {% else %}<p class="sub">Nada publicado ainda.</p>{% endfor %}
+  </section>
+</div>
+<section class="card">
+  <h2>Falhas e alertas recentes</h2>
+  {% if errors %}
+  <div class="tbl" style="margin:0;box-shadow:none"><table>
+    <thead><tr><th>Quando</th><th>Onde</th><th>O quê</th><th>Detalhe</th></tr></thead>
+    <tbody>
+    {% for e in errors %}
+    <tr><td class="mono">{{ e.at.strftime('%d/%m %H:%M') }}</td><td><a href="{{ link_for(e) }}">{{ e.entity }} #{{ e.entity_id }}</a></td><td>{{ e.action }}</td><td><small>{{ (e.detail or {}).get('reason', '') }}</small></td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% else %}<p class="sub">Nenhuma falha registrada.</p>{% endif %}
+</section>
+{% endblock %}

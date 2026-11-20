@@ -1,0 +1,69 @@
+# Produção na VPS (Oracle Always Free, ARM): só os workers e o backup. A interface fica na
+# Vercel, o banco no Neon e os arquivos no Cloudflare R2. Variáveis em deploy/.env (não versionado).
+#
+#   cd fea/deploy
+#   docker compose -f docker-compose.vps.yml run --rm migrar     # aplica as migrações
+#   docker compose -f docker-compose.vps.yml up -d --build        # sobe os workers e o backup
+x-worker: &worker
+  build:
+    context: ..
+    dockerfile: docker/worker.Dockerfile
+  env_file: .env
+  restart: unless-stopped
+  healthcheck:
+    test: ["CMD", "python", "-m", "worker", "alive"]
+    interval: 60s
+    timeout: 10s
+    retries: 3
+    start_period: 30s
+  logging:
+    driver: json-file
+    options: {max-size: "10m", max-file: "3"}
+
+services:
+  buscador:
+    <<: *worker
+    command: ["python", "-m", "worker", "buscador"]
+
+  editor:
+    <<: *worker
+    command: ["python", "-m", "worker", "editor"]
+    # O FFmpeg é o que mais pesa. Na VM ARM de 4 OCPUs, 2 renders ao mesmo tempo.
+    environment:
+      WORKER_CONCURRENCY: "2"
+
+  postador:
+    <<: *worker
+    command: ["python", "-m", "worker", "postador"]
+
+  limpeza:
+    <<: *worker
+    command: ["python", "-m", "worker", "limpeza"]
+
+  migrar:
+    <<: *worker
+    restart: "no"
+    profiles: ["manual"]
+    command: ["alembic", "upgrade", "head"]
+
+  # Backup diário do Neon no disco da VPS; arquivos com mais de 14 dias saem.
+  # Complementa a restauração do próprio Neon.
+  backup:
+    image: postgres:17-alpine
+    env_file: .env
+    restart: unless-stopped
+    volumes:
+      - ./backups:/backups
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        while true; do
+          f=/backups/fea-$$(date +%Y%m%d-%H%M).sql.gz
+          pg_dump --no-owner --no-privileges "$$DATABASE_URL" | gzip > "$$f.parcial" \
+            && mv "$$f.parcial" "$$f" && echo "backup ok: $$f" || echo "backup FALHOU"
+          find /backups -name 'fea-*' -mtime +14 -delete
+          sleep 86400
+        done
+    logging:
+      driver: json-file
+      options: {max-size: "1m", max-file: "2"}

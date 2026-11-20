@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: fea
+          POSTGRES_PASSWORD: fea
+          POSTGRES_DB: fea
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U fea"
+          --health-interval 5s
+          --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql://fea:fea@localhost:5432/fea
+    steps:
+      - uses: actions/checkout@v4
+      - name: FFmpeg e Tesseract
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg tesseract-ocr fonts-dejavu-core
+      - uses: astral-sh/setup-uv@v3
+      - run: uv sync --all-extras --frozen
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run pytest -q
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Imagem do worker
+        run: docker build -f docker/worker.Dockerfile -t fea-worker .
+      - name: Worker reconhece FFmpeg
+        run: docker run --rm fea-worker python -c "from worker.health import run_checks; raise SystemExit(0 if run_checks(check_database=False) else 1)"
+      - name: Imagem da interface
+        run: docker build -f docker/web.Dockerfile -t fea-web .

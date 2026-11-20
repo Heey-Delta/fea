@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Publicações{% endblock %}
+{% block content %}
+<div class="top">
+  <div>
+    <h1>Publicações</h1>
+    <p class="sub">Envios de cada vídeo para cada conta. Incertos não são reenviados às cegas: o Postador confere na plataforma; se não der, decida aqui.</p>
+  </div>
+  <a class="btn pri" href="/publicacoes/nova">Nova publicação</a>
+</div>
+{% if flash %}<p class="{{ 'error' if flash.kind == 'error' else 'notice' }}" role="status">{{ flash.text }}</p>{% endif %}
+<div class="row chips">
+  <a class="chip{% if not status %} on{% endif %}" href="/publicacoes{% if op %}?op={{ op }}{% endif %}">Todos</a>
+  {% for key, label in labels.items() %}{% if counts.get(key) %}
+  <a class="chip{% if status == key %} on{% endif %}" href="/publicacoes?status={{ key }}{% if op %}&amp;op={{ op }}{% endif %}">{{ label }} ({{ counts[key] }})</a>
+  {% endif %}{% endfor %}
+</div>
+{% if lote %}<p class="sub">Mostrando o lote #{{ lote }}. <a href="/publicacoes">Ver todos</a></p>{% endif %}
+{% if rows %}
+<div class="tbl"><table>
+  <thead><tr><th>#</th><th>Vídeo</th><th>Conta</th><th>Horário</th><th>Título</th><th>Estado</th><th>Ações</th></tr></thead>
+  <tbody>
+  {% for j, a, item, b in rows %}
+  <tr>
+    <td>{{ j.id }}</td>
+    <td>#{{ item.id }}<br><small class="sub">lote {{ b.id }}{% if b.automatic %} · auto{% endif %}</small></td>
+    <td><span class="row" style="flex-wrap:nowrap">{{ icon({'youtube': 'youtube', 'tiktok': 'tiktok', 'instagram': 'instagram'}.get(a.platform, 'send')) }}<span>{{ a.name }}</span></span></td>
+    <td>{% if j.published_at %}{{ j.published_at.strftime('%d/%m %H:%M') }}{% elif j.planned_at %}{{ j.planned_at.strftime('%d/%m %H:%M') }} UTC{% else %}—{% endif %}</td>
+    <td>{% if j.url %}<a href="{{ j.url }}" target="_blank" rel="noopener">{{ j.title }}</a>{% else %}{{ j.title or '(gerado na hora)' }}{% endif %}{% if j.title_method %}<br><small class="sub">{{ j.title_method }}</small>{% endif %}{% if j.metrics %}<div class="metrics">{% for k, label in (('views', 'views'), ('likes', 'curtidas'), ('comments', 'coment.')) %}{% if j.metrics.get(k) is not none %}<span>{{ '{:,}'.format(j.metrics[k]).replace(',', '.') }} {{ label }}</span>{% endif %}{% endfor %}</div>{% endif %}
+      {% if j.status in ('planned', 'pending_capacity', 'retry_wait') %}
+      <details class="sec" style="border:0;padding-top:6px"><summary style="font-size:12px;font-weight:600">{{ icon('text') }}<span class="grow">Editar título</span>{{ icon('chevron-down', 'chev') }}</summary>
+        <form class="sec-body" method="post" action="/publicacoes/{{ j.id }}/editar">
+          <input class="input" name="title" value="{{ j.title or '' }}" maxlength="150" placeholder="vazio = gerado na hora" aria-label="Título">
+          <textarea class="input" name="description" rows="3" placeholder="vazio = modelo da operação" aria-label="Descrição">{{ j.description or '' }}</textarea>
+          <button class="btn sm pri" type="submit">Salvar</button>
+        </form></details>
+      {% endif %}</td>
+    <td><span class="chip">{{ labels[j.status] }}</span>{% if j.status_reason %}<br><small class="sub">{{ j.status_reason }}</small>{% endif %}</td>
+    <td>
+      {% if j.status in ('uncertain', 'failed') %}
+      <form class="row" method="post" action="/publicacoes/{{ j.id }}/decidir">
+        <input class="input sm-input" name="url" placeholder="link, se publicou" aria-label="Link do vídeo publicado">
+        <button class="btn sm" name="decisao" value="published">Publicado</button>
+        <button class="btn sm" name="decisao" value="retry">Tentar de novo</button>
+        <button class="btn sm" name="decisao" value="cancel">Cancelar</button>
+      </form>
+      {% elif j.status in ('planned', 'pending_capacity', 'retry_wait') %}
+      <form method="post" action="/publicacoes/{{ j.id }}/decidir"><button class="btn sm" name="decisao" value="cancel">Cancelar</button></form>
+      {% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+{% else %}
+<div class="empty"><strong>Nenhum envio</strong><span class="sub">Aprove vídeos e crie uma nova publicação, ou ligue a distribuição automática no bloco Publicador do fluxo.</span></div>
+{% endif %}
+{% endblock %}

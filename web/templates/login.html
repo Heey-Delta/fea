@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23111'/%3E%3Ctext x='16' y='21' font-family='Arial' font-weight='700' font-size='13' fill='white' text-anchor='middle'%3EFO%3C/text%3E%3C/svg%3E">
+  <title>Entrar</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="{{ url_for('static', path='app.css') }}">
+</head>
+<body>
+  <div class="center">
+    <div class="card login">
+      <div class="brand" style="padding:0"><span class="brand-mark" aria-hidden="true">FO</span>Ferramenta de Operações</div>
+      <h1>Entrar</h1>
+      <p class="sub">Acesso restrito à conta do GitHub autorizada.</p>
+      {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+      {% if configured %}
+      <a class="btn pri" href="/auth/github">Entrar com GitHub</a>
+      {% else %}
+      <p class="error" role="alert">O login com GitHub ainda não está configurado. Preencha GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET e GITHUB_ALLOWED_ID nas variáveis de ambiente.</p>
+      {% endif %}
+      <p class="sub" style="margin:0"><a href="/sobre">Sobre</a> · <a href="/privacidade">Privacidade</a> · <a href="/termos">Termos</a> · <a href="/exclusao-de-dados">Exclusão de dados</a></p>
+    </div>
+  </div>
+</body>
+</html>

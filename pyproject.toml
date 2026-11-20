@@ -1,0 +1,58 @@
+[project]
+name = "fea"
+version = "0.1.0"
+description = "Ferramenta de operações de vídeo: Buscador, Editor e Postador."
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "jinja2>=3.1",
+    "python-multipart>=0.0.9",
+    "itsdangerous>=2.2",
+    "sqlalchemy>=2.0",
+    "alembic>=1.13",
+    "psycopg[binary]>=3.2",
+    "pydantic-settings>=2.4",
+    "cryptography>=43",
+    "httpx>=0.27",
+    "boto3>=1.35",
+    "pillow>=10.4",
+]
+
+[project.optional-dependencies]
+worker = [
+    "imagehash>=4.3",
+]
+
+[dependency-groups]
+dev = [
+    "playwright>=1.65.2",
+    "pytest>=8.3",
+    "ruff>=0.6",
+]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff.lint.per-file-ignores]
+# Migrações geradas pelo Alembic têm constraints em uma linha só.
+"migrations/versions/*" = ["E501"]
+# Fixtures do pytest importadas de outro módulo e recebidas como parâmetro.
+"tests/*" = ["F811"]
+# Desenhos SVG dos ícones em uma linha cada.
+"web/icons.py" = ["E501"]
+
+[tool.ruff.lint.flake8-bugbear]
+# Padrão do FastAPI: Depends/Form/Body/Query como valor padrão do parâmetro.
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Form", "fastapi.Body", "fastapi.Query", "fastapi.File"]

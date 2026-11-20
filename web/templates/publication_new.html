@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Nova publicação{% endblock %}
+{% block content %}
+<a class="back" href="/publicacoes">{{ icon('arrow-left') }} Publicações</a>
+<h1>Nova publicação</h1>
+<p class="sub">Escolha vídeos aprovados e contas. O Postador gera título, descrição e tags na hora de publicar; o título nunca vai para dentro do vídeo.</p>
+{% if flash %}<p class="{{ 'error' if flash.kind == 'error' else 'notice' }}" role="status">{{ flash.text }}</p>{% endif %}
+<form class="row" method="get" action="/publicacoes/nova">
+  <label class="field" for="op">Operação
+  <select class="input" id="op" name="op" onchange="this.form.submit()">
+    {% for o in operations %}<option value="{{ o.id }}" {% if op and op.id == o.id %}selected{% endif %}>{{ o.name }}</option>{% endfor %}
+  </select></label>
+</form>
+{% if not op %}
+<div class="empty"><strong>Nenhuma operação ativa</strong></div>
+{% else %}
+{% set f_items = form.get('item_ids') if form.item_ids is defined else none %}
+{% set f_accounts = form.get('account_ids') if form.account_ids is defined else none %}
+<form class="card form" method="post" action="/publicacoes/nova">
+  <input type="hidden" name="operation_id" value="{{ op.id }}">
+  <input type="hidden" name="request_key" value="{{ request_key }}">
+  <fieldset>
+    <legend class="field">Vídeos aprovados sem envio ({{ items | length }})</legend>
+    {% for i in items %}
+    <label class="check"><input type="checkbox" name="item_ids" value="{{ i.id }}" {% if f_items is none or i.id in f_items %}checked{% endif %}> #{{ i.id }} · {{ (i.text or i.external_id or '')[:70] }}</label>
+    {% else %}<p class="sub">Nada aprovado esperando publicação.</p>{% endfor %}
+  </fieldset>
+  <fieldset>
+    <legend class="field">Contas</legend>
+    {% for a in accounts %}
+    <label class="check"><input type="checkbox" name="account_ids" value="{{ a.id }}" {% if a.status != 'connected' %}disabled{% elif f_accounts is none or a.id in f_accounts %}checked{% endif %}> {{ a.name }} ({{ a.daily_limit }}/dia){% if a.status != 'connected' %}: {{ a.status }}{% endif %}</label>
+    {% else %}<p class="error">Nenhuma conta escolhida no Publicador desta operação. Escolha no fluxo.</p>{% endfor %}
+  </fieldset>
+  <div class="grid">
+    <label class="field">Distribuição
+      <select class="input" name="mode">
+        <option value="rotation" {% if (form.get('mode') or publish.get('mode') or 'rotation') == 'rotation' %}selected{% endif %}>Rodízio: 1 canal por vídeo</option>
+        <option value="all" {% if (form.get('mode') or publish.get('mode')) == 'all' %}selected{% endif %}>Todos os canais</option>
+      </select></label>
+    <label class="field">Intervalo (min) <input class="input" type="number" min="0" name="interval_min" value="{{ form.get('interval_min') or publish.get('interval_min') or 30 }}"></label>
+    <label class="field">Início (opcional) <input class="input" type="datetime-local" name="start_at" value="{{ form.get('start_at') or '' }}"></label>
+    <label class="field">Fuso do início
+      <select class="input" name="tz">{% for tz in timezones %}<option {% if tz == (form.get('tz') or 'America/Sao_Paulo') %}selected{% endif %}>{{ tz }}</option>{% endfor %}</select></label>
+  </div>
+  <label class="check"><input type="checkbox" name="first_immediate" value="true" {% if form.get('first_immediate') or ('first_immediate' not in form and publish.get('first_immediate')) %}checked{% endif %}> Primeira publicação imediata</label>
+  <p class="sub">Janela diária: {{ (publish.get('window') or {}).get('start') or '08:00' }}–{{ (publish.get('window') or {}).get('end') or '23:00' }} no fuso de cada conta. O que não couber em 7 dias fica "sem vaga" e é reavaliado.</p>
+  <div class="row">
+    <button class="btn" type="submit" name="acao" value="previa">Prévia da agenda</button>
+    <button class="btn pri" type="submit" name="acao" value="criar">Criar envios</button>
+  </div>
+</form>
+{% if preview is not none %}
+<section class="card" id="previa">
+  <h2>Prévia</h2>
+  {% if preview %}
+  <div class="tbl"><table>
+    <thead><tr><th>Vídeo</th><th>Conta</th><th>Horário</th><th>Estado</th></tr></thead>
+    <tbody>{% for r in preview %}<tr><td>#{{ r.item }}</td><td>{{ r.account }}</td><td>{{ r.at.strftime('%d/%m %H:%M') if r.at else '—' }}</td><td>{{ r.status }}{% if r.reason %}: {{ r.reason }}{% endif %}</td></tr>{% endfor %}</tbody>
+  </table></div>
+  {% else %}<p class="sub">Nada a agendar com essa escolha.</p>{% endif %}
+</section>
+{% endif %}
+{% endif %}
+{% endblock %}

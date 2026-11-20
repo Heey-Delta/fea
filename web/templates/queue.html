@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Fila{% endblock %}
+{% block content %}
+<div class="top">
+  <div>
+    <h1>Fila</h1>
+    <p class="sub">Todos os itens das operações, da pesca à exclusão. Ordem: prioridade, depois score.</p>
+  </div>
+  <form class="row" method="get" action="/fila">
+    <label class="sr" for="op">Operação</label>
+    <select class="input" id="op" name="op" onchange="this.form.submit()">
+      <option value="">Todas as operações</option>
+      {% for o in operations %}<option value="{{ o.id }}" {% if op == o.id %}selected{% endif %}>{{ o.name }}</option>{% endfor %}
+    </select>
+    {% if etapa %}<input type="hidden" name="etapa" value="{{ etapa }}">{% endif %}
+  </form>
+</div>
+{% if flash %}<p class="{{ 'error' if flash.kind == 'error' else 'notice' }}" role="status">{{ flash.text }}</p>{% endif %}
+<div class="row chips">
+  <a class="chip{% if not etapa and not estado %} on{% endif %}" href="/fila{% if op %}?op={{ op }}{% endif %}">Tudo</a>
+  {% for key, label in stages.items() %}
+  <a class="chip{% if etapa == key %} on{% endif %}" href="/fila?etapa={{ key }}{% if op %}&amp;op={{ op }}{% endif %}">{{ label }} ({{ counts[key] }})</a>
+  {% endfor %}
+</div>
+<div class="row chips">
+  {% for key, label in labels.items() %}{% if counts.get('status:' ~ key) %}
+  <a class="chip{% if estado == key %} on{% endif %}" href="/fila?estado={{ key }}{% if op %}&amp;op={{ op }}{% endif %}">{{ label }} ({{ counts['status:' ~ key] }})</a>
+  {% endif %}{% endfor %}
+</div>
+{% if items %}
+<form method="post" action="/fila/lote">
+  <input type="hidden" name="op" value="{{ op or '' }}"><input type="hidden" name="etapa" value="{{ etapa }}"><input type="hidden" name="estado" value="{{ estado }}">
+  <div class="bulk row">
+    <strong>Selecionados:</strong>
+    <select class="input" name="acao" aria-label="Ação em lote">{% for key, label in actions.items() %}<option value="{{ key }}">{{ label }}</option>{% endfor %}</select>
+    <input class="input sm-input" name="motivo" placeholder="Motivo (rejeitar)" aria-label="Motivo">
+    <button class="btn sm pri" type="submit">Revisar e confirmar</button>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th><input type="checkbox" aria-label="Selecionar todos" onclick="document.querySelectorAll('[name=item_ids]').forEach(c => c.checked = this.checked)"></th><th>Item</th><th>Operação</th><th>Execução</th><th>Estado</th><th>Prioridade</th><th>Score</th><th>Data</th><th>Motivo / erro</th><th></th></tr></thead>
+    <tbody>
+    {% for i in items %}
+    <tr>
+      <td><input type="checkbox" name="item_ids" value="{{ i.id }}" aria-label="Selecionar item {{ i.id }}"></td>
+      <td>#{{ i.id }} · {{ (i.text or i.external_id or '')[:60] }}{% if i.url %}<br><a href="{{ i.url }}" target="_blank" rel="noopener"><small>origem</small></a>{% endif %}</td>
+      <td><a href="/fila?op={{ i.operation_id }}">{{ op_names.get(i.operation_id, i.operation_id) }}</a></td>
+      <td>{% if i.execution_id %}<a href="/execucoes/{{ i.execution_id }}">#{{ i.execution_id }}</a>{% else %}—{% endif %}</td>
+      <td><span class="chip">{{ labels[i.status] }}</span>{% if i.delete_after and not i.files_deleted_at %}<br><small class="sub">apaga {{ i.delete_after.strftime('%d/%m %H:%M') }}</small>{% elif i.files_deleted_at %}<br><small class="sub">arquivos apagados</small>{% endif %}</td>
+      <td>{{ {'high': 'alta', 'normal': 'normal', 'low': 'baixa'}[i.priority] }}</td>
+      <td>{{ i.score }}</td>
+      <td>{{ i.created_at.strftime('%d/%m %H:%M') }}</td>
+      <td><small>{{ i.status_reason or '' }}</small></td>
+      <td>{% if i.status in ('awaiting_approval', 'needs_fix', 'approved') %}<a class="btn sm" href="/aprovacao/{{ i.id }}">Abrir</a>{% endif %}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+</form>
+{% else %}
+<div class="empty"><strong>Nada nesta fila</strong><span class="sub">Rode um Play numa operação para o Buscador encher a fila de pesca.</span></div>
+{% endif %}
+{% endblock %}

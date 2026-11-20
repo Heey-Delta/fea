@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Confirmar · Fila{% endblock %}
+{% block content %}
+<a class="back" href="/fila">{{ icon('arrow-left') }} Fila</a>
+<h1>{{ s.label }}</h1>
+<div class="card">
+  <p><strong>{{ s.ok | length }}</strong> itens entram{% if s.by_status %}: {% for k, v in s.by_status.items() %}{{ v }} {{ k }}{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}.</p>
+  {% if s.skipped %}
+  <p><strong>{{ s.skipped | length }}</strong> ficam de fora:</p>
+  <ul>{% for item, reason in s.skipped %}<li>#{{ item.id }} ({{ labels[item.status] }}): {{ reason }}</li>{% endfor %}</ul>
+  {% endif %}
+  {% if motivo %}<p class="sub">Motivo: {{ motivo }}</p>{% endif %}
+  {% if s.ok %}
+  <form class="row" method="post" action="/fila/lote">
+    <input type="hidden" name="acao" value="{{ s.action }}"><input type="hidden" name="motivo" value="{{ motivo }}">
+    <input type="hidden" name="confirmar" value="true">
+    <input type="hidden" name="op" value="{{ op or '' }}"><input type="hidden" name="etapa" value="{{ etapa }}"><input type="hidden" name="estado" value="{{ estado }}">
+    {% for item, _ in s.ok %}<input type="hidden" name="item_ids" value="{{ item.id }}">{% endfor %}
+    <a class="btn" href="/fila">Voltar</a>
+    <button class="btn pri" type="submit">Confirmar ({{ s.ok | length }})</button>
+  </form>
+  {% else %}<a class="btn" href="/fila">Voltar</a>{% endif %}
+</div>
+{% endblock %}
