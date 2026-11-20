@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Configurar login</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="{{ url_for('static', path='app.css') }}">
+</head>
+<body>
+  {{ icon_sprite() }}
+  <div class="center">
+    <div class="card login" style="max-width:520px">
+      <div class="brand" style="padding:0"><span class="brand-mark" aria-hidden="true">FO</span>Ferramenta de Operações</div>
+      <h1>Configurar o login</h1>
+      {% for p in problems %}<p class="error" role="alert">{{ p }}</p>{% endfor %}
+      {% if not problems %}
+      <p class="sub">O GitHub vai abrir com o app de login já preenchido. Confira se você está na conta <strong>Heey-Delta</strong> e clique em <strong>Create GitHub App</strong>. O app só lê o seu perfil público; as chaves voltam direto para a ferramenta, criptografadas.</p>
+      <div class="kv"><span>Retorno do login</span><code>{{ base }}/auth/github/callback</code></div>
+      <form method="post" action="{{ action }}">
+        <input type="hidden" name="manifest" value="{{ manifest }}">
+        <button class="btn pri lg" type="submit" style="width:100%">{{ icon('external') }} Criar o app de login no GitHub</button>
+      </form>
+      {% endif %}
+      <a class="back" href="/login">{{ icon('arrow-left') }} Voltar</a>
+    </div>
+  </div>
+</body>
+</html>

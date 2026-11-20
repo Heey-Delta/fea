@@ -90,7 +90,7 @@ def test_login_disabled_when_not_configured(settings):
 
     app = create_app(settings.model_copy(update={"github_client_secret": ""}))
     client = TestClient(app)
-    assert "ainda não está configurado" in client.get("/login").text
+    assert "ainda não foi configurado" in client.get("/login").text
     assert client.get("/auth/github", follow_redirects=False).status_code == 503
 
 

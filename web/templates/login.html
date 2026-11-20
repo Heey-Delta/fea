@@ -15,10 +15,12 @@
       <h1>Entrar</h1>
       <p class="sub">Acesso restrito à conta do GitHub autorizada.</p>
       {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+      {% if notice %}<p class="notice" role="status">{{ notice }}</p>{% endif %}
       {% if configured %}
       <a class="btn pri" href="/auth/github">Entrar com GitHub</a>
       {% else %}
-      <p class="error" role="alert">O login com GitHub ainda não está configurado. Preencha GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET e GITHUB_ALLOWED_ID nas variáveis de ambiente.</p>
+      <p class="callout">O login ainda não foi configurado. Leva um clique: o GitHub cria o app de login na sua conta e devolve as chaves para a ferramenta.</p>
+      <a class="btn pri" href="/setup/github">Configurar login com GitHub</a>
       {% endif %}
       <p class="sub" style="margin:0"><a href="/sobre">Sobre</a> · <a href="/privacidade">Privacidade</a> · <a href="/termos">Termos</a> · <a href="/exclusao-de-dados">Exclusão de dados</a></p>
     </div>
