@@ -13,7 +13,7 @@ import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
 
-import imagehash
+import numpy as np
 from PIL import Image
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -95,9 +95,31 @@ def video_duration(path: Path) -> float:
     return float(probe(path)["format"].get("duration") or 0)
 
 
+def _dct_matrix(n: int) -> np.ndarray:
+    k = np.arange(n)[:, None]
+    i = np.arange(n)[None, :]
+    return np.cos(np.pi * k * (2 * i + 1) / (2 * n))
+
+
+_DCT = _dct_matrix(32)
+
+
+def phash_of(img: Image.Image) -> str:
+    """pHash de 64 bits (hexadecimal de 16 caracteres), igual ao `imagehash.phash`.
+
+    Só precisa de numpy: a lib imagehash puxa o PyWavelets, que não compila no Termux (Android).
+    O resultado é o mesmo, então os hashes já gravados continuam comparáveis.
+    """
+    gray = img.convert("L").resize((32, 32), Image.Resampling.LANCZOS)
+    pixels = np.asarray(gray, dtype=np.float64)
+    low = (_DCT @ pixels @ _DCT.T)[:8, :8]
+    bits = (low > np.median(low)).flatten()
+    return f"{int(''.join('1' if b else '0' for b in bits), 2):0{HASH_HEX}x}"
+
+
 def image_phash(path: Path) -> str:
     with Image.open(path) as img:
-        return str(imagehash.phash(img.convert("RGB")))
+        return phash_of(img.convert("RGB"))
 
 
 def video_phash(path: Path, duration_s: float | None = None) -> str:
@@ -142,8 +164,7 @@ def phash_distance(a: str, b: str) -> int | None:
         return None
     parts = range(0, len(a), HASH_HEX)
     distances = [
-        imagehash.hex_to_hash(a[i : i + HASH_HEX]) - imagehash.hex_to_hash(b[i : i + HASH_HEX])
-        for i in parts
+        bin(int(a[i : i + HASH_HEX], 16) ^ int(b[i : i + HASH_HEX], 16)).count("1") for i in parts
     ]
     return round(sum(distances) / len(distances))
 
