@@ -52,12 +52,13 @@ def redirect_uri(request: Request, platform: str) -> str:
 
 def tool_status(request: Request) -> list[dict]:
     s = request.app.state.settings
-    github = bool(s.github_client_id and s.github_client_secret and s.github_allowed_id)
+    login = request.app.state.login_settings()
+    github = bool(login.github_client_id and login.github_client_secret and s.github_allowed_id)
     return [
         {
             "name": "Login da ferramenta (GitHub)",
             "ok": github,
-            "env": "GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET, GITHUB_ALLOWED_ID",
+            "env": "app do GitHub (criado pela tela de login) e GITHUB_ALLOWED_ID",
             "hint": f"Callback: {(s.public_base_url or '').rstrip('/')}/auth/github/callback"
             if s.public_base_url
             else "Defina PUBLIC_BASE_URL para fixar o endereço de retorno.",

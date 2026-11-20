@@ -42,6 +42,17 @@ class Service:
 
 SERVICES: tuple[Service, ...] = (
     Service(
+        "github",
+        "Login da ferramenta (GitHub)",
+        "login",
+        (
+            Field("github_client_id", "Client ID", secret=False),
+            Field("github_client_secret", "Client secret"),
+        ),
+        console="https://github.com/settings/apps",
+        note="Criado em um clique pela tela de login (fluxo App Manifest do GitHub).",
+    ),
+    Service(
         "r2",
         "Cloudflare R2",
         "infra",

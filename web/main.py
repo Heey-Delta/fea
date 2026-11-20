@@ -41,6 +41,7 @@ from web import (
     public,
     publishing,
     queue_view,
+    setup_github,
 )
 from web.common import MENU, NotLoggedIn, render, require_user
 
@@ -96,6 +97,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         log.error("banco indisponível", extra={"error": str(exc.orig)})
         return render(request, "database_down.html", status_code=503)
 
+    def login_settings() -> Settings:
+        """Settings do login: variável de ambiente ou o app criado pela tela /setup/github."""
+        try:
+            with app.state.session_factory() as session:
+                return credentials.effective(session, settings)
+        except Exception:  # noqa: BLE001 - sem banco: só as variáveis de ambiente
+            return settings
+
+    app.state.login_settings = login_settings
+
     def callback_url(request: Request) -> str:
         if settings.public_base_url:
             return settings.public_base_url.rstrip("/") + "/auth/github/callback"
@@ -109,32 +120,39 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def login_page(request: Request) -> Response:
         if request.session.get("user"):
             return RedirectResponse("/", status_code=303)
-        return render(request, "login.html", configured=auth.is_configured(settings))
+        return render(
+            request,
+            "login.html",
+            configured=auth.is_configured(login_settings()),
+            notice=request.session.pop("login_notice", None),
+        )
 
     @app.get("/auth/github")
     def github_start(request: Request) -> Response:
-        if not auth.is_configured(settings):
+        cfg = login_settings()
+        if not auth.is_configured(cfg):
             return render(request, "login.html", status_code=503, configured=False)
         state = auth.new_state()
         request.session["oauth_state"] = state
-        url = auth.authorize_url(settings, callback_url(request), state)
+        url = auth.authorize_url(cfg, callback_url(request), state)
         return RedirectResponse(url, status_code=303)
 
     @app.get("/auth/github/callback", name="github_callback")
     def github_callback(request: Request, code: str = "", state: str = "") -> Response:
         expected = request.session.pop("oauth_state", None)
+        cfg = login_settings()
         try:
             if not code or not expected or not secrets.compare_digest(state, expected):
                 raise auth.AuthError("Login expirado ou inválido. Tente de novo.", 400)
             with app.state.http_client_factory() as client:
-                user = auth.fetch_user(settings, code, callback_url(request), client)
-            auth.check_allowed(settings, user)
+                user = auth.fetch_user(cfg, code, callback_url(request), client)
+            auth.check_allowed(cfg, user)
         except auth.AuthError as exc:
             return render(
                 request,
                 "login.html",
                 status_code=exc.status,
-                configured=auth.is_configured(settings),
+                configured=auth.is_configured(cfg),
                 error=str(exc),
             )
         request.session.clear()
@@ -179,6 +197,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(approval.router)
     app.include_router(editing.router)
     app.include_router(public.router)
+    app.include_router(setup_github.router)
     app.include_router(access.router)
     app.include_router(publishing.router)
     app.include_router(queue_view.router)
