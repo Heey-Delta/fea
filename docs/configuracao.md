@@ -6,7 +6,7 @@ Onde cada coisa entra:
 
 - **Vercel** (projeto `fea` → Settings → Environment Variables): apenas o login do GitHub. O resto já está configurado.
 - **Tela Acessos** da ferramenta: chaves do R2, Reddit, X, Google, TikTok e Instagram, e o login de cada conta. Ficam criptografadas no banco e valem na hora para a interface e para os workers.
-- **VPS**: um instalador pergunta só duas coisas (`DATABASE_URL` e `TOKEN_ENCRYPTION_KEY`).
+- **VPS**: um comando gerado na tela Acessos instala tudo. Não é preciso copiar nenhuma chave.
 
 Nenhum segredo vai para o repositório nem para o chat.
 
@@ -82,15 +82,10 @@ Os apps das redes de publicação pedem páginas públicas. Elas já existem:
 ## 4 · Workers na VPS (20 min)
 
 1. Oracle Cloud → Compute → Create instance: **Ampere A1** (ARM), Ubuntu 24.04, até 4 OCPUs e 24 GB. Deixe aberta só a porta 22.
-2. Entre por SSH e rode:
-
-   ```bash
-   bash <(curl -fsSL https://fea-rho.vercel.app/static/instalar-vps.sh)
-   ```
-
-3. O instalador mostra uma chave pública. Em GitHub → `Heey-Delta/fea` → Settings → **Deploy keys** → *Add deploy key*, cole a chave com "Allow write access" desmarcado e tecle Enter no terminal.
-4. Ele pede `DATABASE_URL` e `TOKEN_ENCRYPTION_KEY`. Copie os dois da Vercel (Settings → Environment Variables → revelar o valor).
-5. No fim, os 4 workers aparecem como `healthy`. Para atualizar depois, rode o mesmo comando de novo.
+2. Na ferramenta, abra Acessos → **Workers (VPS)** → **Gerar comando de instalação**. O comando vale 30 minutos e uma única vez, e já traz o banco e a chave de criptografia.
+3. Entre na VPS por SSH e cole o comando.
+4. O instalador mostra uma chave pública. Em GitHub → `Heey-Delta/fea` → Settings → **Deploy keys** → *Add deploy key*, cole a chave com "Allow write access" desmarcado e tecle Enter no terminal.
+5. Em cerca de 1 minuto, o card **Workers (VPS)** mostra 4/4 no ar. Para atualizar depois, rode `bash <(curl -fsSL https://fea-rho.vercel.app/static/instalar-vps.sh)` na VPS.
 
 Backup: um dump por dia fica em `~/fea/deploy/backups/` por 14 dias. Para restaurar: `gunzip -c arquivo.sql.gz | psql "$DATABASE_URL"`.
 

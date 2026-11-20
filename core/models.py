@@ -388,3 +388,14 @@ class AppCredential(Base):
     name: Mapped[str] = mapped_column(String(60), primary_key=True)
     value_encrypted: Mapped[str] = mapped_column(Text)
     updated_at: Mapped[datetime] = updated_at()
+
+
+class WorkerHeartbeat(Base):
+    """Sinal de vida de cada worker da VPS (um por papel e máquina), mostrado na tela Acessos."""
+
+    __tablename__ = "worker_heartbeats"
+    __table_args__ = (PrimaryKeyConstraint("role", "host"),)
+
+    role: Mapped[str] = mapped_column(String(20))
+    host: Mapped[str] = mapped_column(String(100))
+    at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

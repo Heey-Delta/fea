@@ -179,7 +179,7 @@ def test_migration_status_and_upgrade(factory):  # noqa: F811
 
     engine = factory.kw["bind"]
     st = status(engine)
-    assert st["up_to_date"] and st["head"] == "0006"
+    assert st["up_to_date"] and st["head"] == "0007"
     assert upgrade(engine)["up_to_date"]
 
 

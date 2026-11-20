@@ -26,6 +26,9 @@ class Settings(BaseSettings):
 
     # Neon em produção; Postgres local em desenvolvimento.
     database_url: str = "postgresql://fea:fea@localhost:5432/fea"
+    # Neon (Vercel) também cria a URL direta, sem o pool: é a dos workers e das migrações
+    # (LISTEN/NOTIFY e advisory lock não passam pelo pool em modo transação).
+    database_url_unpooled: str = ""
 
     # Chave Fernet dos tokens das contas. Precisa ser a mesma na Vercel e na VPS.
     token_encryption_key: str = ""
@@ -78,6 +81,10 @@ class Settings(BaseSettings):
             and self.r2_secret_access_key
             and self.r2_bucket
         )
+
+    @property
+    def direct_database_url(self) -> str:
+        return self.database_url_unpooled or self.database_url
 
     @property
     def is_production(self) -> bool:

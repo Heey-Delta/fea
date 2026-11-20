@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Instala os workers da Ferramenta de Operações numa VPS Ubuntu (Oracle Always Free, ARM ou x86).
 #
-#   bash <(curl -fsSL https://fea-rho.vercel.app/static/instalar-vps.sh)
-#
-# Pede só duas informações: DATABASE_URL e TOKEN_ENCRYPTION_KEY (as mesmas da Vercel).
+#   Gere o comando na tela Acessos → Workers (VPS) → "Gerar comando de instalação". Ele vale
+#   30 minutos, uma vez, e já traz DATABASE_URL e TOKEN_ENCRYPTION_KEY.
+#   Sem ele: bash <(curl -fsSL https://fea-rho.vercel.app/static/instalar-vps.sh) e cole as duas.
 # As demais chaves (R2, Reddit, X, Google, TikTok, Instagram) os workers leem da tela Acessos.
 # Pode rodar de novo a qualquer momento: atualiza o código e reinicia os workers.
 set -euo pipefail
@@ -40,10 +40,14 @@ fi
 cd "$DIR/deploy"
 
 # 3. Variáveis (só na primeira vez)
-if [ ! -f .env ]; then
-  say "Duas informações (Vercel → projeto fea → Settings → Environment Variables):"
-  read -rp "DATABASE_URL: " DB_URL
-  read -rsp "TOKEN_ENCRYPTION_KEY (não aparece ao digitar): " ENC_KEY; echo
+DB_URL="${FEA_DATABASE_URL:-}"
+ENC_KEY="${FEA_TOKEN_KEY:-}"
+if [ -n "$DB_URL" ] || [ ! -f .env ]; then
+  if [ -z "$DB_URL" ]; then
+    say "Duas informações (ou use o comando gerado na tela Acessos, que já traz as duas):"
+    read -rp "DATABASE_URL: " DB_URL
+    read -rsp "TOKEN_ENCRYPTION_KEY (não aparece ao digitar): " ENC_KEY; echo
+  fi
   umask 077
   printf 'APP_ENV=production\nDATABASE_URL=%s\nTOKEN_ENCRYPTION_KEY=%s\n' "$DB_URL" "$ENC_KEY" > .env
 fi

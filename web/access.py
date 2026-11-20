@@ -17,12 +17,12 @@ from sqlalchemy.orm import Session
 
 from core import accounts as acc
 from core import credentials as creds
-from core.models import Account, PublishJob
+from core.models import Account, Event, PublishJob
 from core.operations import OperationError
 from networks import PLATFORM_LABEL
 from networks.base import AdapterError
 from web.common import db_session, render, require_user
-from web.public import public_urls
+from web.public import public_urls, vps_serializer
 
 router = APIRouter(dependencies=[Depends(require_user)])
 
@@ -92,7 +92,7 @@ def db_status(request: Request) -> dict:
     if "localhost" in s.database_url and s.is_production:
         return {**row, "ok": False, "hint": "Crie o banco: Vercel → Storage → Neon."}
     try:
-        st = status(request.app.state.session_factory.kw["bind"])
+        st = status(direct_engine(request))
     except Exception as exc:  # noqa: BLE001
         return {**row, "ok": False, "hint": f"Sem conexão com o banco: {str(exc)[:120]}"}
     if st["up_to_date"]:
@@ -106,16 +106,55 @@ def db_status(request: Request) -> dict:
     }
 
 
+def direct_engine(request: Request):
+    """Conexão direta (sem o pool do Neon) para migrar: o advisory lock exige sessão fixa."""
+    from sqlalchemy import create_engine
+    from sqlalchemy.pool import NullPool
+
+    from core.db import sqlalchemy_url
+
+    s = request.app.state.settings
+    if not s.database_url_unpooled:
+        return request.app.state.session_factory.kw["bind"]
+    return create_engine(sqlalchemy_url(s.direct_database_url), poolclass=NullPool)
+
+
+@router.post("/contas/vps/comando")
+def vps_command(request: Request, session: Session = Depends(db_session)) -> Response:
+    """Gera o comando de instalação da VPS (uma vez, 30 minutos)."""
+    s = request.app.state.settings
+    if not s.token_encryption_key:
+        flash(request, "error", "Defina TOKEN_ENCRYPTION_KEY antes de instalar a VPS.")
+        return RedirectResponse("/contas#vps", status_code=303)
+    nonce = secrets.token_urlsafe(12)
+    token = vps_serializer(s.secret_key).dumps({"n": nonce})
+    base = (s.public_base_url or str(request.base_url)).rstrip("/")
+    request.session["vps_cmd"] = f"bash <(curl -fsSL {base}/vps/instalar/{token})"
+    session.add(Event(entity="vps_install", action="issued", detail={"nonce": nonce}))
+    flash(request, "ok", "Comando gerado. Vale 30 minutos e uma única vez.")
+    return RedirectResponse("/contas#vps", status_code=303)
+
+
 @router.post("/contas/banco/migrar")
 def migrate(request: Request) -> Response:
     from core.migrate import upgrade
 
     try:
-        st = upgrade(request.app.state.session_factory.kw["bind"])
+        st = upgrade(direct_engine(request))
         flash(request, "ok", f"Banco atualizado até a migração {st['head']}.")
     except Exception as exc:  # noqa: BLE001
         flash(request, "error", f"Migração falhou: {str(exc)[:300]}")
     return RedirectResponse("/contas", status_code=303)
+
+
+def worker_status(session: Session) -> list[dict]:
+    from core.workers import status
+
+    try:
+        return status(session)
+    except Exception:  # noqa: BLE001 - tabela ainda não migrada
+        session.rollback()
+        return []
 
 
 @router.get("/contas", response_class=HTMLResponse)
@@ -140,6 +179,8 @@ def page(request: Request, session: Session = Depends(db_session)) -> Response:
         active="/contas",
         tool=tool_status(request),
         infra=[s for s in statuses if s.service.group == "infra"],
+        workers=worker_status(session),
+        vps_cmd=request.session.pop("vps_cmd", None),
         search=[s for s in statuses if s.service.group == "busca"],
         publishing=[s for s in statuses if s.service.group == "publicacao"],
         by_platform=by_platform,

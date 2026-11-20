@@ -337,7 +337,7 @@ Status: 0
 
 - Subtask 27.1: Interface na Vercel (`app.py` + `vercel.json`) e variáveis de ambiente. Feito: projeto `fea` (time OHalla) com preview da branch no ar; produção sai quando a branch entrar no `main`.
 - Subtask 27.2: Banco Neon pelo Marketplace da Vercel; migrações aplicadas pelo CI ou manualmente. Pronto no código: botão "Aplicar migrações" na tela Acessos e serviço `migrar` da VPS. **Falta: criar o Neon (um clique do usuário na Vercel).**
-- Subtask 27.3: Workers na VPS com Docker Compose (Buscador, Editor, Postador, Limpeza). Pronto: `deploy/docker-compose.vps.yml` e o instalador `bash <(curl -fsSL https://fea-rho.vercel.app/static/instalar-vps.sh)`, que pede só `DATABASE_URL` e `TOKEN_ENCRYPTION_KEY`. **Falta: criar a VPS na Oracle (usuário).**
+- Subtask 27.3: Workers na VPS com Docker Compose (Buscador, Editor, Postador, Limpeza). Pronto: `deploy/docker-compose.vps.yml` e o comando de instalação gerado na tela Acessos (uso único, 30 min, já traz banco e chave); sinal de vida dos workers na tela Acessos. **Falta: criar a VPS na Oracle (usuário).**
 - Subtask 27.4: Bucket no Cloudflare R2 com URLs assinadas. Pronto no código (`R2Storage`); as chaves entram pela tela Acessos e valem para interface e workers. **Falta: criar o bucket e o token (usuário).**
 - Subtask 27.5: Backup do banco e healthcheck da interface e dos workers. Feito: `/health` na interface, `python -m worker alive` (heartbeat) no healthcheck do Docker, serviço `backup` diário com 14 dias.
 

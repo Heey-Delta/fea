@@ -33,6 +33,7 @@ TABLES = {
     "jobs",
     "events",
     "app_credentials",
+    "worker_heartbeats",
 }
 
 

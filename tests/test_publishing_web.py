@@ -169,3 +169,37 @@ def test_access_page_shows_database_and_r2(client, factory):  # noqa: F811
     page = client.get("/contas").text
     assert "Cloudflare R2" in page and "Conectado e atualizado" in page
     assert client.get("/static/instalar-vps.sh").status_code == 200
+
+
+def test_vps_install_command_is_single_use(client, factory, tmp_path):  # noqa: F811
+    import re
+    import subprocess
+
+    page = client.post("/contas/vps/comando").text
+    cmd = re.search(r"bash &lt;\(curl -fsSL (\S+?)\)", page)
+    assert cmd, "comando não apareceu"
+    url = cmd.group(1).replace("https://fea.test", "")
+    script = client.get(url)
+    assert script.status_code == 200
+    assert "export FEA_DATABASE_URL=" in script.text and "export FEA_TOKEN_KEY=" in script.text
+    path = tmp_path / "instalar.sh"
+    path.write_text(script.text)
+    assert subprocess.run(["bash", "-n", str(path)]).returncode == 0
+    again = client.get(url)
+    assert again.status_code == 410 and "já foi usado" in again.text
+    assert client.get("/vps/instalar/falso").status_code == 404
+
+
+def test_worker_heartbeat_status(factory):  # noqa: F811
+    from datetime import UTC, datetime, timedelta
+
+    from core import workers
+
+    now = datetime.now(UTC)
+    with factory() as s:
+        workers.beat(s, "editor", "vps1", now)
+        workers.beat(s, "postador", "vps1", now - timedelta(minutes=10))
+        s.commit()
+        by_role = {w["role"]: w for w in workers.status(s, now)}
+    assert by_role["editor"]["online"] and not by_role["postador"]["online"]
+    assert by_role["buscador"]["at"] is None

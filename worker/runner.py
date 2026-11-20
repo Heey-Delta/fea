@@ -18,7 +18,7 @@ from datetime import timedelta
 import psycopg
 from sqlalchemy.orm import Session, sessionmaker
 
-from core import queue
+from core import queue, workers
 from core.queue import NOTIFY_CHANNEL, PermanentError, RetryableError
 
 log = logging.getLogger("worker")
@@ -188,7 +188,11 @@ class Worker:
     def _maintenance(self) -> None:
         """Tarefas periódicas: devolver tarefas presas e as rotinas do papel (ex.: agendador)."""
         last_run: dict[str, float] = {}
-        jobs = {"requeue_stale": (300.0, lambda s: queue.requeue_stale(s, self.stale_after))}
+        jobs = {
+            "requeue_stale": (300.0, lambda s: queue.requeue_stale(s, self.stale_after)),
+            # Sinal de vida no banco: a tela Acessos mostra se o worker está no ar.
+            "heartbeat": (60.0, lambda s: workers.beat(s, self.role, socket.gethostname())),
+        }
         jobs.update(self.periodic)
         while not self.stop.is_set():
             now = time.monotonic()
