@@ -23,7 +23,7 @@
     {% for s in sources %}
     <label class="check"><input type="checkbox" name="source_ids" value="{{ s.id }}" {% if s.status == 'ok' %}checked{% else %}disabled{% endif %}> {{ s.reference or s.node_id }} ({{ s.type }}){% if s.status == 'error' %}: com erro, teste a conexão na aba Fontes{% endif %}</label>
     {% else %}
-    <p class="error">Nenhuma fonte. Adicione um bloco Fonte no canvas.</p>
+    <p class="error">Nenhuma fonte. Adicione uma no bloco Pesca do fluxo.</p>
     {% endfor %}
   </fieldset>
   <fieldset>

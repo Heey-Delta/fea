@@ -1,4 +1,4 @@
-"""Canvas de blocos num navegador de verdade (Chromium + Playwright)."""
+"""Fluxo da operação (Pesca → Motor Editor → Publicador) num navegador de verdade."""
 
 import os
 import socket
@@ -15,6 +15,7 @@ from sqlalchemy.orm import sessionmaker
 
 from core import operations as ops
 from core.db import sqlalchemy_url
+from core.models import Account
 from tests.conftest import fake_github
 from tests.test_operations import complete_config
 
@@ -62,7 +63,9 @@ def factory():
     engine = create_engine(sqlalchemy_url(DATABASE_URL))
     with engine.begin() as conn:
         conn.execute(
-            text("TRUNCATE operations, operation_configs, events RESTART IDENTITY CASCADE")
+            text(
+                "TRUNCATE operations, operation_configs, events, accounts RESTART IDENTITY CASCADE"
+            )
         )
     yield sessionmaker(bind=engine, expire_on_commit=False)
     engine.dispose()
@@ -93,81 +96,106 @@ def make_operation(factory, config=None, status=None) -> int:
         return op.id
 
 
-def test_canvas_loads_saved_flow(page, server, factory):
+def make_account(factory, platform="youtube", name="Canal A") -> int:
+    with factory() as s:
+        account = Account(platform=platform, name=name, external_id=f"{platform}-{name}")
+        s.add(account)
+        s.commit()
+        return account.id
+
+
+def saved_config(factory, op_id):
+    with factory() as s:
+        return ops.current_config(s, s.get(ops.Operation, op_id)).config
+
+
+def test_flow_shows_three_blocks_and_issues(page, server, factory):
     op_id = make_operation(factory)
     page.goto(f"{server}/operacoes/{op_id}/fluxo")
-    page.wait_for_selector(".drawflow-node")
-    assert page.locator(".drawflow-node").count() == 5
-    assert page.locator(".connection").count() == 5
+    page.wait_for_selector("[data-block]")
+    names = page.locator(".block .name").all_inner_texts()
+    assert names == ["Pesca", "Motor Editor", "Publicador"]
+    assert "Fontes de busca" in page.text_content("#panel")  # Pesca aberta por padrão
     assert "Adicione ao menos uma fonte de busca na Pesca." in page.inner_text("#canvas-issues")
+    assert "bad" in page.get_attribute('[data-dot="pesca"]', "class")
 
 
-def test_forbidden_connection_is_removed(page, server, factory):
+def test_configure_all_blocks_and_save(page, server, factory):
     op_id = make_operation(factory)
+    youtube = make_account(factory, "youtube", "Canal YT")
+    tiktok = make_account(factory, "tiktok", "Perfil TT")
     page.goto(f"{server}/operacoes/{op_id}/fluxo")
-    page.wait_for_selector(".drawflow-node")
-    before = page.locator(".connection").count()
-    # Rede → Aprovação não está na tabela de ligações permitidas.
-    page.evaluate(
-        """() => {
-          const data = window.feaEditor.export().drawflow.Home.data;
-          const find = (t) => Object.keys(data).find((k) => data[k].data.type === t);
-          window.feaEditor.addConnection(find('network'), find('approval'), 'output_1', 'input_1');
-        }"""
-    )
-    assert page.locator(".connection").count() == before
-    assert "Ligação recusada" in page.inner_text("#canvas-status")
-
-
-def test_add_blocks_connect_and_save(page, server, factory):
-    op_id = make_operation(factory)
-    page.goto(f"{server}/operacoes/{op_id}/fluxo")
-    page.wait_for_selector(".drawflow-node")
-    page.click("[data-add=source]")
-    page.click("[data-add=account]")
-    assert page.locator(".drawflow-node").count() == 7
-    page.evaluate(
-        """() => {
-          const ed = window.feaEditor;
-          const data = ed.export().drawflow.Home.data;
-          const find = (t) => Object.keys(data).find((k) => data[k].data.type === t);
-          ed.updateNodeDataFromId(find('source'), {...data[find('source')].data,
-            config: {type: 'reddit', reference: 'r/teste', permission_note: 'ok'}});
-          ed.addConnection(find('source'), find('fishing'), 'output_1', 'input_1');
-          ed.addConnection(find('account'), find('publish'), 'output_1', 'input_1');
-        }"""
-    )
+    page.wait_for_selector("[data-block]")
+    # Pesca: fonte do Reddit e do X, tags.
+    page.click("#add-source")
+    page.fill('[data-source="0"] [data-src="reference"]', "r/teste")
+    page.fill('[data-source="0"] [data-src="permission_note"]', "autorizado")
+    page.click("#add-source")
+    page.select_option('[data-source="1"] [data-src="type"]', "x")
+    page.fill('[data-source="1"] [data-src="reference"]', "@criador")
+    page.fill('[data-bind="fishing.tags"]', "academia, treino")
+    assert "r/teste" in page.inner_text('[data-summary="pesca"]')
+    # Motor Editor: resolução e enquadramento.
+    page.click('[data-block="editor"]')
+    page.select_option("#resolution", "720x1280")
+    page.select_option('[data-bind="edit.preset.video.fit"]', "cover")
+    # Publicador: YouTube + TikTok, as duas contas, aprovação automática.
+    page.click('[data-block="publicador"]')
+    page.check('[data-profile="tiktok"]')
+    page.check(f'[data-account="{youtube}"]')
+    page.check(f'[data-account="{tiktok}"]')
+    page.check('input[name="approval"][value="auto"]')
+    page.fill('[data-bind="publish.titles.hashtags"]', "shorts, academia")
     page.click("#save")
     page.wait_for_function("document.querySelector('#canvas-status').textContent.includes('salva')")
     assert page.inner_text("#version") == "v2"
-    assert "Fluxo completo" in page.inner_text("#canvas-issues")
-    with factory() as s:
-        op = s.get(ops.Operation, op_id)
-        saved = ops.current_config(s, op).config
-    assert ops.validate_graph(saved) == []
-    assert all("pos" in node for node in saved["nodes"])
-    assert saved["retention"] == {"delete_after_minutes": 30}
+    config = saved_config(factory, op_id)
+    assert ops.linked_account_ids(config) == [youtube, tiktok]
+    assert [i for i in ops.validate_graph(config) if i.level == "error"] == []
+    by_type = {}
+    for node in config["nodes"]:
+        by_type.setdefault(node["type"], []).append(node)
+    assert by_type["network"][0]["config"]["profiles"] == ["youtube_shorts", "tiktok"]
+    assert [n["config"]["reference"] for n in by_type["source"]] == ["r/teste", "@criador"]
+    assert by_type["source"][1]["config"]["type"] == "x"
+    assert by_type["fishing"][0]["config"]["tags"] == ["academia", "treino"]
+    preset = by_type["edit"][0]["config"]["preset"]
+    assert (preset["video"]["width"], preset["video"]["fit"]) == (720, "cover")
+    assert by_type["approval"][0]["config"]["auto_approve"] is True
+    assert by_type["publish"][0]["config"]["titles"]["hashtags"] == ["shorts", "academia"]
+    # Ao desmarcar a rede, a conta dela sai junto.
+    page.uncheck('[data-profile="tiktok"]')
+    assert page.locator(f'[data-account="{tiktok}"]').count() == 0
 
 
-def test_panel_edits_block_config(page, server, factory):
+def test_mask_upload_from_editor_block(page, server, factory, tmp_path):
+    from PIL import Image
+
     op_id = make_operation(factory)
+    png = tmp_path / "moldura.png"
+    Image.new("RGBA", (1080, 1920), (0, 0, 0, 0)).save(png)
     page.goto(f"{server}/operacoes/{op_id}/fluxo")
-    page.wait_for_selector(".drawflow-node")
-    page.click(".drawflow-node.t-fishing")
-    page.fill("#node-config", '{"tags": ["academia"], "target_x": 25}')
-    page.click("#apply-node")
-    config = page.evaluate("() => window.feaExportConfig()")
-    fishing = next(n for n in config["nodes"] if n["type"] == "fishing")
-    assert fishing["config"] == {"tags": ["academia"], "target_x": 25}
+    page.click('[data-block="editor"]')
+    page.set_input_files("#mask-file", str(png))
+    page.wait_for_function(
+        "document.querySelector('#mask-status').textContent.includes('importada')"
+    )
+    assert page.is_checked('input[name="mask"]:not([value=""])')
+    assert "moldura" in page.inner_text('[data-summary="editor"]')
+    page.click("#save")
+    page.wait_for_function("document.querySelector('#canvas-status').textContent.includes('salva')")
+    preset = next(n for n in saved_config(factory, op_id)["nodes"] if n["type"] == "edit")
+    assert preset["config"]["preset"]["mask"]["mask_id"]
 
 
 def test_archived_operation_is_read_only(page, server, factory):
     op_id = make_operation(factory, complete_config(), status="archived")
     page.goto(f"{server}/operacoes/{op_id}/fluxo")
-    page.wait_for_selector(".drawflow-node")
+    page.wait_for_selector("[data-block]")
     assert page.locator("#save").count() == 0
-    assert page.locator("[data-add]").count() == 0
-    assert "Somente leitura" in page.inner_text("h1 + .chip + .chip")
+    assert page.locator("#add-source").count() == 0
+    assert page.is_disabled('[data-bind="fishing.tags"]')
+    assert "Somente leitura" in page.inner_text(".top")
 
 
 def test_manual_upload_from_sources_tab(page, server, factory, tmp_path):

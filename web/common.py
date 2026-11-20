@@ -13,7 +13,7 @@ MENU = [
     {"label": "Fila", "href": "/fila", "task": "Task 8"},
     {"label": "Aprovação", "href": "/aprovacao", "task": "Task 18"},
     {"label": "Publicações", "href": "/publicacoes", "task": "Task 21"},
-    {"label": "Contas", "href": "/contas", "task": "Task 19"},
+    {"label": "Acessos", "href": "/contas", "task": "Task 19"},
 ]
 
 

@@ -4,6 +4,7 @@
 <h1>Dashboard</h1>
 <p class="sub">Visão operacional. Cada card abre a fila já filtrada.</p>
 {% if kpis is none %}<p class="error" role="alert">Banco de dados indisponível: confira o DATABASE_URL.</p>{% endif %}
+{% if pending %}<p class="callout">Acessos ainda não preenchidos: {{ pending | join(', ') }}. Só precisa das redes que você vai usar. <a href="/contas">Abrir Acessos</a>.</p>{% endif %}
 <div class="grid">
   {% for k in kpis or [] %}
   <a class="card kpi{% if k.alert and k.value %} alert{% endif %}" href="{{ k.href }}"><span class="lbl">{{ k.label }}</span><span class="num">{{ k.value }}</span></a>

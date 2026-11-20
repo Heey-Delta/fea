@@ -1,6 +1,6 @@
 """Telas e API das operações (Task 4).
 
-O canvas (próxima etapa da Task 4) salva o fluxo por POST /operacoes/{id}/config em JSON.
+O fluxo (Pesca → Motor Editor → Publicador) salva por POST /operacoes/{id}/config em JSON.
 """
 
 import json
@@ -13,6 +13,7 @@ from typing import Any
 
 from fastapi import APIRouter, Body, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from core import credentials
@@ -21,8 +22,10 @@ from core import operations as ops
 from core import sources as src
 from core.connectors import SOURCE_TYPES
 from core.connectors.upload import IMAGE_EXT, VIDEO_EXT, upload_prefix
-from core.models import Operation, Source
+from core.models import Account, Operation, Source
 from core.states import OPERATION_STATUS
+from networks import PLATFORM_LABEL, PROFILES
+from web import editing
 from web.common import db_session, render, require_user
 
 router = APIRouter(dependencies=[Depends(require_user)])
@@ -130,16 +133,38 @@ def canvas_page(
     op = get_operation(session, operation_id)
     config = ops.current_config(session, op)
     read_only = op.status == "archived"
+    settings = credentials.effective(session, request.app.state.settings)
+    ready = {st.service.id: st.ready for st in credentials.status(session, settings)}
     boot = {
         "config": config.config,
         "issues": [
             {"level": i.level, "message": i.message, "node_id": i.node_id}
             for i in ops.validate_graph(config.config)
         ],
-        "labels": ops.NODE_TYPES,
-        "allowedEdges": sorted(ops.ALLOWED_EDGES),
         "saveUrl": f"/operacoes/{op.id}/config",
         "readOnly": read_only,
+        "sourceTypes": SOURCE_TYPES,
+        "profiles": [
+            {
+                "id": p.id,
+                "name": p.name,
+                "platform": p.platform,
+                "maxDuration": p.max_duration_s,
+                "resolutions": [list(r) for r in p.allowed_resolutions],
+                "fps": list(p.allowed_fps),
+                "notes": p.notes,
+            }
+            for p in PROFILES.values()
+        ],
+        "platformLabel": PLATFORM_LABEL,
+        "accounts": [
+            {"id": a.id, "name": a.name, "platform": a.platform, "status": a.status}
+            for a in session.scalars(select(Account).order_by(Account.platform, Account.name))
+        ],
+        "masks": editing.mask_list(request, session, op.id),
+        "maskUploadUrl": f"/operacoes/{op.id}/mascaras",
+        "presetUrl": f"/operacoes/{op.id}/edicao",
+        "ready": ready,
     }
     return render(
         request,
@@ -149,7 +174,6 @@ def canvas_page(
         config=config,
         boot=boot,
         read_only=read_only,
-        palette=list(ops.NODE_TYPES.items()),
     )
 
 

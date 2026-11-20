@@ -103,7 +103,7 @@ def blocked(session: Session, item: Item, action: str) -> str | None:
             return "não está sem permissão"
         source = session.get(Source, item.source_id)
         if not (source and source.permission_note):
-            return "a fonte ainda não tem permissão registrada (canvas → bloco Fonte)"
+            return "a fonte ainda não tem permissão registrada (fluxo → bloco Pesca)"
     elif action == "rerender":
         if item.status not in ("awaiting_approval", "needs_fix", "approved"):
             return "só editados aceitam nova versão"

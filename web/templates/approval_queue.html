@@ -4,7 +4,7 @@
 <div class="top">
   <div>
     <h1>Aprovação</h1>
-    <p class="sub">Fila de editados. Marque os vídeos e aprove para as contas escolhidas. Aprovar não publica: a Postagem distribui depois.</p>
+    <p class="sub">Fila de editados. Marque os vídeos e aprove para as contas escolhidas. Aprovar não publica: o Publicador distribui depois.</p>
   </div>
   <form class="row" method="get" action="/aprovacao">
     <label class="sr" for="op">Operação</label>
@@ -20,7 +20,7 @@
 <form method="post" action="/aprovacao/lote">
   <div class="bulk row">
     <strong>Em lote:</strong>
-    {% for a in accounts %}<label class="check"><input type="checkbox" name="account_ids" value="{{ a.id }}" checked> {{ a.name }}</label>{% else %}<span class="sub">Nenhuma conta ligada à Postagem desta operação.</span>{% endfor %}
+    {% for a in accounts %}<label class="check"><input type="checkbox" name="account_ids" value="{{ a.id }}" checked> {{ a.name }}</label>{% else %}<span class="sub">Nenhuma conta escolhida no Publicador desta operação.</span>{% endfor %}
     <button class="btn sm pri" type="submit" name="acao" value="approve">Aprovar selecionados</button>
     <input class="input sm-input" name="motivo" placeholder="Motivo da rejeição" aria-label="Motivo da rejeição">
     <button class="btn sm" type="submit" name="acao" value="reject">Rejeitar selecionados</button>

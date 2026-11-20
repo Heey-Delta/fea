@@ -222,6 +222,8 @@ def upload_mask(
     output = profile_of_config(ops.current_config(session, op).config).output
     with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
         shutil.copyfileobj(file.file, tmp)
+    wants_json = "application/json" in request.headers.get("accept", "")
+    ok, text = False, ""
     try:
         version, check = masks.import_mask(
             session,
@@ -232,15 +234,42 @@ def upload_mask(
             mask_id=mask_id,
             output=(output.width, output.height),
         )
-        text = f"Máscara importada (versão {version.version})."
+        ok, text = True, f"Máscara importada (versão {version.version})."
         if check.warnings:
             text += " Avisos: " + " ".join(check.warnings)
-        flash(request, "ok", text)
     except masks.MaskError as exc:
-        flash(request, "error", f"Máscara recusada: {exc}")
+        text = f"Máscara recusada: {exc}"
     finally:
         Path(tmp.name).unlink(missing_ok=True)
+    if wants_json:
+        # Canvas: devolve a lista atualizada para o painel do Motor Editor.
+        session.flush()
+        return JSONResponse(
+            {"ok": ok, "message": text, "masks": mask_list(request, session, op.id)},
+            status_code=200 if ok else 422,
+        )
+    flash(request, "ok" if ok else "error", text)
     return RedirectResponse(f"/operacoes/{op.id}/edicao", status_code=303)
+
+
+def mask_list(request: Request, session: Session, operation_id: int) -> list[dict]:
+    storage = request.app.state.storage
+    out = []
+    for mask, versions in masks.list_masks(session, operation_id):
+        if not versions:
+            continue
+        latest = versions[0]
+        out.append(
+            {
+                "id": mask.id,
+                "name": mask.name,
+                "version": latest.version,
+                "url": storage.url(latest.file_key),
+                "size": f"{latest.width}×{latest.height}",
+                "alpha": latest.has_alpha,
+            }
+        )
+    return out
 
 
 def asset_key(operation_id: int, filename: str) -> str:

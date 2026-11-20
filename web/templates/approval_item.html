@@ -37,7 +37,7 @@
       <form method="post" action="/aprovacao/{{ c.item.id }}/aprovar">
         <fieldset><legend class="field">Contas autorizadas para este vídeo</legend>
           {% for a in accounts %}<label class="check"><input type="checkbox" name="account_ids" value="{{ a.id }}" {% if not c.item.approved_account_ids or a.id in c.item.approved_account_ids %}checked{% endif %}> {{ a.name }}</label>
-          {% else %}<p class="sub">Nenhuma conta ligada à Postagem desta operação.</p>{% endfor %}
+          {% else %}<p class="sub">Nenhuma conta escolhida no Publicador desta operação.</p>{% endfor %}
         </fieldset>
         <button class="btn pri" type="submit" {% if c.blocked %}disabled{% endif %}>Aprovar</button>
       </form>

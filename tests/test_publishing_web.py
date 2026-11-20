@@ -14,6 +14,11 @@ from tests.test_render_job import factory, pytestmark, storage  # noqa: F401
 
 
 class GoogleFake(FakeAdapter):
+    def authorize_url(self, redirect_uri, state):
+        from networks.youtube_shorts.adapter import authorize_url
+
+        return authorize_url("gid", redirect_uri, state)
+
     def exchange_code(self, code, redirect_uri):
         assert code == "codigo" and redirect_uri.endswith("/contas/youtube/retorno")
         return json.dumps({"refresh_token": "novo"})
@@ -37,14 +42,14 @@ def client(settings, storage):  # noqa: F811
     app = create_app(settings)
     app.state.storage = storage
     app.state.http_client_factory = fake_github()
-    app.state.adapter_factory = lambda platform: GoogleFake()
+    app.state.adapter_factory = lambda platform, current=None: GoogleFake()
     c = TestClient(app)
     github_login(c)
     return c
 
 
 def test_connect_youtube_account(client, factory):  # noqa: F811
-    assert "Conectar canal do YouTube" in client.get("/contas").text
+    assert "Conectar conta YouTube" in client.get("/contas").text
     go = client.get("/contas/youtube/conectar", follow_redirects=False)
     q = parse_qs(urlparse(go.headers["location"]).query)
     assert q["redirect_uri"] == ["https://fea.test/contas/youtube/retorno"]
@@ -57,7 +62,7 @@ def test_connect_youtube_account(client, factory):  # noqa: F811
         ).query
     )["state"][0]
     ok = client.get(f"/contas/youtube/retorno?code=codigo&state={state}")
-    assert "Canal Novo conectado" in ok.text
+    assert "YouTube: Canal Novo conectada" in ok.text
     with factory() as s:
         account = s.scalars(select(m.Account)).one()
         assert account.token_encrypted and "novo" not in account.token_encrypted
@@ -110,3 +115,25 @@ def test_jobs_page_and_manual_decision(client, factory, storage, tmp_path):  # n
     )
     assert "publicado" in done.text
     assert jobs(factory)[0].external_id == "xyz"
+
+
+def test_access_page_saves_keys_and_blocks_connect_without_app(client, factory):  # noqa: F811
+    page = client.get("/contas").text
+    for name in ("Reddit", "X (Twitter)", "YouTube Shorts", "TikTok", "Instagram Reels"):
+        assert name in page
+    assert "https://fea.test/contas/tiktok/retorno" in page
+    # TikTok sem chaves: não deixa conectar.
+    blocked = client.get("/contas/tiktok/conectar")
+    assert "Para conectar, preencha antes" in blocked.text
+    saved = client.post(
+        "/contas/chaves/tiktok",
+        data={"tiktok_client_key": "ck1", "tiktok_client_secret": "segredo99"},
+    )
+    assert "TikTok: 2 campo(s) salvo(s)." in saved.text
+    assert "segredo99" not in saved.text and "••••do99" in saved.text
+    go = client.get("/contas/tiktok/conectar", follow_redirects=False)
+    assert go.status_code == 302
+    removed = client.post("/contas/chaves/tiktok/limpar")
+    assert "removidas" in removed.text
+    with factory() as s:
+        assert s.get(m.AppCredential, "tiktok_client_key") is None

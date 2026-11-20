@@ -26,7 +26,7 @@
     <td>#{{ item.id }}<br><small class="sub">lote {{ b.id }}{% if b.automatic %} · auto{% endif %}</small></td>
     <td>{{ a.name }}</td>
     <td>{% if j.published_at %}{{ j.published_at.strftime('%d/%m %H:%M') }}{% elif j.planned_at %}{{ j.planned_at.strftime('%d/%m %H:%M') }} UTC{% else %}—{% endif %}</td>
-    <td>{% if j.url %}<a href="{{ j.url }}" target="_blank" rel="noopener">{{ j.title }}</a>{% else %}{{ j.title or '(gerado na hora)' }}{% endif %}{% if j.title_method %}<br><small class="sub">{{ j.title_method }}</small>{% endif %}</td>
+    <td>{% if j.url %}<a href="{{ j.url }}" target="_blank" rel="noopener">{{ j.title }}</a>{% else %}{{ j.title or '(gerado na hora)' }}{% endif %}{% if j.title_method %}<br><small class="sub">{{ j.title_method }}</small>{% endif %}{% if j.metrics %}<div class="metrics">{% for k, label in (('views', 'views'), ('likes', 'curtidas'), ('comments', 'coment.')) %}{% if j.metrics.get(k) is not none %}<span>{{ '{:,}'.format(j.metrics[k]).replace(',', '.') }} {{ label }}</span>{% endif %}{% endfor %}</div>{% endif %}</td>
     <td><span class="chip">{{ labels[j.status] }}</span>{% if j.status_reason %}<br><small class="sub">{{ j.status_reason }}</small>{% endif %}</td>
     <td>
       {% if j.status in ('uncertain', 'failed') %}
@@ -45,6 +45,6 @@
   </tbody>
 </table></div>
 {% else %}
-<div class="empty"><strong>Nenhum envio</strong><span class="sub">Aprove vídeos e crie uma nova publicação, ou ligue a distribuição automática no bloco Postagem.</span></div>
+<div class="empty"><strong>Nenhum envio</strong><span class="sub">Aprove vídeos e crie uma nova publicação, ou ligue a distribuição automática no bloco Publicador do fluxo.</span></div>
 {% endif %}
 {% endblock %}

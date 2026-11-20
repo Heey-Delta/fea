@@ -23,13 +23,23 @@ from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import sessionmaker
 from starlette.middleware.sessions import SessionMiddleware
 
+from core import credentials
 from core import dashboard as dash
 from core.config import Settings, get_settings
 from core.db import sqlalchemy_url
 from core.logging import configure_logging
 from core.storage import LocalStorage, make_storage
 from networks import make_adapter
-from web import approval, auth, editing, executions, operations, publishing, queue_view
+from web import (
+    access,
+    approval,
+    auth,
+    editing,
+    executions,
+    operations,
+    publishing,
+    queue_view,
+)
 from web.common import MENU, NotLoggedIn, render, require_user
 
 BASE_DIR = Path(__file__).parent
@@ -59,7 +69,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     app.state.session_factory = sessionmaker(bind=engine, expire_on_commit=False)
     app.state.storage = make_storage(settings)
-    app.state.adapter_factory = lambda platform: make_adapter(platform, settings)
+    app.state.adapter_factory = lambda platform, current=None: make_adapter(
+        platform, current or settings
+    )
     # Os testes injetam aqui um cliente HTTP simulado para os conectores.
     app.state.connector_kwargs = {}
     app.add_middleware(
@@ -138,16 +150,20 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         try:
             with app.state.session_factory() as session:
                 kpis, errors = dash.kpis(session), dash.recent_errors(session)
+                pending = [
+                    st.service.name for st in credentials.status(session, settings) if not st.ready
+                ]
         except OperationalError:
             # Sem banco, o painel abre com o aviso (as outras telas mostram a página de erro).
             log.exception("banco indisponível no dashboard")
-            kpis, errors = None, []
+            kpis, errors, pending = None, [], []
         return render(
             request,
             "dashboard.html",
             active="/",
             kpis=kpis,
             errors=errors,
+            pending=pending,
             link_for=dash.link_for,
         )
 
@@ -155,6 +171,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(executions.router)
     app.include_router(approval.router)
     app.include_router(editing.router)
+    app.include_router(access.router)
     app.include_router(publishing.router)
     app.include_router(queue_view.router)
 

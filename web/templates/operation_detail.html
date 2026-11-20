@@ -33,7 +33,7 @@
   <div class="row">
     {% for node in config.config.nodes %}<span class="chip">{{ node_label.get(node.type, node.type) }}</span>{% endfor %}
   </div>
-  <a class="btn sm" href="/operacoes/{{ op.id }}/fluxo">Abrir canvas</a>
+  <a class="btn sm" href="/operacoes/{{ op.id }}/fluxo">Abrir fluxo</a>
 </section>
 <section class="card">
   <h2>Validação do fluxo</h2>
@@ -77,7 +77,7 @@
 <div class="empty"><strong>Nenhuma execução ainda</strong><span class="sub">{% if op.status == 'active' %}Use o Play para iniciar.{% else %}Ative a operação para usar o Play.{% endif %}</span></div>
 {% endif %}
 {% elif tab == 'fontes' %}
-<p class="sub">As fontes são configuradas nos blocos Fonte do <a href="/operacoes/{{ op.id }}/fluxo">canvas</a>. Aqui ficam o estado e o teste de conexão.</p>
+<p class="sub">As fontes são configuradas no bloco Pesca do <a href="/operacoes/{{ op.id }}/fluxo">fluxo</a>. Aqui ficam o estado e o teste de conexão.</p>
 {% if sources %}
 <div class="tbl">
   <table>
@@ -106,7 +106,7 @@
 <ul id="upload-log" class="upload-log" aria-live="polite"></ul>
 <script src="{{ url_for('static', path='upload.js') }}"></script>
 {% else %}
-<div class="empty"><strong>Nenhuma fonte ainda</strong><span class="sub">Adicione um bloco Fonte no canvas e salve a versão.</span></div>
+<div class="empty"><strong>Nenhuma fonte ainda</strong><span class="sub">Adicione uma fonte no bloco Pesca do fluxo e salve a versão.</span></div>
 {% endif %}
 {% else %}
 <section class="card">
