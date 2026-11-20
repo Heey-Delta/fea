@@ -64,7 +64,7 @@ Os apps das redes de publicação pedem páginas públicas. Elas já existem:
    - Tela de consentimento OAuth do tipo **Externo**, com as páginas acima e os escopos `youtube.upload` e `youtube.readonly`. **Publique o app**: em modo "Teste" o acesso cai a cada 7 dias.
    - Credenciais → ID do cliente OAuth → **Aplicativo da Web**. Redirect: `https://fea-rho.vercel.app/contas/youtube/retorno`.
    - Cole o Client ID e o secret em Acessos → **Conectar conta YouTube**, uma vez por canal. Se aparecer "app não verificado": Avançado → Continuar.
-   - Peça a auditoria ("YouTube API Services – Audit and Quota Extension"). Sem ela, os vídeos sobem privados.
+   - Peça a auditoria ("YouTube API Services – Audit and Quota Extension"). Sem ela, os vídeos sobem privados. As respostas prontas e o roteiro do vídeo de demonstração estão em `docs/auditoria-youtube.md`.
 6. **TikTok**:
    - https://developers.tiktok.com → Connect an app → produtos **Login Kit** e **Content Posting API** (Direct Post).
    - Escopos `user.info.basic`, `video.publish` e `video.list`. Termos e privacidade: as páginas acima. Redirect: `https://fea-rho.vercel.app/contas/tiktok/retorno`.

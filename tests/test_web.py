@@ -143,3 +143,18 @@ def test_public_pages_need_no_login(client):
         response = client.get(path)
         assert response.status_code == 200 and text in response.text, path
     assert 'href="/privacidade"' in client.get("/login").text
+
+
+def test_privacy_page_has_what_google_requires_for_youtube(client):
+    """Auditoria da API do YouTube: aviso, termos, política do Google, revogação e uso limitado."""
+    text = client.get("/privacidade").text
+    for needed in (
+        "This tool uses YouTube API Services",
+        "https://www.youtube.com/t/terms",
+        "https://policies.google.com/privacy",
+        "https://security.google.com/settings/security/permissions",
+        "Google API Services User Data Policy",
+        "Limited Use requirements",
+        "not sold, shared, transferred",
+    ):
+        assert needed in text, needed
