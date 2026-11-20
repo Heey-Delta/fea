@@ -15,7 +15,7 @@ Fontes:
 
 | Parte | Onde | O que roda |
 |---|---|---|
-| Interface | Vercel (FastAPI + Jinja2 + HTMX) | Telas, canvas, aprovação, retorno do OAuth |
+| Interface | Vercel (FastAPI + Jinja2 + HTMX) | Telas, fluxo, aprovação, Acessos, retorno do OAuth |
 | Banco | Neon (Postgres, via Vercel Marketplace) | Dados, versões e fila de tarefas |
 | Processamento | VPS (Oracle Always Free) com Docker | Buscador, Editor, Postador e Limpeza |
 | Arquivos | Cloudflare R2 | Originais, renders e máscaras |
@@ -24,7 +24,7 @@ Fluxo: Buscador → fila de pesca → Editor → fila de editados → (aprovaç�
 
 ## Mapa de fases
 
-Blocos do produto (ver `docs/fluxo-operacao.md`): **Pesca** (Tasks 5 a 8), **Edição** (Tasks 9 a 18), **Postagem** (Tasks 19 a 24). Montados no canvas da operação (Task 4).
+Blocos do produto (ver `docs/fluxo-operacao.md`): **Pesca** (Tasks 5 a 8), **Motor Editor** (Tasks 9 a 18), **Publicador** (Tasks 19 a 24). Ligados no fluxo da operação (Task 4).
 
 - **Base:** Tasks 1 a 3.
 - **Fase 1 — Operação e coleta:** Tasks 4 a 8.
@@ -93,9 +93,9 @@ Status: 1
 - Subtask 4.5: Tela de detalhe com abas: Visão geral, Configuração, Fontes, Contas, Execuções, Histórico de versões.
 - Subtask 4.6: Lista de operações com botão Play em cada linha.
 - Subtask 4.7: Teste: duas operações com configurações diferentes rodando nos mesmos motores (critério 1 da v2.1).
-- Subtask 4.8: Canvas de criação com Drawflow (decidido): blocos Fonte, Pesca, Edição, Aprovação, Postagem, Rede e Conta, com portas de entrada e saída. O canvas só configura o fluxo; não edita vídeo (decidido).
+- Subtask 4.8: Fluxo da operação em três blocos ligados em sequência: **Pesca → Motor Editor → Publicador** (substituiu o canvas livre do Drawflow a pedido). Fontes ficam dentro da Pesca; rede, contas e aprovação dentro do Publicador; os blocos internos e as ligações são gerados ao salvar. Só configura o fluxo; não edita vídeo (decidido).
 - Subtask 4.9: Ligações fora da tabela de tipos de porta são recusadas com motivo.
-- Subtask 4.10: Clicar no bloco abre o painel de configuração do lado direito. Por enquanto em JSON; os formulários de cada bloco chegam com as Tasks 6, 15 e 21.
+- Subtask 4.10: Clicar no bloco abre o painel com formulário: Pesca (redes de busca, onde buscar, permissão, tags, quantidade, modo automático), Motor Editor (resolução, FPS, enquadramento, máscara PNG com importação, áudio) e Publicador (redes, contas, aprovação, distribuição, título/legenda, limpeza).
 - Subtask 4.11: Validação antes de ativar: Fonte → Pesca → Edição → Aprovação → Postagem; uma Rede ligada a Edição e Postagem; ao menos uma Conta; sem ciclos.
 - Subtask 4.12: Grafo (nós, arestas e configs) salvo como JSON versionado em `operation_configs`. Cada execução guarda snapshot.
 - Subtask 4.13: Operação arquivada abre o canvas em somente leitura, com opção de duplicar.
@@ -343,11 +343,13 @@ Status: 0
 
 ## Task 28: Fase 4 — Expansão
 Nível: 2
-Status: -1
+Status: 1
 
-- Subtask 28.1: Buscadores de X e TikTok (verificar API, regras e custo de cada um).
-- Subtask 28.2: Perfis e adaptadores TikTok e Instagram Reels.
-- Subtask 28.3: Métricas de engajamento.
+- Subtask 28.1: Buscador do X pela API v2 oficial (busca recente, Bearer Token; exige plano pago). Buscador do TikTok **não entra**: a única API de busca do TikTok é a Research API, restrita a pesquisadores; coleta sem API oficial fica fora (decidido).
+- Subtask 28.2: Perfis e adaptadores TikTok (Content Posting API, Direct Post) e Instagram Reels (Instagram API with Instagram Login), com OAuth, renovação de token e envio assíncrono (`processing` → consulta → `published`). Uma operação pode publicar em várias redes; o vídeo segue o padrão comum a todas.
+- Subtask 28.3: Métricas por envio (views, curtidas, comentários) atualizadas a cada 6 h por 30 dias, na tela Publicações.
+- Subtask 28.4: Tela **Acessos**: estado das variáveis da ferramenta, chaves de Reddit, X, Google, TikTok e Instagram preenchidas pela interface (criptografadas no banco, valem para interface e workers), endereços de retorno e login OAuth de cada conta.
+- Subtask 28.5: Visual revisto: mais limpo, cantos levemente arredondados, sóbrio e minimalista.
 
 ## Task 29: Decisões
 Nível: 4

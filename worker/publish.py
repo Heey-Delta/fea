@@ -136,6 +136,22 @@ def scheduler_tick(session: Session, now: datetime | None = None) -> dict:
             max_attempts=1,
             payload={"metrics": True},
         )
+    # Renovação diária dos tokens (Instagram expira em 60 dias sem uso; TikTok em 365).
+    day = now.strftime("%Y%m%d")
+    for account in session.scalars(
+        select(Account).where(
+            Account.status == "connected", Account.platform.in_(("tiktok", "instagram"))
+        )
+    ):
+        queue.enqueue(
+            session,
+            "publish",
+            f"refresh:{account.id}:{day}",
+            ref_id=account.id,
+            priority="low",
+            max_attempts=1,
+            payload={"refresh": True},
+        )
     return {"batches": created, "pending_moved": moved, "enqueued": len(due)}
 
 
@@ -543,6 +559,32 @@ def run_check(
         return retry_or_fail(session, job, "Envio não encontrado na plataforma.", now, op_id)
 
 
+def run_refresh(
+    factory: sessionmaker, account_id: int, settings: Settings, adapters: AdapterFactory
+) -> bool:
+    """Renova o token da conta e grava se mudou. Token recusado → conta em erro."""
+    with factory() as session:
+        account = session.get(Account, account_id)
+        if account is None or not acc.usable(account):
+            return False
+        cipher = TokenCipher(settings.token_encryption_key)
+        try:
+            credentials = acc.credentials(cipher, account)
+            fresh = adapters(account.platform).fresh_credentials(credentials)
+        except AuthError as exc:
+            acc.mark_error(session, account, str(exc))
+            session.commit()
+            return False
+        except Exception as exc:  # noqa: BLE001 - tenta de novo amanhã
+            log.warning("renovação falhou", extra={"account": account_id, "error": str(exc)})
+            return False
+        if fresh != credentials:
+            account.token_encrypted = cipher.encrypt(fresh)
+            session.commit()
+            return True
+        return False
+
+
 @register("publish")
 def publish_job(ctx: JobContext) -> None:
     settings = creds.load(ctx.session_factory, get_settings())
@@ -554,6 +596,8 @@ def publish_job(ctx: JobContext) -> None:
         run_status(ctx.session_factory, ctx.ref_id, settings, adapters)
     elif payload.get("metrics"):
         run_metrics(ctx.session_factory, ctx.ref_id, settings, adapters)
+    elif payload.get("refresh"):
+        run_refresh(ctx.session_factory, ctx.ref_id, settings, adapters)
     else:
         run_publish(ctx.session_factory, ctx.ref_id, get_storage(), settings, adapters)
 

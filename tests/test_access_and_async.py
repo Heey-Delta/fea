@@ -131,3 +131,21 @@ def test_metrics_refresh(factory, storage, settings, tmp_path):  # noqa: F811
     assert all(j.metrics == {"views": 5} for j in jobs(factory))
     with factory() as s:
         assert pub.metrics_due(s, later + timedelta(hours=1)) == {}
+
+
+def test_daily_token_refresh(factory, storage, settings, tmp_path):  # noqa: F811
+    from core.security import TokenCipher
+
+    make_world(factory, storage, tmp_path, n_items=1, n_accounts=1)
+    with factory() as s:
+        account = s.scalars(select(m.Account)).one()
+        account.platform = "tiktok"
+        s.commit()
+        pub.scheduler_tick(s, NOW)
+        s.commit()
+        job = s.scalars(select(m.Job).where(m.Job.idempotency_key.like("refresh:%"))).one()
+        assert job.ref_id == account.id
+    assert pub.run_refresh(factory, account.id, settings, lambda _: AsyncAdapter()) is True
+    with factory() as s:
+        token = TokenCipher(KEY).decrypt(s.get(m.Account, account.id).token_encrypted)
+        assert "r0-novo" in token

@@ -90,8 +90,8 @@ SERVICES: tuple[Service, ...] = (
         "Instagram Reels",
         "publicacao",
         (
-            Field("instagram_app_id", "App ID", secret=False),
-            Field("instagram_app_secret", "App secret"),
+            Field("instagram_app_id", "Instagram App ID", secret=False),
+            Field("instagram_app_secret", "Instagram App Secret"),
         ),
         oauth_platform="instagram",
         console="https://developers.facebook.com/apps",
