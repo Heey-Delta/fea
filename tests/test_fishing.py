@@ -449,3 +449,25 @@ def test_unknown_execution_action(factory, logged_client):
         ex = executions.start_execution(s, s.get(m.Operation, op_id))
         s.commit()
     assert logged_client.post(f"/execucoes/{ex.id}/explodir").status_code == 404
+
+
+def test_phash_igual_ao_da_lib_imagehash():
+    """O hash próprio (só numpy) bate com o imagehash, então os já gravados seguem válidos."""
+    import numpy as np
+    import pytest
+    from PIL import Image
+
+    imagehash = pytest.importorskip("imagehash")
+    from core.fishing import HASH_HEX, phash_distance, phash_of
+
+    rng = np.random.default_rng(7)
+    previous = None
+    for _ in range(12):
+        img = Image.fromarray(rng.integers(0, 256, (90, 60, 3), dtype=np.uint8))
+        mine = phash_of(img)
+        assert mine == str(imagehash.phash(img)) and len(mine) == HASH_HEX
+        if previous:
+            assert phash_distance(mine, previous) == (
+                imagehash.hex_to_hash(mine) - imagehash.hex_to_hash(previous)
+            )
+        previous = mine

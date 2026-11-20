@@ -24,7 +24,6 @@ pkg update -y
 pkg install -y python git openssh ffmpeg tesseract libpq openssl libffi \
   clang make pkg-config rust binutils libjpeg-turbo freetype \
   python-numpy python-pillow python-cryptography curl
-pkg install -y python-scipy 2>/dev/null || say "python-scipy indisponível: o pip tenta compilar depois."
 
 # 2. Código (repositório privado: chave de implantação só de leitura)
 if [ ! -d "$DIR/.git" ]; then
@@ -67,8 +66,9 @@ export ANDROID_API_LEVEL="$(getprop ro.build.version.sdk)"
 export MATHLIB="m"
 export CARGO_BUILD_JOBS=2
 pip install --upgrade pip wheel setuptools
+# numpy, Pillow e cryptography já vêm do pacote do Termux (python-*); aqui entra só o resto.
 pip install "sqlalchemy>=2.0" "alembic>=1.13" "psycopg>=3.2" "pydantic-settings>=2.4" \
-  "httpx>=0.27" "boto3>=1.35" "imagehash>=4.3" "itsdangerous>=2.2" "jinja2>=3.1"
+  "httpx>=0.27" "boto3>=1.35" "itsdangerous>=2.2" "jinja2>=3.1"
 
 # 5. Fonte do texto sobre o vídeo
 mkdir -p assets/fonts
