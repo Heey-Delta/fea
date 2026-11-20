@@ -191,3 +191,14 @@ def test_vps_installer_is_served_and_valid():
     assert subprocess.run(["bash", "-n", str(script)]).returncode == 0
     text = script.read_text()
     assert "DATABASE_URL" in text and "TOKEN_ENCRYPTION_KEY" in text and "Deploy keys" in text
+
+
+def test_termux_installer_is_valid_and_safe():
+    import subprocess
+    from pathlib import Path
+
+    script = Path("web/static/instalar-termux.sh")
+    assert subprocess.run(["bash", "-n", str(script)]).returncode == 0
+    text = script.read_text()
+    assert "Deploy keys" in text and "fea-workers" in text
+    assert "DATABASE_URL" not in text and "TOKEN_ENCRYPTION_KEY" not in text  # sem segredos
