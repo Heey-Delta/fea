@@ -50,7 +50,15 @@ Feito: o Neon está conectado ao projeto e a Vercel gravou `DATABASE_URL` e `DAT
 3. **Reddit** (gratuito, uso não comercial):
    - Em https://www.reddit.com/prefs/apps crie um app do tipo **script**. O redirect (`http://localhost:8080`) não é usado, mas é obrigatório.
    - Cole o Client ID, o Client secret e o User-Agent (ex.: `fea/0.1 (by u/seu_usuario)`) e clique em **Testar**.
-4. **X** (opcional, pago): crie o app em https://developer.x.com (plano Basic ou superior), cole o Bearer Token e clique em **Testar**.
+4. **Google Drive** (grátis, recomendado como primeira fonte): vídeos que caírem numa pasta viram itens da operação.
+   - Google Cloud (pode ser o mesmo projeto do YouTube) → **APIs e serviços → Biblioteca** → ative a **Google Drive API**.
+   - **IAM e administrador → Contas de serviço → Criar conta de serviço**, com o nome `fea-drive`. Pule as permissões e toque em Concluir.
+   - Abra a conta criada → **Chaves → Adicionar chave → Criar nova chave → JSON**. Um arquivo é baixado; ele é secreto.
+   - Abra o arquivo num editor de texto, copie **tudo** e cole em Acessos → **Google Drive**. Toque em Salvar e depois em **Testar**. O teste mostra o e-mail da conta de serviço.
+   - No Google Drive, crie a pasta (ex.: `fea-entrada`) → **Compartilhar** → cole o e-mail da conta de serviço como **Leitor**.
+   - Na operação, adicione uma fonte do tipo **Google Drive** com o link da pasta e registre a permissão de uso dos vídeos.
+   - Isso não acrescenta escopo nenhum ao login do YouTube, então não atrapalha a auditoria.
+5. **X** (opcional, pago): crie o app em https://developer.x.com (plano Basic ou superior), cole o Bearer Token e clique em **Testar**.
 
 Os apps das redes de publicação pedem páginas públicas. Elas já existem:
 
@@ -59,25 +67,29 @@ Os apps das redes de publicação pedem páginas públicas. Elas já existem:
 - Termos: `https://fea-rho.vercel.app/termos`
 - Exclusão de dados: `https://fea-rho.vercel.app/exclusao-de-dados`
 
-5. **YouTube Shorts**:
+6. **YouTube Shorts**:
    - Google Cloud → novo projeto → ative a **YouTube Data API v3**.
    - Tela de consentimento OAuth do tipo **Externo**, com as páginas acima e os escopos `youtube.upload` e `youtube.readonly`. **Publique o app**: em modo "Teste" o acesso cai a cada 7 dias.
    - Credenciais → ID do cliente OAuth → **Aplicativo da Web**. Redirect: `https://fea-rho.vercel.app/contas/youtube/retorno`.
    - Cole o Client ID e o secret em Acessos → **Conectar conta YouTube**, uma vez por canal. Se aparecer "app não verificado": Avançado → Continuar.
    - Peça a auditoria ("YouTube API Services – Audit and Quota Extension"). Sem ela, os vídeos sobem privados. As respostas prontas e o roteiro do vídeo de demonstração estão em `docs/auditoria-youtube.md`.
-6. **TikTok**:
+7. **TikTok**:
    - https://developers.tiktok.com → Connect an app → produtos **Login Kit** e **Content Posting API** (Direct Post).
    - Escopos `user.info.basic`, `video.publish` e `video.list`. Termos e privacidade: as páginas acima. Redirect: `https://fea-rho.vercel.app/contas/tiktok/retorno`.
    - Cole o Client key e o secret em Acessos → **Conectar conta TikTok**.
    - Envie o app para revisão. Até ser aprovado, os posts ficam visíveis só para você.
-7. **Instagram Reels**:
+8. **Instagram Reels**:
    - A conta precisa ser **profissional** (Criador ou Empresa).
    - https://developers.facebook.com → Criar app (tipo Empresa) → produto **Instagram** → "API setup with Instagram login".
    - Permissões `instagram_business_basic` e `instagram_business_content_publish`. Redirect: `https://fea-rho.vercel.app/contas/instagram/retorno`. Privacidade e exclusão de dados: as páginas acima.
    - Adicione a sua conta como **testadora** e aceite o convite no Instagram.
    - Cole o Instagram App ID e o secret em Acessos → **Conectar conta Instagram**.
 
-## 4 · Workers na VPS (20 min)
+## 4 · Workers
+
+**Sem VPS:** rode os workers no seu computador com o Docker Desktop. Passo a passo em `docs/workers-no-computador.md`. Outros caminhos e custos estão em `docs/rumos.md`.
+
+### Na VPS (20 min)
 
 1. Oracle Cloud → Compute → Create instance: **Ampere A1** (ARM), Ubuntu 24.04, até 4 OCPUs e 24 GB. Deixe aberta só a porta 22.
 2. Na ferramenta, abra Acessos → **Workers (VPS)** → **Gerar comando de instalação**. O comando vale 30 minutos e uma única vez, e já traz o banco e a chave de criptografia.

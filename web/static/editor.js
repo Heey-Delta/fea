@@ -85,7 +85,7 @@
   // ---- Catálogo --------------------------------------------------------------------------
   const profileById = Object.fromEntries(boot.profiles.map((p) => [p.id, p]));
   const PLATFORM_ICON = { youtube: "youtube", tiktok: "tiktok", instagram: "instagram" };
-  const SOURCE_ICON = { reddit: "reddit", x: "x-logo", upload: "upload" };
+  const SOURCE_ICON = { reddit: "reddit", x: "x-logo", upload: "upload", drive: "drive" };
   const KIND = {
     busca: { name: "Busca", icon: "search", desc: "Fontes, filtros, tags e quantidade da pesca." },
     edicao: { name: "Edição", icon: "film", desc: "Configure os parâmetros do módulo." },
@@ -504,7 +504,7 @@
 
   function sourceItem(s, i) {
     const types = Object.entries(boot.sourceTypes).map(([k, v]) => opt(k, v, s.type || "reddit")).join("");
-    const ph = { reddit: "r/comunidade", x: "@usuario ou termo de busca", upload: "nome da pasta (opcional)" }[s.type || "reddit"];
+    const ph = { reddit: "r/comunidade", x: "@usuario ou termo de busca", upload: "nome da pasta (opcional)", drive: "link da pasta do Google Drive" }[s.type || "reddit"];
     const dbId = boot.sourceIds[s.id];
     return `<div class="list-item" data-source="${i}">
       <div class="row"><strong>${icon(SOURCE_ICON[s.type || "reddit"] || "search")} Fonte ${i + 1}</strong>${RO ? "" : `<button class="btn sm ghost danger" type="button" data-remove-source="${i}">${icon("trash")} Remover</button>`}</div>
@@ -518,7 +518,7 @@
   function insBusca() {
     const used = new Set(model.sources.map((s) => s.type || "reddit"));
     return `${head("search", "Busca", KIND.busca.desc)}
-      ${used.has("reddit") ? readyNote("reddit", "Reddit") : ""}${used.has("x") ? readyNote("x", "X") : ""}
+      ${used.has("reddit") ? readyNote("reddit", "Reddit") : ""}${used.has("x") ? readyNote("x", "X") : ""}${used.has("drive") ? readyNote("drive", "Google Drive") : ""}
       ${sec("Fontes", "link", `${model.sources.map(sourceItem).join("") || '<p class="sub">Nenhuma fonte ainda.</p>'}${RO ? "" : `<button class="btn" type="button" id="add-source">${icon("plus")} Adicionar fonte</button>`}<small class="sub">Sem permissão registrada, os itens ficam pendentes até você liberar na Fila.</small>`, true)}
       ${sec("Filtros e tags", "search", `
         <label class="field">Tags<input class="input" data-bind="fishing.tags" data-kind="list" placeholder="academia, treino"><small>separadas por vírgula</small></label>

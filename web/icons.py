@@ -55,6 +55,7 @@ ICONS: dict[str, str] = {
     "broom": '<path d="m14 4-4.5 8M6 14h9l1 6H5z"/>',
     "account": '<circle cx="12" cy="9" r="3.5"/><path d="M5 20c.9-3.5 3.6-5 7-5s6.1 1.5 7 5"/>',
     "shield": '<path d="M12 3 4.5 6v6c0 4.2 3.1 7.6 7.5 9 4.4-1.4 7.5-4.8 7.5-9V6z"/><path d="m9 12 2 2 4-4"/>',
+    "drive": '<path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
     "database": '<ellipse cx="12" cy="6" rx="7.5" ry="3"/><path d="M4.5 6v12c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3V6M4.5 12c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3"/>',
     "key": '<circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M16.5 6.5l2.5 2.5"/>',
     # Redes (desenhos genéricos)

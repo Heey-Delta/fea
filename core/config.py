@@ -47,6 +47,10 @@ class Settings(BaseSettings):
     reddit_client_secret: str = ""
     reddit_user_agent: str = "fea/0.1 (ferramenta de operacoes)"
 
+    # Google Drive (Buscador): chave JSON de uma conta de serviço do Google Cloud com a
+    # Google Drive API ativa. A pasta é compartilhada com o e-mail da conta de serviço.
+    google_drive_service_account: str = ""
+
     # X (Buscador): Bearer Token do app no portal de desenvolvedor do X (API v2, plano pago).
     x_bearer_token: str = ""
 

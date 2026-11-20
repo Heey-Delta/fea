@@ -137,6 +137,36 @@ def vps_command(request: Request, session: Session = Depends(db_session)) -> Res
     return RedirectResponse("/contas#vps", status_code=303)
 
 
+@router.post("/contas/vps/env")
+def worker_env(request: Request, session: Session = Depends(db_session)) -> Response:
+    """Arquivo .env dos workers para rodar no próprio computador (Docker Desktop).
+
+    Mesmo conteúdo que o comando da VPS grava: banco direto e chave de criptografia. Só sai
+    para quem está logado; fica registrado em events.
+    """
+    s = request.app.state.settings
+    if not s.token_encryption_key:
+        flash(request, "error", "Defina TOKEN_ENCRYPTION_KEY antes de baixar o arquivo.")
+        return RedirectResponse("/contas#vps", status_code=303)
+    session.add(Event(entity="vps_install", action="env_downloaded", detail={}))
+    session.commit()
+    body = (
+        "# Workers da Ferramenta de Operações. Guarde este arquivo como deploy/.env\n"
+        "# Ele dá acesso ao banco: não envie para ninguém nem coloque no Git.\n"
+        "APP_ENV=production\n"
+        f"DATABASE_URL={s.direct_database_url}\n"
+        f"TOKEN_ENCRYPTION_KEY={s.token_encryption_key}\n"
+    )
+    return Response(
+        body,
+        media_type="text/plain; charset=utf-8",
+        headers={
+            "Content-Disposition": 'attachment; filename="fea-workers.env"',
+            "Cache-Control": "no-store, private",
+        },
+    )
+
+
 @router.post("/contas/banco/migrar")
 def migrate(request: Request) -> Response:
     from core.migrate import upgrade
@@ -266,6 +296,21 @@ def test_x(settings, client: httpx.Client) -> str:
     raise ValueError(f"X recusou o token (HTTP {response.status_code}).")
 
 
+def test_drive(settings, client: httpx.Client) -> str:
+    from core.connectors.base import SourceError
+    from core.connectors.drive import DriveConnector
+
+    try:
+        connector = DriveConnector(settings, client=client, sleep=lambda _s: None)
+        connector.token()
+    except SourceError as exc:
+        raise ValueError(str(exc)) from exc
+    return (
+        f"Google aceitou a conta de serviço. Compartilhe a pasta do Drive com "
+        f"{connector.email} (Leitor) e use o link da pasta na fonte da operação."
+    )
+
+
 def test_r2(settings, client: httpx.Client) -> str:
     from core.storage import R2Storage
 
@@ -283,7 +328,7 @@ def test_r2(settings, client: httpx.Client) -> str:
 def test_keys(request: Request, service_id: str, session: Session = Depends(db_session)):
     service = get_service(service_id)
     settings = settings_for(request, session)
-    testers = {"reddit": test_reddit, "x": test_x, "r2": test_r2}
+    testers = {"reddit": test_reddit, "x": test_x, "r2": test_r2, "drive": test_drive}
     if service_id not in testers:
         flash(request, "ok", f"{service.name}: o teste é a própria conexão de uma conta abaixo.")
         return RedirectResponse(f"/contas#{service_id}", status_code=303)

@@ -203,6 +203,8 @@ def validate_graph(config: dict[str, Any]) -> list[Issue]:
             issues.append(Issue("error", "Fonte do Reddit sem comunidade (ex.: r/nome).", sid))
         elif source_type == "x" and not (cfg.get("reference") or "").strip():
             issues.append(Issue("error", "Fonte do X sem @usuario ou termo de busca.", sid))
+        elif source_type == "drive" and not (cfg.get("reference") or "").strip():
+            issues.append(Issue("error", "Fonte do Google Drive sem o link da pasta.", sid))
     for sid in by_type["source"]:
         if not (by_id[sid].get("config") or {}).get("permission_note"):
             issues.append(
