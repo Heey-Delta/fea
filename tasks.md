@@ -351,6 +351,7 @@ Status: 1
 - Subtask 28.4: Tela **Acessos**: estado das variáveis da ferramenta, chaves de Reddit, X, Google, TikTok e Instagram preenchidas pela interface (criptografadas no banco, valem para interface e workers), endereços de retorno e login OAuth de cada conta.
 - Subtask 28.5: Visual revisto: mais limpo, cantos levemente arredondados, sóbrio e minimalista.
 - Subtask 28.6: Limite de uso do R2: a ferramenta conta gravações (Classe A), leituras (Classe B) e o pico de armazenamento do mês, mede o bucket de hora em hora (Limpeza) e para ao chegar no percentual escolhido da franquia grátis (padrão 80%). Painel e ajuste no Dashboard.
+- Subtask 28.7: Páginas públicas com as exigências da auditoria da API do YouTube (aviso de uso dos YouTube API Services, links dos Termos do YouTube e da política do Google, revogação, exclusão e uso limitado) e guia `docs/auditoria-youtube.md` com as respostas do formulário, os arquivos pedidos e o roteiro do screencast.
 
 ## Task 29: Decisões
 Nível: 4

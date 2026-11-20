@@ -12,7 +12,7 @@
 <p>Exclusivamente para buscar, editar, agendar e publicar vídeos nas contas do próprio operador e acompanhar o desempenho deles. Os dados das plataformas não são compartilhados com terceiros nem usados para outra finalidade.</p>
 <h2>4. Permissões das plataformas</h2>
 <ul>
-  <li><strong>YouTube (Google):</strong> enviar vídeos e ler informações do canal (<code>youtube.upload</code>, <code>youtube.readonly</code>). O uso de dados das APIs do Google segue a Política de Dados do Usuário dos Serviços de API do Google, inclusive os requisitos de uso limitado.</li>
+  <li><strong>YouTube (Google):</strong> enviar vídeos e ler informações do canal (<code>youtube.upload</code>, <code>youtube.readonly</code>). Esta ferramenta usa os Serviços de API do YouTube: valem os <a href="https://www.youtube.com/t/terms" rel="noopener">Termos de Serviço do YouTube</a> e a <a href="https://policies.google.com/privacy" rel="noopener">Política de Privacidade do Google</a>. O uso de dados das APIs do Google segue a <a href="https://developers.google.com/terms/api-services-user-data-policy" rel="noopener">Política de Dados do Usuário dos Serviços de API do Google</a>, inclusive os requisitos de uso limitado. O acesso pode ser revogado em <a href="https://security.google.com/settings/security/permissions" rel="noopener">myaccount.google.com/permissions</a>.</li>
   <li><strong>TikTok:</strong> informações básicas do perfil, publicação de vídeos e leitura das métricas dos vídeos publicados (<code>user.info.basic</code>, <code>video.publish</code>, <code>video.list</code>).</li>
   <li><strong>Instagram (Meta):</strong> informações básicas da conta profissional e publicação de Reels (<code>instagram_business_basic</code>, <code>instagram_business_content_publish</code>).</li>
 </ul>
@@ -22,6 +22,18 @@
 <p>Acesso por login único autorizado, tokens e chaves criptografados, conexões apenas por HTTPS e armazenamento em provedores com controle de acesso.</p>
 <h2>7. Seus direitos e exclusão</h2>
 <p>Qualquer conta conectada pode ser desconectada pela própria plataforma ou pela ferramenta, e os dados podem ser apagados conforme a página <a href="/exclusao-de-dados">Exclusão de dados</a>. Titulares podem pedir acesso, correção ou exclusão pelo contato abaixo, nos termos da LGPD.</p>
-<h2>Privacy policy (English summary)</h2>
-<p>This private tool is used by a single operator. It stores the connected accounts' public IDs and names, encrypted OAuth tokens, the videos it publishes and their public metrics, only to publish to the operator's own accounts. Data is not sold or shared. Video files are deleted shortly after publishing. Use of Google API data complies with the Google API Services User Data Policy, including the Limited Use requirements. See <a href="/exclusao-de-dados">Data deletion</a> to remove data.</p>
+<h2 id="en">Privacy policy (English)</h2>
+<p>This is a private tool used by a single operator, who owns every connected account. It is not offered to the public, does not sell data and shows no advertising.</p>
+<h3>YouTube API Services</h3>
+<p>This tool uses YouTube API Services. By using it with a YouTube channel you are bound by the <a href="https://www.youtube.com/t/terms" rel="noopener">YouTube Terms of Service</a>, and Google's data practices are described in the <a href="https://policies.google.com/privacy" rel="noopener">Google Privacy Policy</a>.</p>
+<ul>
+  <li><strong>Data accessed:</strong> the channel ID and name, and the title, ID, link and public statistics (views, likes, comments) of the videos this tool uploads to that channel. Scopes: <code>youtube.upload</code> and <code>youtube.readonly</code>.</li>
+  <li><strong>How it is used:</strong> only to upload the operator's videos to the operator's own channel and to show their performance to the operator. Nothing else.</li>
+  <li><strong>Storage:</strong> OAuth tokens are encrypted at rest; video files are deleted shortly after publishing; publishing records and statistics are kept while the operation exists.</li>
+  <li><strong>Sharing:</strong> YouTube data is not sold, shared, transferred or disclosed to any third party.</li>
+  <li><strong>Revoking access:</strong> you can revoke this tool's access at any time in the <a href="https://security.google.com/settings/security/permissions" rel="noopener">Google security settings</a>. On revocation the stored token is deleted immediately and stored YouTube data for that channel is deleted within 30 days. See <a href="/exclusao-de-dados">Data deletion</a>.</li>
+</ul>
+<p>The use and transfer to any other app of information received from Google APIs will adhere to the <a href="https://developers.google.com/terms/api-services-user-data-policy" rel="noopener">Google API Services User Data Policy</a>, including the Limited Use requirements.</p>
+<h3>Other platforms</h3>
+<p>For TikTok and Instagram the tool stores only the connected account's public ID and name, encrypted tokens, the videos published and their public metrics, to publish to the operator's own accounts.</p>
 {% endblock %}
