@@ -6,3 +6,10 @@ __pycache__/
 .ruff_cache/
 .coverage
 storage/
+
+# Logs e controle dos workers locais (Termux, computador)
+logs/*.log
+logs/*.pid
+logs/*.child
+logs/status/*.json
+!logs/status/buscador.json

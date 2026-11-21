@@ -95,25 +95,15 @@ fi
 
 # 6. Atalhos para ligar, desligar e ver os workers
 mkdir -p "$HOME/.local/bin" logs
+# Ligar e desligar ficam no código (deploy/termux): o fea-atualizar traz as versões novas.
+# Cada worker religa sozinho se o Android o derrubar.
 cat > "$HOME/.local/bin/fea-ligar" <<EOF
 #!/data/data/com.termux/files/usr/bin/bash
-termux-wake-lock 2>/dev/null || true
-cd "$DIR" && source .venv/bin/activate
-export WORKER_CONCURRENCY=1 PYTHONUNBUFFERED=1
-for r in buscador editor postador limpeza; do
-  if [ -f logs/\$r.pid ] && kill -0 "\$(cat logs/\$r.pid)" 2>/dev/null; then echo "\$r já está rodando"; continue; fi
-  nohup python -m worker \$r >> logs/\$r.log 2>&1 &
-  echo \$! > logs/\$r.pid
-  echo "\$r ligado"
-done
+exec bash "$DIR/deploy/termux/ligar.sh"
 EOF
 cat > "$HOME/.local/bin/fea-desligar" <<EOF
 #!/data/data/com.termux/files/usr/bin/bash
-cd "$DIR"
-for r in buscador editor postador limpeza; do
-  [ -f logs/\$r.pid ] && kill "\$(cat logs/\$r.pid)" 2>/dev/null && echo "\$r desligado"; rm -f logs/\$r.pid
-done
-termux-wake-unlock 2>/dev/null || true
+exec bash "$DIR/deploy/termux/desligar.sh"
 EOF
 cat > "$HOME/.local/bin/fea-status" <<EOF
 #!/data/data/com.termux/files/usr/bin/bash

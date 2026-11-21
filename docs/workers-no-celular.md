@@ -40,3 +40,10 @@ Copie as últimas linhas do erro (sem linhas com `DATABASE_URL` ou chaves) e man
 
 ## Quando você tiver uma VPS
 Não precisa desmontar nada no celular. Na VPS, cole o comando de **Acessos → Workers → Gerar comando de instalação (VPS)**. Os workers do celular percebem a plataforma ativa e param sozinhos ("migrado para a VPS"). Detalhes em `docs/plataforma.md`.
+
+## Workers que caem sozinhos (Android)
+O Android mata processos em segundo plano: tela apagada, economia de bateria e o "phantom process killer" do Android 12+. Desde a Task 42, cada worker religa sozinho em 10 s se cair, e o log registra "worker X parou (código N); religando". Para cair menos:
+1. Configurações → Apps → Termux → Bateria → **Sem restrições**.
+2. Deixe a notificação do Termux ativa (wake lock).
+3. Android 14 ou mais novo: Opções do desenvolvedor → **Desativar restrições de processos filhos**.
+4. Instalação feita antes da Task 42: rode o instalador uma vez de novo para o `fea-ligar` passar a religar os workers. Depois disso o `fea-atualizar` mantém os scripts em dia.

@@ -11,8 +11,9 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from core import workers
+from core.distribution import DEFAULT_WINDOW, window_minutes
 from core.editor import preset as pr
-from core.models import Execution, Item, Job, Operation, Source
+from core.models import Account, Execution, Item, Job, Operation, Source
 from core.operations import current_config, linked_account_ids
 from core.version import code_version
 
@@ -107,6 +108,21 @@ def report(session: Session, migration: dict | None = None, now: datetime | None
             f"agenda={'automática' if publish.get('automatic') else 'manual'} "
             f"contas={len(linked_account_ids(config))} auto={config.get('automation')}"
         )
+        accounts = list(
+            session.scalars(select(Account).where(Account.id.in_(linked_account_ids(config))))
+        )
+        for account in accounts:
+            lines.append(
+                f"  conta #{account.id} {account.platform} {account.name} [{account.status}] "
+                f"limite/dia={account.daily_limit}"
+            )
+        per_day = sum(a.daily_limit for a in accounts if a.status == "connected")
+        if publish.get("mode", "rotation") == "rotation" and per_day:
+            window = publish.get("window") or DEFAULT_WINDOW
+            gap = max(int(publish.get("interval_min") or 0), window_minutes(window) // per_day)
+            lines.append(f"  rodízio: até {per_day} posts/dia, 1 a cada {gap} min")
+        elif not per_day:
+            lines.append("  nenhuma conta conectada: a agenda automática não roda")
         for src in session.scalars(select(Source).where(Source.operation_id == op.id)):
             lines.append(
                 f"  fonte #{src.id} {src.type} {_short_ref(src)} [{src.status}] "
