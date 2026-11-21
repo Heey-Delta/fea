@@ -37,3 +37,6 @@ bash <(curl -fsSL https://fea-rho.vercel.app/static/instalar-termux.sh)
 
 ## Se algo falhar
 Copie as últimas linhas do erro (sem linhas com `DATABASE_URL` ou chaves) e mande ao Claude. Este instalador não foi testado num celular de verdade: é possível que alguma biblioteca precise de ajuste.
+
+## Quando você tiver uma VPS
+Não precisa desmontar nada no celular. Na VPS, cole o comando de **Acessos → Workers → Gerar comando de instalação (VPS)**. Os workers do celular percebem a plataforma ativa e param sozinhos ("migrado para a VPS"). Detalhes em `docs/plataforma.md`.

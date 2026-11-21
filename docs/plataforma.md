@@ -38,6 +38,8 @@ Princípio mantido: **administração central, execução separada.** O isolamen
 
 Na VPS, o comando gerado em **Acessos → Workers** instala tudo: Docker, firewall, código, imagem, núcleo e agente. O agente sobe um ambiente para cada operação ativa e marca a plataforma como ativa. Os workers do celular percebem isso sozinhos e param, com a mensagem "migrado para a VPS". Não é preciso fazer mais nada no celular.
 
+Variáveis opcionais do instalador (úteis para teste ou VPS pequena): `FEA_HOME` (pasta, padrão `/opt/fea`), `FEA_REPO` (origem do código; cópia local dispensa a chave do GitHub) e `FEA_IMAGE` (usa uma imagem `fea-worker:<tag>` já pronta, sem compilar). Depois de instalado, o comando `fea` administra a máquina: `fea status`, `fea atualizar`, `fea logs [operação]`, `fea painel [operação]`.
+
 ## Critérios de aceitação (seção 15 do manual), com o estado real
 
 | Critério | Como é atendido | Situação |
