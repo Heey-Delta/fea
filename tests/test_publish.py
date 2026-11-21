@@ -14,6 +14,7 @@ from core import distribution as dist
 from core import operations as ops
 from core import titles
 from core.config import Settings
+from core.operations import OperationError
 from core.security import TokenCipher
 from networks.base import (
     AuthError,
@@ -404,3 +405,30 @@ def test_failed_jobs_keep_files_and_rejected_are_cleaned(factory, storage, setti
         s.commit()
         assert pub.run_cleanup(s, storage, datetime.now(UTC) + timedelta(hours=1)) == 1
     assert rejected.id == items[1]
+
+
+def test_failed_job_goes_back_to_the_agenda_without_duplicate(factory, storage, tmp_path):  # noqa: F811
+    """Envio que falhou: o vídeo pode ser agendado de novo no mesmo registro, sem erro 500."""
+    op_id, items, accounts = make_world(factory, storage, tmp_path, n_items=1, n_accounts=1)
+    first = batch(factory, op_id, accounts, interval_min=0, request_key="k1")
+    with factory() as s:
+        job = s.scalars(select(m.PublishJob)).one()
+        job.status, job.attempts, job.status_reason = "failed", 2, "erro da API"
+        s.commit()
+        job_id = job.id
+    second = batch(factory, op_id, accounts, interval_min=0, request_key="k2")
+    assert second != first
+    with factory() as s:
+        all_jobs = s.scalars(select(m.PublishJob)).all()
+        assert len(all_jobs) == 1 and all_jobs[0].id == job_id
+        assert all_jobs[0].status == "planned" and all_jobs[0].attempts == 0
+        assert all_jobs[0].batch_id == second
+    with factory() as s, pytest.raises(OperationError, match="Nenhum vídeo aprovado"):
+        dist.create_batch(  # já está planejado de novo: não entra outra vez
+            s,
+            s.get(m.Operation, op_id),
+            item_ids=None,
+            account_ids=accounts,
+            request_key="k3",
+            now=NOW,
+        )

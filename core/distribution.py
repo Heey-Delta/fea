@@ -17,6 +17,7 @@ from datetime import UTC, date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from core.models import Account, Batch, Event, Item, Operation, PublishJob, Render
@@ -34,6 +35,8 @@ OCCUPYING = (
     "published",
 )
 OPEN = (*OCCUPYING, "pending_capacity")
+# Envios encerrados sem publicar: podem voltar para a agenda no mesmo registro.
+REUSABLE = ("failed", "cancelled", "skipped")
 DEFAULT_WINDOW = {"start": "08:00", "end": "23:00"}
 
 
@@ -334,6 +337,21 @@ def create_batch(
     t0 = first_slot(now, start_at, first_immediate, interval)
     planned = plan(candidates, agenda, ids, mode, t0, published_hashes(session, ids))
 
+    # Um envio por vídeo e conta (restrição do banco). Se o par já teve um envio que falhou,
+    # foi cancelado ou pulado, o mesmo registro volta para a agenda em vez de criar outro.
+    previous = {
+        (j.render_id, j.account_id): j
+        for j in session.scalars(
+            select(PublishJob).where(PublishJob.render_id.in_({p.render_id for p in planned}))
+        )
+    }
+    if planned and all(
+        previous.get((p.render_id, p.account_id)) is not None
+        and previous[(p.render_id, p.account_id)].status not in REUSABLE
+        for p in planned
+    ):
+        raise OperationError("Esses vídeos já têm envio para essas contas: veja em Publicações.")
+
     batch = Batch(
         operation_id=op.id,
         request_key=request_key,
@@ -343,19 +361,36 @@ def create_batch(
         first_immediate=first_immediate,
         start_at=start_at,
     )
-    session.add(batch)
-    session.flush()
-    for p in planned:
-        session.add(
-            PublishJob(
-                batch_id=batch.id,
-                render_id=p.render_id,
-                account_id=p.account_id,
-                planned_at=p.planned_at,
-                status=p.status,
-                status_reason=p.reason,
-            )
-        )
+    try:
+        with session.begin_nested():
+            session.add(batch)
+            session.flush()
+            for p in planned:
+                old = previous.get((p.render_id, p.account_id))
+                if old is None:
+                    session.add(
+                        PublishJob(
+                            batch_id=batch.id,
+                            render_id=p.render_id,
+                            account_id=p.account_id,
+                            planned_at=p.planned_at,
+                            status=p.status,
+                            status_reason=p.reason,
+                        )
+                    )
+                elif old.status in REUSABLE:
+                    old.batch_id = batch.id
+                    old.planned_at = p.planned_at
+                    old.status = p.status
+                    old.status_reason = p.reason
+                    old.attempts = 0
+                    old.external_id = old.url = old.published_at = None
+            session.flush()
+    except IntegrityError:
+        # Dois pedidos ao mesmo tempo (ex.: toque duplo em "Criar envios").
+        raise OperationError(
+            "Esse envio acabou de ser criado por outro pedido: veja em Publicações."
+        ) from None
     session.add(
         Event(
             entity="batch",
