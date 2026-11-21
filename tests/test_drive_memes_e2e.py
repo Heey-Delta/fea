@@ -136,6 +136,41 @@ def test_tag_no_drive_da_prioridade_sem_descartar(factory, tmp_path):  # noqa: F
     assert "rejected" not in status and status == {"approved": 2, "grouped": 8}, status
 
 
+def test_memes_presos_de_rodadas_antigas_voltam_a_andar(factory, tmp_path):  # noqa: F811
+    """Rodada antiga deixou tudo "sem permissão"/"duplicado": a nova rodada não pode só pular."""
+    from worker.collect import run_collect
+    from worker.render import run_render
+
+    storage = LocalStorage(tmp_path / "storage")
+    images = [make_meme(tmp_path / f"meme_{i}.jpg", i) for i in range(5)]
+    op_id, ex_id = meme_operation(factory, target_x=1)
+    with factory() as s:  # como o código antigo deixou os itens
+        source = s.scalars(select(m.Source)).one()
+        for i in range(5):
+            s.add(m.Item(operation_id=op_id, execution_id=ex_id, source_id=source.id,
+                         external_id=f"img{i}", media_type="image",
+                         status="pending_permission" if i % 2 else "duplicate"))  # fmt: skip
+        s.get(m.Execution, ex_id).status = "completed"
+        op = s.get(m.Operation, op_id)
+        ex2 = executions.start_execution(s, op, target_x=1)
+        s.commit()
+        ex2_id = ex2.id
+    progress = run_collect(factory, ex2_id, key_settings(), storage, drive_with(images))
+    assert progress.already_seen == 0 and len(progress.eligible) == 5, progress
+    with factory() as s:
+        refs = [j.ref_id for j in s.scalars(select(m.Job).where(m.Job.type == "render"))]
+    for ref in refs:
+        run_render(factory, ref, storage)
+    with factory() as s:
+        statuses = sorted(i.status for i in s.scalars(select(m.Item)))
+        assert statuses == ["approved"] + ["grouped"] * 4
+        ex3 = executions.start_execution(s, s.get(m.Operation, op_id), target_x=1)
+        s.commit()
+        ex3_id = ex3.id
+    again = run_collect(factory, ex3_id, key_settings(), storage, drive_with(images))
+    assert again.already_seen == 5 and "já foram usados" in again.stop_reason  # não repete
+
+
 def test_ordem_sem_tags_e_aleatoria_e_com_tags_prioriza():
     from core.connectors.base import RawItem
     from worker.collect import arrange

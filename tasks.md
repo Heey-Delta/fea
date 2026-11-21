@@ -437,6 +437,7 @@ Status: 1
 - Subtask 40.2: Repetidos não barram mais por padrão; opção "Bloquear repetidos" no bloco Busca para ligar depois.
 - Subtask 40.3: Fontes sem busca por texto (Drive, upload): sem tags, ordem aleatória; com tags, os que casam com elas vêm primeiro e o resto não é descartado. Arquivos já vistos na fonte continuam pulados (não repete).
 - Subtask 40.4: Com "Agrupar imagens", a meta X conta vídeos: busca X × N imagens e manda todas para a edição (antes só X entravam e saía 1 Short).
+- Subtask 40.5: Itens presos de rodadas antigas ("sem permissão", "duplicado" com repetidos liberados, "fora do nicho" no Drive) voltam a ser processados em vez de contar como "já vistos" para sempre (a busca rodava, pulava tudo e parava). Quando a pasta só tem arquivos já usados, a execução diz isso.
 
 ## Task 36: Isolamento reforçado (fase 2)
 Nível: 4

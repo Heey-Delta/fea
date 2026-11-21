@@ -72,6 +72,29 @@ def claim_item(session: Session, ex: Execution, source: Source, raw: RawItem) ->
     return session.execute(stmt).scalar()
 
 
+# Estados de itens vistos antes que não são uso de verdade: travas que deixaram de valer
+# (permissão removida na Task 38, repetidos opcionais na Task 40) ou a tag que no Drive não
+# descarta mais. O post volta a ser processado em vez de ficar "já visto" para sempre.
+REOPENABLE = ("pending_permission", "duplicate")
+
+
+def reopen_item(session: Session, ex: Execution, source: Source, raw: RawItem, rules: dict):
+    """Id do item já visto que pode ser processado de novo, ou None (já usado: não repete)."""
+    item = session.scalar(
+        select(Item).where(Item.source_id == source.id, Item.external_id == raw.external_id)
+    )
+    if item is None:
+        return None
+    reopen = item.status == "pending_permission"
+    reopen |= item.status == "duplicate" and not rules.get("block_duplicates")
+    reopen |= item.status == "rejected" and item.status_reason == "fora do nicho"
+    if not reopen:
+        return None
+    item.status, item.status_reason, item.duplicate_of = "discovered", None, None
+    item.execution_id = ex.id
+    return item.id
+
+
 def set_status(session: Session, item_id: int, status: str, reason: str | None = None, **values):
     item = session.get(Item, item_id)
     item.status = status
@@ -92,6 +115,8 @@ def process_raw(
     """Aplica as regras a um post. Devolve (item_id, estado final)."""
     with factory() as session:
         item_id = claim_item(session, ex, source, raw)
+        if item_id is None:
+            item_id = reopen_item(session, ex, source, raw, rules)
         if item_id is None:
             session.commit()
             return None, "already_seen"
@@ -285,6 +310,15 @@ def run_collect(
                 break
             cursor = page.next_cursor
 
+    if (
+        progress.examined
+        and progress.already_seen == progress.examined
+        and progress.stop_reason == Progress.stop_reason
+    ):
+        progress.stop_reason = (
+            f"todos os {progress.examined} arquivos da fonte já foram usados: "
+            "coloque arquivos novos na pasta"
+        )
     if progress.examined == 0 and progress.stop_reason == Progress.stop_reason:
         # A fonte respondeu, mas sem nenhum item: o caso típico é a pasta do Drive vazia.
         progress.stop_reason = (
