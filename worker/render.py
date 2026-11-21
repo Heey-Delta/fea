@@ -212,6 +212,10 @@ def run_render(
     attempt: int = 1,
 ) -> Render | None:
     with factory() as session:
+        current = session.get(Item, item_id)
+        if current is not None and current.status == "grouped":
+            # Já entrou no Short de outra imagem: a tarefa desta imagem não tem o que fazer.
+            return None
         item, render, config = start(session, item_id, payload)
         preset = pr.from_config(config)
         profile = profile_of_config(config)
