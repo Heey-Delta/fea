@@ -454,6 +454,16 @@ Status: 1
 - Subtask 42.3: Diagnóstico mostra as contas (estado e limite diário) e o espaço do rodízio; avisa quando nenhuma conta está conectada e a agenda automática não roda.
 - Subtask 42.4: Simulação fiel: workers como processos, Play pela rota do painel e Drive servido localmente: 10 memes viraram 2 Shorts de 5 imagens, aprovados e agendados. A publicação depende da conta conectada; com limite 3/dia por conta, o rodízio põe 8 h entre posts.
 
+## Task 43: Correções do diagnóstico real (21/11)
+Nível: 3
+Status: 1
+
+- Subtask 43.1: O celular não atualizava: `logs/status/buscador.json` era versionado e mudava nos commits; o worker do celular também escreve nele, então o `git pull --ff-only` do `fea-atualizar` recusava e saía. Workers ficaram 10 versões atrás (PR #17) e o banco na 0009. Arquivo fora do Git; instalador e `fea-atualizar` agora ficam iguais ao main com `fetch` + `reset --hard` (`.env`, logs e venv não são versionados e ficam).
+- Subtask 43.2: Drive percorre subpastas (largura primeiro, até 200 pastas, com paginação no cursor; cursor antigo continua valendo). "Testar conexão" conta a pasta inteira.
+- Subtask 43.3: Música aleatória sem músicas não trava o render: sai sem música.
+- Subtask 43.4: "Autorizar tudo" agenda sozinho mesmo com a agenda marcada como manual.
+- Subtask 43.5: Reposição de estoque espera 30 min depois de uma busca que não achou nada (antes disparava uma por minuto).
+
 ## Task 36: Isolamento reforçado (fase 2)
 Nível: 4
 Status: -1

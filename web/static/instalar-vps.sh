@@ -100,7 +100,7 @@ if [ ! -d "$APP/.git" ]; then
   fi
 else
   say "Atualizando o código…"
-  $SUDO git -C "$APP" pull --ff-only
+  $SUDO git -C "$APP" fetch -q origin main && $SUDO git -C "$APP" reset -q --hard origin/main
 fi
 VERSION="$($SUDO git -C "$APP" rev-parse --short=7 HEAD)"
 

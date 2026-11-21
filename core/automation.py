@@ -68,6 +68,22 @@ def ready_stock(session: Session, operation_id: int) -> int:
     )
 
 
+STOCK_BACKOFF = timedelta(minutes=30)
+
+
+def stock_backoff(session: Session, operation_id: int, now: datetime) -> bool:
+    """A última reposição terminou sem nada novo há pouco: não adianta buscar de novo já."""
+    last = session.scalar(
+        select(Execution)
+        .where(Execution.operation_id == operation_id, Execution.trigger == "stock")
+        .order_by(Execution.id.desc())
+        .limit(1)
+    )
+    if last is None or last.started_at < now - STOCK_BACKOFF:
+        return False
+    return last.status == "partial"
+
+
 def daily_play_due(
     session: Session, op: Operation, auto: dict, tz: ZoneInfo, now: datetime
 ) -> bool:
@@ -108,7 +124,7 @@ def automation_tick(session: Session, now: datetime | None = None) -> list[int]:
         if auto.get("stock_enabled"):
             target = int(auto.get("daily_target") or 0) * int(auto.get("stock_min_days") or 0)
             stock = ready_stock(session, op.id)
-            if target and stock < target:
+            if target and stock < target and not stock_backoff(session, op.id, now):
                 ex = exe.start_execution(
                     session, op, target_x=target - stock, trigger="stock", now=now
                 )

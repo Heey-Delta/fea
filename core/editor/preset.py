@@ -133,8 +133,6 @@ def validate(preset: dict) -> list[str]:
     if group and not 2 <= group <= MAX_GROUP:
         errors.append(f"Agrupar imagens: use de 2 a {MAX_GROUP} (ou 0 para desligar).")
     audio = p["audio"]
-    if audio["mode"] == "random" and not audio["library"]:
-        errors.append("Música aleatória: envie ao menos uma música para a biblioteca.")
     if audio["mode"] not in AUDIO_MODES:
         errors.append(f"Modo de áudio inválido: {audio['mode']}.")
     if audio["mode"] == "replace" and not audio["file_key"]:
