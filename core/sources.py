@@ -94,7 +94,11 @@ def test_connection(
         source.last_error = None
         source.last_checked_at = now
         if source.type == "drive":
+            from core.connectors.drive import skipped_summary
+
             message = f"Conexão ok: {total} vídeos/imagens na pasta (com subpastas)."
+            if skipped_summary(connector):
+                message += f" Ignorados (não são imagem/vídeo): {skipped_summary(connector)}."
         else:
             message = f"Conexão ok: {total} itens na primeira página."
         result = ConnectionResult(True, message, total)

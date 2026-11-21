@@ -463,6 +463,9 @@ Status: 1
 - Subtask 43.3: Música aleatória sem músicas não trava o render: sai sem música.
 - Subtask 43.4: "Autorizar tudo" agenda sozinho mesmo com a agenda marcada como manual.
 - Subtask 43.5: Reposição de estoque espera 30 min depois de uma busca que não achou nada (antes disparava uma por minuto).
+- Subtask 43.6: Drive lista tudo da pasta (sem filtro de tipo no Google): atalhos para imagem/vídeo entram (baixa o destino) e arquivos de tipo genérico são reconhecidos pela extensão.
+- Subtask 43.7: Imagens salvas com nome errado (caso real: memes salvos como `.txt`, que o Drive marca como `text/plain`) são reconhecidas pelo conteúdo: lê só os primeiros 32 bytes e confere a assinatura (JPEG, PNG, WebP, GIF, BMP, HEIC/AVIF, MP4/MOV, WebM).
+- Subtask 43.8: O que fica de fora aparece contado por tipo no "Testar conexão" e no motivo de parada da busca; o Diagnóstico mostra os envios (estado, próximo horário, motivo).
 
 ## Task 36: Isolamento reforçado (fase 2)
 Nível: 4
