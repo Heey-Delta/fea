@@ -288,6 +288,12 @@ def run_collect(
                 break
             cursor = page.next_cursor
 
+    if progress.examined == 0 and progress.stop_reason == Progress.stop_reason:
+        # A fonte respondeu, mas sem nenhum item: o caso típico é a pasta do Drive vazia.
+        progress.stop_reason = (
+            "nenhum vídeo ou imagem encontrado nas fontes (pasta vazia, arquivo em subpasta "
+            "ou atalho, ou envio ao Drive ainda não terminado)"
+        )
     finish_collect(factory, execution_id, progress)
     return progress
 
