@@ -503,3 +503,16 @@ def account_config(
     except OperationError as exc:
         flash(request, "error", str(exc))
     return RedirectResponse(f"/contas#{account.platform}", status_code=303)
+
+
+@router.get("/diagnostico", response_class=HTMLResponse)
+def diagnostics_page(request: Request, session: Session = Depends(db_session)) -> Response:
+    """Texto único para copiar: por que uma operação parou (Task 41)."""
+    from core import diagnostics
+    from core.migrate import status
+
+    try:
+        migration = status(direct_engine(request))
+    except Exception as exc:  # noqa: BLE001
+        migration = {"current": f"erro: {str(exc)[:80]}", "head": "?", "up_to_date": False}
+    return render(request, "diagnostico.html", text=diagnostics.report(session, migration))
