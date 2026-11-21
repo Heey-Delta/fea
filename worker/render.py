@@ -7,6 +7,7 @@ pedida em "nova versão"), roda o QC e solta na fila de editados: `awaiting_appr
 """
 
 import logging
+import random
 import tempfile
 from pathlib import Path
 
@@ -69,41 +70,125 @@ def start(session: Session, item_id: int, payload: dict | None) -> tuple[Item, R
     return item, render, config.config
 
 
+def claim_group(session: Session, item: Item, count: int) -> list[Item] | None:
+    """Junta `count` imagens elegíveis da operação num só Short (a deste item é a principal).
+
+    None quando ainda não há imagens suficientes: o item continua elegível e a tarefa do
+    próximo item que chegar tenta de novo. As extras ficam `grouped` até o render terminar.
+    """
+    others = list(
+        session.scalars(
+            select(Item)
+            .where(
+                Item.operation_id == item.operation_id,
+                Item.media_type == "image",
+                Item.status == "eligible",
+                Item.id != item.id,
+                Item.original_file.is_not(None),
+            )
+            .order_by(Item.id)
+            .limit(count - 1)
+            .with_for_update(skip_locked=True)
+        )
+    )
+    if len(others) < count - 1:
+        return None
+    for other in others:
+        other.status = "grouped"
+        other.status_reason = f"agrupado no item {item.id}"
+    return others
+
+
+def release_group(factory: sessionmaker, member_ids: list[int]) -> None:
+    """Devolve as imagens extras à pesca quando o render do grupo não deu certo."""
+    if not member_ids:
+        return
+    with factory() as session:
+        for item in session.scalars(
+            select(Item).where(Item.id.in_(member_ids), Item.status == "grouped")
+        ):
+            item.status, item.status_reason = "eligible", None
+        session.commit()
+
+
 def fetch(storage: Storage, key: str, tmp: Path, name: str) -> Path:
     path = tmp / name
     storage.get_file(key, path)
     return path
 
 
+def check_image(path: Path) -> None:
+    """Imagem corrompida faria o FFmpeg ficar em laço para sempre: valida antes de renderizar."""
+    from PIL import Image, UnidentifiedImageError
+
+    try:
+        with Image.open(path) as img:
+            img.verify()
+    except (UnidentifiedImageError, OSError, SyntaxError) as exc:
+        raise ValueError(f"imagem inválida ({path.name})") from exc
+
+
+def pick_music(preset: dict) -> str | None:
+    """Chave da música do vídeo: a fixa (substituir), uma sorteada (aleatória) ou nenhuma."""
+    audio = preset["audio"]
+    if audio["mode"] == "replace":
+        return audio["file_key"]
+    if audio["mode"] == "random" and audio["library"]:
+        return random.choice(audio["library"])
+    return None
+
+
 def produce(
-    storage: Storage, preset: dict, profile, mask_version, original: str, media_type: str, tmp: Path
+    storage: Storage,
+    preset: dict,
+    profile,
+    mask_version,
+    original: str,
+    media_type: str,
+    tmp: Path,
+    group: list[str] | None = None,
 ) -> tuple[Path, qc.QCReport]:
-    """Baixa os arquivos, monta a camada fixa, renderiza e roda o QC (sem tocar no banco)."""
+    """Baixa os arquivos, monta a camada fixa, renderiza e roda o QC (sem tocar no banco).
+
+    `group`: chaves das imagens extras de um Short com várias imagens (a principal é `original`).
+    """
     source = fetch(storage, original, tmp, "original" + Path(original).suffix)
+    extras = [
+        fetch(storage, key, tmp, f"grupo{i}" + Path(key).suffix)
+        for i, key in enumerate(group or [], 1)
+    ]
+    for path in [source, *extras] if extras else []:
+        check_image(path)
     info = rd.analyze(source, media_type)
     mask_path = fetch(storage, mask_version.file_key, tmp, "mask.png") if mask_version else None
     elements = [
         fetch(storage, e["file_key"], tmp, f"el{i}{Path(e['file_key']).suffix}")
         for i, e in enumerate(preset["elements"])
     ]
-    audio_key = preset["audio"]["file_key"]
-    music = (
-        fetch(storage, audio_key, tmp, "audio" + Path(audio_key).suffix)
-        if preset["audio"]["mode"] == "replace" and audio_key
-        else None
-    )
+    audio_key = pick_music(preset)
+    music = fetch(storage, audio_key, tmp, "audio" + Path(audio_key).suffix) if audio_key else None
     layer = ov.build_overlay(preset, tmp / "overlay.png", mask_path, elements)
     out = tmp / "render.mp4"
-    plan = rd.plan_render(
-        preset,
-        source,
-        media_type,
-        info,
-        out,
-        overlay=layer.path,
-        replacement_audio=music,
-        max_duration_s=profile.max_duration_s,
-    )
+    if extras:
+        plan = rd.plan_slideshow(
+            preset,
+            [source, *extras],
+            out,
+            overlay=layer.path,
+            replacement_audio=music,
+            max_duration_s=profile.max_duration_s,
+        )
+    else:
+        plan = rd.plan_render(
+            preset,
+            source,
+            media_type,
+            info,
+            out,
+            overlay=layer.path,
+            replacement_audio=music,
+            max_duration_s=profile.max_duration_s,
+        )
     rd.run(plan, on_progress=lambda p: activity.report_progress(p, f"{p:.0f}% do vídeo"))
     report = qc.check_render(
         out,
@@ -125,11 +210,24 @@ def run_render(
     settings: Settings | None = None,
     payload: dict | None = None,
     attempt: int = 1,
-) -> Render:
+) -> Render | None:
     with factory() as session:
         item, render, config = start(session, item_id, payload)
         preset = pr.from_config(config)
         profile = profile_of_config(config)
+        group_keys: list[str] = []
+        member_ids: list[int] = []
+        group_count = int(preset["video"].get("group_images") or 0)
+        if group_count >= 2 and (item.media_type or "video") == "image":
+            members = claim_group(session, item, group_count)
+            if members is None:  # ainda faltam imagens: espera as próximas da pesca
+                item.status = "eligible"
+                session.delete(render)
+                session.commit()
+                log.info("aguardando imagens para o grupo", extra={"item_id": item_id})
+                return None
+            group_keys = [m.original_file for m in members]
+            member_ids = [m.id for m in members]
         problems = pr.validate(preset) + profile.validate_preset(preset)
         mask_version = None
         if preset["mask"]["mask_id"]:
@@ -140,29 +238,36 @@ def run_render(
         media_type, original = item.media_type or "video", item.original_file
         session.commit()
 
+    def give_up(reason: str, qa: dict | None = None) -> Render:
+        release_group(factory, member_ids)  # as imagens extras voltam para a pesca
+        return fail(factory, render_id, item_id, reason, qa=qa)
+
     if problems:
-        return fail(factory, render_id, item_id, "; ".join(problems), qa=None)
+        return give_up("; ".join(problems))
 
     try:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmp = Path(tmpdir)
-            out, report = produce(storage, preset, profile, mask_version, original, media_type, tmp)
+            out, report = produce(
+                storage, preset, profile, mask_version, original, media_type, tmp, group_keys
+            )
             key = render_key(operation_id, item_id, render_id_version(factory, render_id))
             if report.passed:
                 storage.put_file(key, out, "video/mp4")
                 report.add("arquivo armazenado", storage.exists(key), key)
     except (ValueError, OSError) as exc:
         # Conteúdo ou arquivo ruim: tentar de novo não resolve.
-        return fail(factory, render_id, item_id, f"arquivo inválido: {exc}", qa=None)
+        return give_up(f"arquivo inválido: {exc}")
     except RuntimeError as exc:
         # Erro de processo do FFmpeg: tenta de novo até o limite do preset (Task 17.4).
         if attempt <= int(preset.get("max_retries", 2)):
+            release_group(factory, member_ids)
             fail(factory, render_id, item_id, str(exc), qa=None, final=False)
             raise RetryableError(str(exc)) from exc
-        return fail(factory, render_id, item_id, str(exc), qa=None)
+        return give_up(str(exc))
 
     if not report.passed:
-        return fail(factory, render_id, item_id, "; ".join(report.errors), qa=report.as_dict())
+        return give_up("; ".join(report.errors), report.as_dict())
     return succeed(factory, render_id, item_id, key, report, config, mask_version)
 
 

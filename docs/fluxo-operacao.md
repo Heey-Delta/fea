@@ -214,3 +214,9 @@ Pesca e Edição rodam automaticamente. Postagem só roda com ação explícita 
 | Uma Rede por operação | Simplifica. Operação que publica em duas redes = duas operações. | Sim? |
 | Fontes com busca por tags | Conector declara `search(tags, cursor)`, além de `fetch`. | Sim? |
 | Formato do grafo | JSON versionado em `operation_configs`, sem tabelas de bloco. | Sim? |
+
+## Short com várias imagens e música aleatória (Task 39)
+No editor da operação, bloco **Edição**:
+- **Agrupar imagens**: liga e define quantas imagens entram em cada vídeo (2 a 20). Cada Short junta as imagens uma após a outra; os segundos por imagem são ajustáveis e encolhem sozinhos se passarem do limite da rede. Imagens que sobram esperam as próximas.
+- **Áudio**: "Nenhum" deixa o vídeo sem música; "Música aleatória" sorteia uma da biblioteca a cada vídeo. Envie na própria opção as músicas que você pode usar.
+- O YouTube não tem API de músicas em alta, e música comercial gera reivindicação de direitos autorais: use músicas suas, licenciadas ou da Biblioteca de Áudio do YouTube.

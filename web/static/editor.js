@@ -551,6 +551,7 @@
     const current = `${v.width || 1080}x${v.height || 1920}`;
     const wm = model.edit.preset.elements[0];
     const audioMode = model.edit.preset.audio.mode || "keep";
+    const grouping = Number(model.edit.preset.video.group_images || 0) >= 2;
     return `${head("film", "Edição", KIND.edicao.desc)}
       <label class="field">Formato<select class="input mono" id="resolution" ${RO ? "disabled" : ""}>${c.resolutions.map(([w, h]) => opt(`${w}x${h}`, `${w} × ${h}`, current)).join("")}</select></label>
       <label class="field">Máscara PNG
@@ -564,7 +565,11 @@
         <label class="field">Largura (% do vídeo)<input class="input" type="number" min="1" max="100" data-bind="edit.preset.elements.0.scale" data-kind="pct" data-default="20"></label>
         <label class="field">Opacidade (%)<input class="input" type="number" min="0" max="100" data-bind="edit.preset.elements.0.opacity" data-kind="pct" data-default="100"></label>` : ""}
       </div>` : ""}
-      <label class="field">Áudio<select class="input" id="audio-mode" ${RO ? "disabled" : ""}>${opt("keep", "Original", audioMode)}${opt("remove", "Nenhum", audioMode)}${opt("replace", "Substituir", audioMode)}</select>${audioMode === "replace" ? `<small>Escolha o arquivo em <a href="${esc(boot.presetUrl)}">Avançado</a>.</small>` : ""}</label>
+      <label class="field">Áudio<select class="input" id="audio-mode" ${RO ? "disabled" : ""}>${opt("keep", "Original", audioMode)}${opt("remove", "Nenhum", audioMode)}${opt("replace", "Substituir", audioMode)}${opt("random", "Música aleatória", audioMode)}</select>${audioMode === "replace" ? `<small>Escolha o arquivo em <a href="${esc(boot.presetUrl)}">Avançado</a>.</small>` : ""}</label>
+      ${audioMode === "random" ? musicLibrary() : ""}
+      <label class="toggle-row"><span>Agrupar imagens<small>junta várias imagens num só vídeo (Short)</small></span><span class="switch"><input type="checkbox" id="group-toggle" ${grouping ? "checked" : ""} ${RO ? "disabled" : ""}><span></span></span></label>
+      ${grouping ? `<label class="field">Imagens por vídeo<input class="input" type="number" min="2" max="20" data-bind="edit.preset.video.group_images" data-kind="num" data-default="5"><small>com 5, cada Short leva 5 imagens; o que sobra espera as próximas</small></label>
+      <label class="field">Segundos por imagem<input class="input" type="number" min="1" max="30" step="0.5" data-bind="edit.preset.video.image_duration_s" data-kind="num" data-default="3"></label>` : ""}
       ${sec("Enquadramento", "frame", `
         <label class="field">Modo<select class="input" data-bind="edit.preset.video.fit" data-default="blur">${opt("blur", "Fundo desfocado")}${opt("cover", "Preencher (corta)")}${opt("contain", "Ajustar (barras)")}</select></label>
         <label class="field">Posição do corte<select class="input" data-bind="edit.preset.video.crop_position" data-default="center">${opt("center", "Centro")}${opt("top", "Topo")}${opt("bottom", "Base")}</select></label>
@@ -578,6 +583,30 @@
         ${toggle("edit.preset.audio.normalize", "Normalizar volume", "", "true")}`)}
       ${sec("Avançado", "settings", `<p class="sub">Textos fixos, áudio substituto e o teste de render ficam na tela completa do preset.</p><a class="btn" href="${esc(boot.presetUrl)}">${icon("external")} Textos, áudio e Testar módulo</a>`)}
       ${tech("edicao", [["Tipo", "edit"], ["Bloco", ids.edit], ["Formato", current], ["Máscara", model.edit.preset.mask.mask_id || "—"]])}`;
+  }
+
+  // Biblioteca de músicas: o modo "aleatória" sorteia uma a cada vídeo. Sem música: modo "Nenhum".
+  function musicLibrary() {
+    const lib = model.edit.preset.audio.library || [];
+    const rows = lib.map((key, i) => `<div class="row"><span class="mono">${esc(key.split("/").pop().replace(/^\d+_/, ""))}</span>${RO ? "" : `<button class="btn sm ghost danger" type="button" data-drop-music="${i}">${icon("trash")}</button>`}</div>`).join("");
+    return `<div class="list-item"><strong>Biblioteca de músicas (${lib.length})</strong>
+      ${rows || '<small class="sub">Envie músicas que você pode usar (suas, licenciadas ou da Biblioteca de Áudio do YouTube).</small>'}
+      ${RO ? "" : `<span class="file-btn">${icon("upload")} <span id="music-label">Adicionar músicas</span><input type="file" accept="audio/*" multiple id="music-file" aria-label="Adicionar músicas"></span>`}</div>`;
+  }
+
+  async function uploadMusic(event) {
+    const files = [...event.target.files];
+    if (!files.length) return;
+    $("#music-label", insBody).textContent = `Enviando ${files.length}…`;
+    try {
+      const lib = model.edit.preset.audio.library = model.edit.preset.audio.library || [];
+      for (const f of files) lib.push(await uploadAsset(f));
+      changed({ inspector: true });
+      toast(`${files.length} música(s) na biblioteca.`);
+    } catch (err) {
+      toast(`Falhou: ${err.message}`, "error");
+      renderInspector();
+    }
   }
 
   function insPub(pid) {
@@ -721,6 +750,24 @@
     });
     const wmFile = $("#wm-file", insBody);
     if (wmFile) wmFile.addEventListener("change", uploadWatermark);
+    const groupToggle = $("#group-toggle", insBody);
+    if (groupToggle) groupToggle.addEventListener("change", () => {
+      const video = model.edit.preset.video;
+      video.group_images = groupToggle.checked ? (Number(video.group_images) >= 2 ? video.group_images : 5) : 0;
+      if (groupToggle.checked) {
+        const set = new Set(model.fishing.accepted_media || ["video"]);
+        set.add("image");  // agrupar só faz sentido buscando imagens
+        model.fishing.accepted_media = [...set];
+        if (!video.image_duration_s || video.image_duration_s > 6) video.image_duration_s = 3;
+      }
+      changed({ inspector: true });
+    });
+    const musicFile = $("#music-file", insBody);
+    if (musicFile) musicFile.addEventListener("change", uploadMusic);
+    $$("[data-drop-music]", insBody).forEach((b) => b.addEventListener("click", () => {
+      model.edit.preset.audio.library.splice(Number(b.dataset.dropMusic), 1);
+      changed({ inspector: true });
+    }));
     const audio = $("#audio-mode", insBody);
     if (audio) audio.addEventListener("change", () => { model.edit.preset.audio.mode = audio.value; changed({ inspector: true }); });
     $$("[data-account]", insBody).forEach((el) => el.addEventListener("change", () => {

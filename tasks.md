@@ -419,6 +419,16 @@ Status: 1
 - Subtask 38.2: Opção "Autorizar tudo" no bloco Aprovação: o que passa no controle de qualidade é aprovado para as contas da operação e a distribuição automática liga junto, sem depender de aprovação manual.
 - Responsabilidade: a origem do conteúdo e os direitos de uso continuam sendo do operador; as políticas das plataformas (direitos autorais, conteúdo reutilizado) valem igual.
 
+## Task 39: Short com várias imagens e música aleatória
+Nível: 3
+Status: 1
+
+- Subtask 39.1: "Agrupar imagens" no bloco Edição: junta N imagens (2 a 20) num só vídeo, uma após a outra, com o enquadramento e a camada fixa (máscara, marca d'água, textos) do preset. A duração por imagem é a do preset e encolhe sozinha se o total passar do limite da rede. Ligar a opção já inclui imagens na busca.
+- Subtask 39.2: Imagens que sobram (menos que N) esperam as próximas da pesca, sem falhar. Se o render do grupo falhar, as imagens extras voltam à pesca (estado novo `grouped`, migração 0011).
+- Subtask 39.3: Áudio "Música aleatória": sorteia uma música da biblioteca da operação a cada vídeo. Sem a opção (áudio "Nenhum"), o vídeo sai sem música e segue para a publicação normal.
+- Subtask 39.4: Imagem corrompida é recusada antes do FFmpeg (ele entraria em laço sem fim).
+- Limite conhecido: o YouTube não oferece API de "músicas em alta" para Shorts, e música comercial gera reivindicação de direitos autorais. A biblioteca é de músicas que o operador envia (próprias, licenciadas ou da Biblioteca de Áudio do YouTube). Pendente, se desejado: sugerir músicas da Biblioteca de Áudio do YouTube.
+
 ## Task 36: Isolamento reforçado (fase 2)
 Nível: 4
 Status: -1

@@ -198,6 +198,10 @@ async def save(request: Request, operation_id: int, session: Session = Depends(d
         flash(request, "error", str(exc))
         return RedirectResponse(f"/operacoes/{op.id}/edicao", status_code=303)
     config = ops.current_config(session, op).config
+    # Opções que esta tela não edita (ficam no editor da operação): não podem se perder aqui.
+    current = pr.from_config(config)
+    preset["video"]["group_images"] = current["video"]["group_images"]
+    preset["audio"]["library"] = current["audio"]["library"]
     errors = pr.validate(preset) + profile_of_config(config).validate_preset(preset)
     if errors:
         flash(request, "error", "Preset não salvo: " + " ".join(errors))

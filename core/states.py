@@ -23,6 +23,7 @@ ITEM_STATUS = (
     "needs_fix",
     "awaiting_approval",
     "approved",
+    "grouped",  # imagem usada num Short com várias imagens (o item principal leva o vídeo)
 )
 APPROVED_BY = ("manual", "auto")
 

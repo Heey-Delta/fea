@@ -77,7 +77,7 @@
   <h2>Áudio</h2>
   <div class="grid">
     <label class="field">Modo
-      <select class="input" name="audio_mode">{{ opt('keep', p.audio.mode, 'manter original') }}{{ opt('remove', p.audio.mode, 'remover') }}{{ opt('replace', p.audio.mode, 'substituir') }}</select></label>
+      <select class="input" name="audio_mode">{{ opt('keep', p.audio.mode, 'manter original') }}{{ opt('remove', p.audio.mode, 'remover') }}{{ opt('replace', p.audio.mode, 'substituir') }}{{ opt('random', p.audio.mode, 'música aleatória (biblioteca)') }}</select></label>
     {{ asset('audio_file_key', 'Áudio de substituição', p.audio.file_key, 'audio/*') }}
     <label class="field">Permissão do áudio <input class="input" name="audio_permission" value="{{ p.audio.permission_note }}" placeholder="licença ou origem"></label>
     <label class="field">Volume (%) <input class="input" type="number" min="0" max="200" name="audio_volume_pct" value="{{ (p.audio.volume * 100) | round | int }}"></label>

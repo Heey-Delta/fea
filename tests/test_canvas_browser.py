@@ -141,6 +141,12 @@ def test_configure_all_modules_and_save(page, server, factory):
     # Edição: formato e enquadramento.
     page.click('.node[data-id="edicao"]')
     page.select_option("#resolution", "720x1280")
+    # Agrupar imagens + música aleatória (Task 39)
+    page.check("#group-toggle")
+    page.fill('[data-bind="edit.preset.video.group_images"]', "7")
+    page.select_option("#audio-mode", "random")
+    assert "Biblioteca de músicas" in page.inner_text("#ins-body")
+    assert page.evaluate("window.feaFlow.model.fishing.accepted_media").count("image") == 1
     page.click("summary:has-text('Enquadramento')")
     page.select_option('[data-bind="edit.preset.video.fit"]', "cover")
     # Publicação: novo destino TikTok em ramificação, contas e aprovação automática.
@@ -170,6 +176,9 @@ def test_configure_all_modules_and_save(page, server, factory):
     assert by_type["fishing"][0]["config"]["tags"] == ["academia", "treino"]
     preset = by_type["edit"][0]["config"]["preset"]
     assert (preset["video"]["width"], preset["video"]["fit"]) == (720, "cover")
+    preset_cfg = by_type["edit"][0]["config"]["preset"]
+    assert preset_cfg["video"]["group_images"] == 7 and preset_cfg["audio"]["mode"] == "random"
+    assert "image" in by_type["fishing"][0]["config"]["accepted_media"]
     assert by_type["approval"][0]["config"]["auto_approve"] is True
     assert by_type["publish"][0]["config"]["automatic"] is True
     assert by_type["publish"][0]["config"]["titles"]["hashtags"] == ["shorts", "academia"]
