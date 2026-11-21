@@ -194,6 +194,18 @@ def test_requeue_stale(factory):
     assert job(factory, exhausted).status == "failed"
 
 
+def test_worker_reiniciado_devolve_as_proprias_tarefas_na_hora(factory):
+    mine = add_job(factory)
+    other = add_job(factory)
+    with factory() as s:
+        queue.claim(s, ["collect"], "buscador@celular#0")
+        queue.claim(s, ["collect"], "buscador@outro#0")
+        assert queue.release_own(s, "buscador@celular") == 1
+        s.commit()
+    assert job(factory, mine).status == "queued"  # sem esperar os 30 minutos
+    assert job(factory, other).status == "running"
+
+
 def test_cancel_execution_jobs(factory):
     ex = make_execution(factory)
     queued = add_job(factory, execution_id=ex)

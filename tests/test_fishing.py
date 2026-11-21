@@ -175,6 +175,16 @@ def setup_operation(factory, rules=None, permission="autorizado", reference="r/G
         return op.id
 
 
+def test_repetidos_passam_por_padrao(factory, media, tmp_path):
+    op_id = setup_operation(factory)
+    fake = reddit_with(
+        media, [("p1", "Dia de academia", media["a"]), ("p4", "academia de novo", media["a"])]
+    )
+    ex_id, _, _ = run(factory, op_id, fake, tmp_path, target_x=5)
+    found = items_by_external(factory, ex_id)
+    assert found["p1"].status == found["p4"].status == "eligible"
+
+
 def post(post_id, title):
     return video_post(post_id, title=title)
 
@@ -216,7 +226,7 @@ def render_jobs(factory):
 @needs_db
 @needs_ffmpeg
 def test_collect_applies_every_rule(factory, media, tmp_path):
-    op_id = setup_operation(factory)
+    op_id = setup_operation(factory, rules={"block_duplicates": True})
     fake = reddit_with(
         media,
         [

@@ -77,6 +77,8 @@ def default_config() -> dict[str, Any]:
                     "accepted_media": ["video"],
                     "max_duration_s": 60,
                     "reject_watermarks": True,
+                    # Repetidos (mesmo arquivo ou imagem parecida) só barram com isto ligado.
+                    "block_duplicates": False,
                 },
             },
             {"id": "edicao", "type": "edit", "config": {"preset": {}}},
