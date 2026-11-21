@@ -137,3 +137,98 @@ def recent_publications(session: Session, limit: int = 8) -> list[tuple]:
             .limit(limit)
         ).all()
     )
+
+
+# --- gráficos do dashboard ---------------------------------------------------------------
+
+DASH_TZ = "America/Sao_Paulo"
+
+
+def published_by_day(session: Session, days: int = 14, now: datetime | None = None) -> list[dict]:
+    """Publicações por dia (fuso de São Paulo), do mais antigo para hoje, com os dias zerados."""
+    from zoneinfo import ZoneInfo
+
+    now = now or datetime.now(UTC)
+    today = now.astimezone(ZoneInfo(DASH_TZ)).date()
+    first = today - timedelta(days=days - 1)
+    local_day = func.date(func.timezone(DASH_TZ, PublishJob.published_at))
+    rows = dict(
+        session.execute(
+            select(local_day, func.count())
+            .where(
+                PublishJob.status == "published",
+                PublishJob.published_at >= now - timedelta(days=days + 1),
+            )
+            .group_by(local_day)
+        ).all()
+    )
+    out = [
+        {"day": first + timedelta(days=i), "count": int(rows.get(first + timedelta(days=i), 0))}
+        for i in range(days)
+    ]
+    # Rótulo só no pico (primeira ocorrência) e no dia de hoje: nunca um número em cada coluna.
+    top = max((p["count"] for p in out), default=0)
+    peak = next((i for i, p in enumerate(out) if top and p["count"] == top), None)
+    for i, p in enumerate(out):
+        p["peak"] = i == peak and i < len(out) - 1
+    return out
+
+
+# Ordem fixa dos estágios (a cor segue o estágio, nunca a posição no ranking).
+PIPELINE = (
+    ("busca", "Na busca", "/fila?etapa=pesca", ("discovered", "eligible")),
+    ("edicao", "Editando", "/fila?estado=rendering", ("rendering",)),
+    ("aprovacao", "Aprovação", "/aprovacao", ("awaiting_approval", "needs_fix")),
+    ("estoque", "Estoque", "/fila?estado=approved", ("approved",)),
+)
+
+
+def pipeline(session: Session) -> list[dict]:
+    counts = dict(session.execute(select(Item.status, func.count()).group_by(Item.status)).all())
+    out = [
+        {"key": key, "label": label, "href": href, "count": sum(counts.get(s, 0) for s in states)}
+        for key, label, href, states in PIPELINE
+    ]
+    scheduled = session.scalar(
+        select(func.count()).where(PublishJob.status.in_(("planned", "pending_capacity")))
+    )
+    out.append(
+        {
+            "key": "agenda",
+            "label": "Agendados",
+            "href": "/publicacoes?status=planned",
+            "count": int(scheduled or 0),
+        }
+    )
+    return out
+
+
+def health(session: Session, now: datetime | None = None) -> dict:
+    from core import workers
+
+    now = now or datetime.now(UTC)
+    day = now - timedelta(hours=24)
+    try:
+        roles = workers.status(session, now)
+    except Exception:  # noqa: BLE001 - migração ainda não aplicada
+        session.rollback()
+        roles = []
+    failures = session.scalar(
+        select(func.count()).where(
+            PublishJob.status.in_(("failed", "uncertain")), PublishJob.updated_at >= day
+        )
+    )
+    return {
+        "workers": roles,
+        "online": sum(1 for w in roles if w["online"]),
+        "failures_24h": int(failures or 0),
+        "accounts_error": int(
+            session.scalar(select(func.count()).where(Account.status == "error")) or 0
+        ),
+    }
+
+
+def secondary(kpis_list: list[dict]) -> list[dict]:
+    """O resto dos indicadores, para a lista compacta (os 3 principais viram gráfico)."""
+    shown = {"Publicados (24 h)", "Na pesca", "Aguardando aprovação", "Estoque de editados"}
+    return [k for k in kpis_list if k["label"] not in shown]

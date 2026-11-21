@@ -1,0 +1,68 @@
+{#- Componentes visuais: gráficos em SVG puro (sem biblioteca) e o estado ao vivo da operação.
+    Cores das séries em tokens --s1..--s5 (app.css); textos sempre em tokens de texto. -#}
+
+{% macro columns(series, label="publicações", one="publicação") -%}
+{%- set n = series | length -%}
+{%- set top = (series | map(attribute='count') | max) or 0 -%}
+{%- set peak = [top, 1] | max -%}
+{%- set W, H, base = 280, 92, 78 -%}
+{%- set slot = W / n -%}
+{%- set bw = [slot * 0.58, 18] | min -%}
+<svg class="viz-cols" viewBox="0 0 {{ W }} {{ H }}" role="img" aria-label="{{ label | capitalize }} por dia, últimos {{ n }} dias">
+  <line x1="0" x2="{{ W }}" y1="{{ base }}" y2="{{ base }}" class="viz-axis"/>
+  {%- for p in series %}
+  {%- set x = slot * loop.index0 + (slot - bw) / 2 -%}
+  {%- set h = (p.count / peak) * (base - 14) -%}
+  {%- set y = base - h -%}
+  {%- set r = [4, h] | min -%}
+  <g class="viz-hit" data-tip="{{ p.day.strftime('%d/%m') }} · {{ p.count }} {{ one if p.count == 1 else label }}" tabindex="0">
+    <rect x="{{ slot * loop.index0 }}" y="0" width="{{ slot }}" height="{{ H }}" fill="transparent"/>
+    {%- if p.count > 0 %}
+    <path class="viz-col{% if loop.last %} today{% endif %}" d="M{{ '%.2f' % x }},{{ base }} V{{ '%.2f' % (y + r) }} Q{{ '%.2f' % x }},{{ '%.2f' % y }} {{ '%.2f' % (x + r) }},{{ '%.2f' % y }} H{{ '%.2f' % (x + bw - r) }} Q{{ '%.2f' % (x + bw) }},{{ '%.2f' % y }} {{ '%.2f' % (x + bw) }},{{ '%.2f' % (y + r) }} V{{ base }} Z"/>
+    {%- else %}
+    <rect class="viz-zero" x="{{ '%.2f' % x }}" y="{{ base - 2 }}" width="{{ '%.2f' % bw }}" height="2" rx="1"/>
+    {%- endif %}
+    {%- if loop.last or p.peak %}
+    <text class="viz-label" x="{{ '%.2f' % (x + bw / 2) }}" y="{{ '%.2f' % ([y - 5, 9] | max) }}" text-anchor="middle">{{ p.count }}</text>
+    {%- endif %}
+  </g>
+  {%- endfor %}
+  <text class="viz-tick" x="0" y="{{ H }}">{{ series[0].day.strftime('%d/%m') }}</text>
+  <text class="viz-tick" x="{{ W }}" y="{{ H }}" text-anchor="end">hoje</text>
+</svg>
+{%- endmacro %}
+
+{% macro stacked(parts) -%}
+{%- set total = parts | sum(attribute='count') -%}
+<div class="viz-stack" role="img" aria-label="{% for p in parts %}{{ p.label }}: {{ p.count }}{% if not loop.last %}, {% endif %}{% endfor %}">
+  {%- if total == 0 %}<span class="viz-stack-empty"></span>{% endif -%}
+  {%- for p in parts if p.count > 0 %}
+  <span class="viz-seg s{{ loop.index }}-{{ p.key }}" style="flex-grow:{{ p.count }}" data-tip="{{ p.label }} · {{ p.count }}" tabindex="0"></span>
+  {%- endfor %}
+</div>
+<ul class="viz-legend">
+  {%- for p in parts %}
+  <li><a href="{{ p.href }}"><span class="sw sw-{{ p.key }}"></span><span>{{ p.label }}</span><strong>{{ p.count }}</strong></a></li>
+  {%- endfor %}
+</ul>
+{%- endmacro %}
+
+{#- Estado ao vivo de uma operação: rodinha, estágios com ícone e erro em vermelho. -#}
+{% macro op_live(live) -%}
+{%- if live and (live.active or live.error) %}
+<div class="oplive{% if live.error %} has-error{% endif %}{% if live.active %} is-running{% endif %}">
+  <div class="live-head">
+    {%- if live.active %}<span class="spin" aria-hidden="true"></span><strong>Em execução</strong>{% endif %}
+    {%- if live.error and not live.active %}<span class="live-err-ico">{{ icon('alert') }}</span><strong>Com erro</strong>{% endif %}
+    {%- for key, verb, ico in [('busca', 'Buscando', 'search'), ('edicao', 'Editando', 'film'), ('publicacao', 'Publicando', 'send')] %}
+    {%- set st = live.stages.get(key) %}
+    {%- if st %}<span class="opstage {{ st }}" title="{{ verb }}{% if st == 'queued' %} (na fila){% endif %}">{{ icon(ico) }}<span>{{ verb if st == 'running' else {'busca': 'Busca', 'edicao': 'Edição', 'publicacao': 'Publicação'}[key] }}</span></span>{% endif %}
+    {%- endfor %}
+  </div>
+  <div class="live-track" aria-hidden="true"><span></span></div>
+  {%- if live.error %}<p class="live-err" title="{{ live.error }}">{{ live.error }}</p>{% endif %}
+</div>
+{%- else %}
+<span class="live-idle">Parada</span>
+{%- endif %}
+{%- endmacro %}

@@ -16,7 +16,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Resp
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from core import credentials
+from core import credentials, live
 from core import executions as exe
 from core import operations as ops
 from core import sources as src
@@ -70,16 +70,35 @@ def list_page(
     request: Request, status: str = "", session: Session = Depends(db_session)
 ) -> Response:
     status = status if status in OPERATION_STATUS else ""
+    operations = ops.list_operations(session, status or None)
     return render(
         request,
         "operations_list.html",
         active="/operacoes",
-        operations=ops.list_operations(session, status or None),
+        operations=operations,
         counts=ops.status_counts(session),
         status=status,
         status_label=STATUS_LABEL,
+        live=live.operations_live(session, [op.id for op in operations]),
         flash=request.session.pop("flash", None),
     )
+
+
+@router.get("/operacoes/ao-vivo")
+def live_state(request: Request, ids: str = "", session: Session = Depends(db_session)):
+    """Estado ao vivo das operações pedidas, já em HTML, para a tela se atualizar sozinha."""
+    wanted = [int(x) for x in ids.split(",") if x.strip().isdigit()][:200]
+    state = live.operations_live(session, wanted)
+    macro = request.app.state.templates.env.get_template("_viz.html").module.op_live
+    out = {}
+    for op_id in wanted:
+        entry = state.get(op_id)
+        out[str(op_id)] = {
+            "html": str(macro(entry)),
+            "running": bool(entry and entry.active),
+            "error": bool(entry and entry.error),
+        }
+    return JSONResponse(out, headers={"Cache-Control": "no-store"})
 
 
 @router.post("/operacoes")
