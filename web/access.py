@@ -19,6 +19,8 @@ from core import accounts as acc
 from core import credentials as creds
 from core.models import Account, Event, PublishJob
 from core.operations import OperationError
+from core.version import code_version
+from core.workers import outdated
 from networks import PLATFORM_LABEL
 from networks.base import AdapterError
 from web.common import db_session, render, require_user
@@ -211,7 +213,9 @@ def page(request: Request, session: Session = Depends(db_session)) -> Response:
         active="/contas",
         tool=tool_status(request),
         infra=[s for s in statuses if s.service.group == "infra"],
-        workers=worker_status(session),
+        workers=(ws := worker_status(session)),
+        site_version=code_version(),
+        outdated=outdated(ws, code_version()),
         vps_cmd=request.session.pop("vps_cmd", None),
         search=[s for s in statuses if s.service.group == "busca"],
         publishing=[s for s in statuses if s.service.group == "publicacao"],

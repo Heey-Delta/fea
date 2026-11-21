@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from core import queue, workers
 from core.queue import NOTIFY_CHANNEL, PermanentError, RetryableError
+from core.version import code_version
 
 log = logging.getLogger("worker")
 
@@ -191,7 +192,10 @@ class Worker:
         jobs = {
             "requeue_stale": (300.0, lambda s: queue.requeue_stale(s, self.stale_after)),
             # Sinal de vida no banco: a tela Acessos mostra se o worker está no ar.
-            "heartbeat": (60.0, lambda s: workers.beat(s, self.role, socket.gethostname())),
+            "heartbeat": (
+                60.0,
+                lambda s: workers.beat(s, self.role, socket.gethostname(), version=code_version()),
+            ),
         }
         jobs.update(self.periodic)
         while not self.stop.is_set():

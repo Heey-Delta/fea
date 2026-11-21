@@ -399,6 +399,7 @@ class WorkerHeartbeat(Base):
     role: Mapped[str] = mapped_column(String(20))
     host: Mapped[str] = mapped_column(String(100))
     at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    version: Mapped[str | None] = mapped_column(String(40))
 
 
 class R2Usage(Base):

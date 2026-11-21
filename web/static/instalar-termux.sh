@@ -124,6 +124,13 @@ done
 echo; echo "Últimas linhas dos logs (sem dados sensíveis):"
 tail -n 3 logs/*.log 2>/dev/null | cut -c1-200
 EOF
+cat > "$HOME/.local/bin/fea-atualizar" <<EOF
+#!/data/data/com.termux/files/usr/bin/bash
+# Baixa o código novo e reinicia os workers (eles não se atualizam sozinhos).
+cd "$DIR" && git pull --ff-only || exit 1
+source .venv/bin/activate && alembic upgrade head
+fea-desligar; fea-ligar; fea-status
+EOF
 chmod +x "$HOME"/.local/bin/fea-*
 grep -q '.local/bin' "$HOME/.bashrc" 2>/dev/null || echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc"
 export PATH="$HOME/.local/bin:$PATH"
@@ -144,4 +151,5 @@ say "Pronto. Em 1 minuto, Acessos → Workers mostra 4/4 no ar.
   fea-status     como estão os workers
   fea-desligar   parar
   fea-ligar      voltar
+  fea-atualizar  baixar o código novo e reiniciar (faça isso depois de cada atualização)
 Deixe o celular na tomada e tire o Termux da otimização de bateria (Configurações do Android)."

@@ -31,7 +31,7 @@ bash <(curl -fsSL https://fea-rho.vercel.app/static/instalar-termux.sh)
 ## 4 · Dia a dia
 - `fea-status`: como estão os workers.
 - `fea-desligar` / `fea-ligar`: parar e voltar.
-- Atualizar o código: rode de novo o comando do passo 2.
+- **Atualizar o código:** `fea-atualizar` (baixa o código novo, aplica migrações e reinicia). Os workers do celular **não se atualizam sozinhos**: depois de cada mudança na ferramenta, rode esse comando. Se o `fea-atualizar` ainda não existir, rode uma vez o comando do passo 2.
 - Em Acessos → Workers, o painel mostra 4/4 no ar em cerca de 1 minuto.
 
 ## Se algo falhar

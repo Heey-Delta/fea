@@ -430,6 +430,32 @@ def test_play_from_the_interface(factory, logged_client):
 
 
 @needs_db
+def test_play_page_shows_source_error_and_tests_in_place(factory, logged_client):
+    """Fonte com erro: o motivo aparece no Play e o teste volta para o próprio Play."""
+    op_id = setup_operation(factory)
+    with factory() as s:
+        source = s.scalars(select(m.Source)).one()
+        source.status, source.last_error = "error", "Google Drive não configurado: teste."
+        source_id = source.id
+        s.commit()
+    page = logged_client.get(f"/operacoes/{op_id}/play").text
+    assert "Google Drive não configurado: teste." in page
+    assert f"/operacoes/{op_id}/fontes/{source_id}/testar" in page
+    back = logged_client.post(
+        f"/operacoes/{op_id}/fontes/{source_id}/testar",
+        data={"voltar": f"/operacoes/{op_id}/play"},
+        follow_redirects=False,
+    )
+    assert back.status_code == 303 and back.headers["location"] == f"/operacoes/{op_id}/play"
+    outside = logged_client.post(
+        f"/operacoes/{op_id}/fontes/{source_id}/testar",
+        data={"voltar": "https://exemplo.com"},
+        follow_redirects=False,
+    )
+    assert outside.headers["location"] == f"/operacoes/{op_id}?aba=fontes"
+
+
+@needs_db
 def test_play_page_refuses_inactive_operation(factory, logged_client):
     with factory() as s:
         op = ops.create_operation(s, "Rascunho")
