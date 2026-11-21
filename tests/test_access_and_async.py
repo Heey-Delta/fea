@@ -202,3 +202,18 @@ def test_termux_installer_is_valid_and_safe():
     text = script.read_text()
     assert "Deploy keys" in text and "fea-workers" in text
     assert "DATABASE_URL" not in text and "TOKEN_ENCRYPTION_KEY" not in text  # sem segredos
+
+
+def test_time_zones_work_without_system_tz_database():
+    """Android (Termux) não tem /usr/share/zoneinfo: o pacote tzdata precisa bastar."""
+    import os
+    import subprocess
+    import sys
+
+    code = (
+        "import zoneinfo; zoneinfo.ZoneInfo('America/Los_Angeles'); "
+        "zoneinfo.ZoneInfo('America/Sao_Paulo'); import worker.publish"
+    )
+    env = {**os.environ, "PYTHONTZPATH": "/nao-existe"}
+    result = subprocess.run([sys.executable, "-c", code], env=env, capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr[-500:]
