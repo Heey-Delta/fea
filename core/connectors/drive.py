@@ -36,8 +36,16 @@ FOLDER_URL = re.compile(r"/folders/([A-Za-z0-9_-]{10,})")
 FOLDER_ID = re.compile(r"^[A-Za-z0-9_-]{10,}$")
 FIELDS = (
     "nextPageToken,files(id,name,mimeType,size,createdTime,webViewLink,"
-    "videoMediaMetadata(durationMillis,width,height))"
+    "videoMediaMetadata(durationMillis,width,height),shortcutDetails(targetId,targetMimeType))"
 )
+SHORTCUT_MIME = "application/vnd.google-apps.shortcut"
+# Uploads pelo celular às vezes chegam com tipo genérico: a extensão decide.
+EXT_KIND = {
+    ".jpg": "image", ".jpeg": "image", ".png": "image", ".webp": "image", ".gif": "image",
+    ".heic": "image", ".heif": "image", ".bmp": "image",
+    ".mp4": "video", ".mov": "video", ".m4v": "video", ".webm": "video", ".3gp": "video",
+    ".mkv": "video",
+}  # fmt: skip
 
 
 def folder_id(reference: str) -> str:
@@ -103,31 +111,89 @@ class FolderPage:
         self.items, self.next_cursor, self.subfolders = items, next_cursor, subfolders
 
 
-def parse(files: list[dict]) -> list[RawItem]:
+# Tipos que podem esconder uma imagem ou vídeo salvo com o nome errado (ex.: "meme.txt").
+SNIFFABLE = ("text/plain", "application/octet-stream", "binary/octet-stream", "")
+MAX_SNIFF = 300  # arquivos inspecionados por página (proteção contra pastas enormes)
+
+
+def sniff(head: bytes) -> str | None:
+    """ "image", "video" ou None pela assinatura dos primeiros bytes (não pelo nome)."""
+    if head.startswith(b"\xff\xd8\xff") or head.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image"
+    if head.startswith((b"GIF87a", b"GIF89a", b"BM")):
+        return "image"
+    if head[:4] == b"RIFF" and head[8:12] == b"WEBP":
+        return "image"
+    if head[4:8] == b"ftyp":
+        brand = head[8:12]
+        if brand in (b"heic", b"heix", b"hevc", b"heim", b"heis", b"mif1", b"msf1", b"avif"):
+            return "image"
+        return "video"  # isom, mp42, qt, 3gp…
+    if head.startswith(b"\x1a\x45\xdf\xa3"):  # Matroska/WebM
+        return "video"
+    return None
+
+
+def skipped_summary(connector) -> str:
+    """ "3 × application/pdf, 1 × …": o que a fonte tinha e não é imagem nem vídeo."""
+    skipped = getattr(connector, "skipped", None) or {}
+    top = sorted(skipped.items(), key=lambda kv: -kv[1])[:5]
+    return ", ".join(f"{n} × {mime}" for mime, n in top)
+
+
+def kind_of(mime: str, name: str) -> str | None:
+    """ "image", "video" ou None. Pelo tipo do Drive; se genérico, pela extensão do nome."""
+    if mime.startswith("video/"):
+        return "video"
+    if mime.startswith("image/"):
+        return "image"
+    if mime.startswith("application/vnd.google-apps"):
+        return None  # Docs, Planilhas etc.
+    return EXT_KIND.get(Path(name).suffix.lower())
+
+
+def parse(
+    files: list[dict],
+    skipped: dict | None = None,
+    sniffer: Callable[[str], str | None] | None = None,
+) -> list[RawItem]:
+    """Itens de mídia. Atalhos para imagem/vídeo viram o arquivo de destino.
+
+    `skipped` (opcional) conta o que ficou de fora, por tipo, para o diagnóstico.
+    """
     items = []
     for f in files:
         mime = f.get("mimeType") or ""
-        if mime.startswith("video/"):
-            kind = "video"
-        elif mime.startswith("image/"):
-            kind = "image"
-        else:
+        name = f.get("name") or f["id"]
+        media_id = f["id"]
+        if mime == FOLDER_MIME:
+            continue
+        if mime == SHORTCUT_MIME:
+            target = f.get("shortcutDetails") or {}
+            mime, media_id = target.get("targetMimeType") or "", target.get("targetId") or ""
+            if mime == FOLDER_MIME or not media_id:
+                continue
+        kind = kind_of(mime, name)
+        if kind is None and sniffer is not None and mime in SNIFFABLE:
+            kind = sniffer(media_id)  # ex.: imagem salva como .txt
+        if kind is None:
+            if skipped is not None:
+                skipped[mime or "sem tipo"] = skipped.get(mime or "sem tipo", 0) + 1
             continue
         meta = f.get("videoMediaMetadata") or {}
         duration = meta.get("durationMillis")
         created = f.get("createdTime")
-        name = f.get("name") or f["id"]
         items.append(
             RawItem(
-                external_id=f["id"],
-                url=f.get("webViewLink") or f"https://drive.google.com/file/d/{f['id']}/view",
+                external_id=media_id,
+                url=f.get("webViewLink") or f"https://drive.google.com/file/d/{media_id}/view",
                 author=None,
                 published_at=datetime.fromisoformat(created.replace("Z", "+00:00"))
                 if created
                 else None,
                 media_type=kind,
                 text=Path(name).stem.replace("_", " ").replace("-", " "),
-                media_url=f["id"],
+                media_url=media_id,
                 duration_s=int(duration) / 1000 if duration else None,
                 extra={"width": meta.get("width"), "height": meta.get("height"), "name": name},
             )
@@ -165,6 +231,7 @@ class DriveConnector:
         self.clock = clock
         self._token: str | None = None
         self._expires = 0.0
+        self.skipped: dict[str, int] = {}  # arquivos da pasta que não são imagem/vídeo, por tipo
 
     @property
     def email(self) -> str:
@@ -262,10 +329,10 @@ class DriveConnector:
         return Page(items=page.items, next_cursor=nxt)
 
     def _fetch_folder(self, fid: str, token: str | None, is_root: bool):
+        # Lista tudo (sem filtro de tipo no Google): atalhos e arquivos de tipo genérico
+        # também entram, e o que sobrar aparece contado no diagnóstico.
         params = {
-            "q": f"'{fid}' in parents and trashed = false and "
-            f"(mimeType contains 'video/' or mimeType contains 'image/' "
-            f"or mimeType = '{FOLDER_MIME}')",
+            "q": f"'{fid}' in parents and trashed = false",
             "fields": FIELDS,
             "orderBy": "createdTime desc",
             "pageSize": PAGE_SIZE,
@@ -285,11 +352,40 @@ class DriveConnector:
             raise SourceError(f"Google Drive respondeu {response.status_code}.")
         payload = response.json()
         files = payload.get("files") or []
-        items = parse(files)
+        budget = {"left": MAX_SNIFF}
+
+        def sniffer(file_id: str) -> str | None:
+            if budget["left"] <= 0:
+                return None
+            budget["left"] -= 1
+            return self._sniff(file_id)
+
+        items = parse(files, self.skipped, sniffer)
         subfolders = [f["id"] for f in files if f.get("mimeType") == FOLDER_MIME]
+        subfolders += [
+            (f.get("shortcutDetails") or {}).get("targetId")
+            for f in files
+            if f.get("mimeType") == SHORTCUT_MIME
+            and (f.get("shortcutDetails") or {}).get("targetMimeType") == FOLDER_MIME
+        ]
         if not files and is_root and not token and not self._folder_visible(fid):
             raise SourceError(f"O Google não enxerga a pasta. {self.share_hint}")
         return FolderPage(items, payload.get("nextPageToken"), subfolders)
+
+    def _sniff(self, file_id: str) -> str | None:
+        """Lê só os primeiros 32 bytes do arquivo para saber se é imagem/vídeo de verdade."""
+        params, headers = self._auth({"alt": "media", "supportsAllDrives": "true"})
+        try:
+            response = self.client.get(
+                f"{API}/files/{file_id}",
+                params=params,
+                headers={**headers, "Range": "bytes=0-31"},
+            )
+        except httpx.HTTPError:
+            return None
+        if response.status_code not in (200, 206):
+            return None
+        return sniff(response.content[:32])
 
     def _folder_visible(self, fid: str) -> bool:
         response = self._get(

@@ -138,3 +138,111 @@ def test_reposicao_de_estoque_espera_quando_nao_acha_nada(factory):  # noqa: F81
         assert len(started) == 1  # passados 30 min, tenta de novo
         assert s.get(m.Execution, started[0]).trigger == "stock"
         executions  # noqa: B018 - módulo usado pelo automation_tick
+
+
+MIXED = [
+    {"id": "foto", "name": "meme.jpg", "mimeType": "image/jpeg"},
+    {"id": "gen", "name": "meme2.JPG", "mimeType": "application/octet-stream"},
+    {"id": "atalho", "name": "meme3", "mimeType": "application/vnd.google-apps.shortcut",
+     "shortcutDetails": {"targetId": "alvo3", "targetMimeType": "image/png"}},
+    {"id": "doc", "name": "notas", "mimeType": "application/vnd.google-apps.document"},
+    {"id": "pdf", "name": "a.pdf", "mimeType": "application/pdf"},
+    {"id": "pdf2", "name": "b.pdf", "mimeType": "application/pdf"},
+]  # fmt: skip
+
+
+def mixed_drive():
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/drive/v3/files":
+            assert "mimeType" not in request.url.params["q"]  # sem filtro de tipo no Google
+            return httpx.Response(200, json={"files": MIXED})
+        return httpx.Response(200, json={"id": "x"})
+
+    return httpx.Client(transport=httpx.MockTransport(handler))
+
+
+def test_atalhos_e_tipo_generico_entram_e_o_resto_e_contado():
+    from core.connectors.drive import skipped_summary
+
+    conn = DriveConnector(key_settings(), client=mixed_drive())
+    page = conn.fetch(SourceRef(1, "drive", FOLDER), None)
+    assert [(i.external_id, i.media_type, i.media_url) for i in page.items] == [
+        ("foto", "image", "foto"),
+        ("gen", "image", "gen"),
+        ("alvo3", "image", "alvo3"),  # atalho baixa o arquivo de destino
+    ]
+    assert skipped_summary(conn) == (
+        "2 × application/pdf, 1 × application/vnd.google-apps.document"
+    )
+
+
+def test_testar_conexao_mostra_os_ignorados(factory):  # noqa: F811
+    from core import sources
+    from core.storage import LocalStorage
+
+    op_id, _ = meme_operation(factory)
+    with factory() as s:
+        source = s.scalars(select(m.Source).where(m.Source.operation_id == op_id)).one()
+        result = sources.test_connection(
+            s, source, key_settings(), LocalStorage("/tmp/x"), client=mixed_drive()
+        )
+    assert "3 vídeos/imagens" in result.message and "2 × application/pdf" in result.message
+
+
+# --- imagens salvas como .txt (caso real do usuário) -------------------------------------
+
+
+def test_assinatura_reconhece_imagem_e_video_pelo_conteudo(tmp_path):
+    from core.connectors.drive import sniff
+
+    jpg = make_meme(tmp_path / "a.jpg", 1).read_bytes()
+    assert sniff(jpg[:32]) == "image"
+    assert sniff(b"\x89PNG\r\n\x1a\n" + b"\0" * 24) == "image"
+    assert sniff(b"RIFF\0\0\0\0WEBPVP8 " + b"\0" * 16) == "image"
+    assert sniff(b"\0\0\0\x18ftypheic" + b"\0" * 20) == "image"
+    assert sniff(b"\0\0\0\x18ftypisom" + b"\0" * 20) == "video"
+    assert sniff(b"so um texto comum\n" + b" " * 14) is None
+
+
+def txt_drive(images_dir, n):
+    """Pasta com memes JPEG salvos como .txt (o Drive diz text/plain) e um .txt de verdade."""
+    files = [
+        {"id": f"meme{i}", "name": f"meme{i}.txt", "mimeType": "text/plain"} for i in range(n)
+    ] + [{"id": "nota", "name": "nota.txt", "mimeType": "text/plain"}]
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/drive/v3/files":
+            return httpx.Response(200, json={"files": files})
+        fid = request.url.path.rsplit("/", 1)[-1]
+        if fid == "nota":
+            return httpx.Response(200, content=b"isto e um texto de verdade, nao imagem")
+        data = (images_dir / f"{fid}.jpg").read_bytes()
+        if request.headers.get("range"):
+            return httpx.Response(206, content=data[:32])
+        return httpx.Response(200, content=data)
+
+    return httpx.Client(transport=httpx.MockTransport(handler))
+
+
+def test_memes_salvos_como_txt_viram_shorts(factory, tmp_path):  # noqa: F811
+    from core.storage import LocalStorage
+    from worker.collect import run_collect
+    from worker.render import run_render
+
+    for i in range(10):
+        make_meme(tmp_path / f"meme{i}.jpg", i)
+    storage = LocalStorage(tmp_path / "s")
+    op_id, ex_id = meme_operation(factory, target_x=2)
+    progress = run_collect(
+        factory, ex_id, key_settings(), storage,
+        {"client": txt_drive(tmp_path, 10), "sleep": lambda _: 0},
+    )  # fmt: skip
+    assert len(progress.eligible) == 10, progress
+    assert "1 × text/plain" in progress.stop_reason  # o .txt de verdade é contado à parte
+    with factory() as s:
+        refs = [j.ref_id for j in s.scalars(select(m.Job).where(m.Job.type == "render"))]
+    for ref in refs:
+        run_render(factory, ref, storage)
+    with factory() as s:
+        statuses = sorted(i.status for i in s.scalars(select(m.Item)))
+    assert statuses.count("approved") == 2 and statuses.count("grouped") == 8

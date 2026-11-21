@@ -43,6 +43,7 @@ class Progress:
     already_seen: int = 0
     eligible: list[tuple[int, int]] = field(default_factory=list)  # (item_id, score)
     stop_reason: str = "fontes esgotadas"
+    skipped_note: str = ""
 
 
 def original_key(operation_id: int, item_id: int, media_type: str) -> str:
@@ -309,6 +310,10 @@ def run_collect(
             if not page.next_cursor or cancelled(factory, execution_id):
                 break
             cursor = page.next_cursor
+        from core.connectors.drive import skipped_summary
+
+        if skipped_summary(connector):
+            progress.skipped_note = f"ignorados por tipo: {skipped_summary(connector)}"
 
     if (
         progress.examined
@@ -325,6 +330,8 @@ def run_collect(
             "nenhum vídeo ou imagem encontrado nas fontes (pasta vazia, arquivo em subpasta "
             "ou atalho, ou envio ao Drive ainda não terminado)"
         )
+    if progress.skipped_note:
+        progress.stop_reason = f"{progress.stop_reason} ({progress.skipped_note})"
     finish_collect(factory, execution_id, progress, target)
     return progress
 

@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 from core import workers
 from core.distribution import DEFAULT_WINDOW, window_minutes
 from core.editor import preset as pr
-from core.models import Account, Execution, Item, Job, Operation, Source
+from core.models import Account, Execution, Item, Job, Operation, PublishJob, Render, Source
 from core.operations import current_config, linked_account_ids
 from core.version import code_version
 
@@ -138,6 +138,23 @@ def report(session: Session, migration: dict | None = None, now: datetime | None
                 f"  execução #{ex.id} {ex.status} {_ago(ex.started_at, now)} meta={ex.target_x} "
                 f"stats={ex.stats or {}} motivo={ex.shortfall_reason or '—'}"
             )
+        sends = session.execute(
+            select(
+                PublishJob.status,
+                PublishJob.status_reason,
+                func.count(),
+                func.min(PublishJob.planned_at),
+            )
+            .join(Render, Render.id == PublishJob.render_id)
+            .join(Item, Item.id == Render.item_id)
+            .where(Item.operation_id == op.id)
+            .group_by(PublishJob.status, PublishJob.status_reason)
+        ).all()
+        for status, reason, n, first in sends:
+            when = f" próximo {first:%d/%m %H:%M} UTC" if first and status == "planned" else ""
+            lines.append(f"  envios {status}={n}{when}{(' · ' + reason[:120]) if reason else ''}")
+        if not sends:
+            lines.append("  envios: nenhum")
         counts = Counter(
             (status, (reason or "")[:70])
             for status, reason in session.execute(
