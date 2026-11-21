@@ -144,10 +144,10 @@ def test_auto_approve_publishes_straight_to_accounts(factory, storage, tmp_path)
     assert item.approved_account_ids == [account_id]
 
 
-def test_auto_approve_needs_permission(factory, storage, tmp_path):
+def test_autorizar_tudo_aprova_sem_nota_de_permissao(factory, storage, tmp_path):
     _, item_id, _ = setup(factory, storage, tmp_path, auto_approve=True, permission="")
     run(factory, storage, item_id)
-    assert state(factory, item_id)[0].status == "awaiting_approval"
+    assert state(factory, item_id)[0].status == "approved"
 
 
 def test_blocking_qc_goes_to_needs_fix(factory, storage, tmp_path):

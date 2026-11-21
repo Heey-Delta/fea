@@ -41,14 +41,14 @@ def test_approve_needs_accounts_and_waiting_status(factory, rendered):  # noqa: 
             ap.approve(s, item, [account_id])
 
 
-def test_no_permission_blocks_approval(factory, storage, tmp_path):  # noqa: F811
+def test_fonte_sem_nota_de_permissao_aprova_normalmente(factory, storage, tmp_path):  # noqa: F811
     _, item_id, account_id = setup(factory, storage, tmp_path, permission="")
     run(factory, storage, item_id)
     with factory() as s:
         item = s.get(m.Item, item_id)
-        assert ap.can_approve(s, item) == "Fonte sem permissão registrada."
-        with pytest.raises(OperationError):
-            ap.approve(s, item, [account_id])
+        assert ap.can_approve(s, item) is None
+        ap.approve(s, item, [account_id])
+        assert item.status == "approved"
 
 
 def test_reject_and_new_version(factory, rendered):  # noqa: F811
@@ -96,7 +96,7 @@ def test_queue_and_item_pages(settings, factory, storage, rendered):  # noqa: F8
     video = client.get(page.text.split('<video src="')[1].split('"')[0])
     assert video.status_code == 200 and video.headers["content-type"] == "video/mp4"
     detail = client.get(f"/aprovacao/{item_id}")
-    assert "resolução e proporção" in detail.text and "registrada" in detail.text
+    assert "resolução e proporção" in detail.text and "Permissão" not in detail.text
     approved = client.post(f"/aprovacao/{item_id}/aprovar", data={"account_ids": [account_id]})
     assert "Vídeo aprovado." in approved.text
     assert "Nada aguardando aprovação" in client.get("/aprovacao").text

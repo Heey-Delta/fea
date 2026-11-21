@@ -316,12 +316,11 @@ def test_budget_limits_examined_posts(factory, media, tmp_path):
 
 
 @needs_db
-def test_source_without_permission_is_pending_and_not_downloaded(factory, tmp_path):
+def test_fonte_sem_nota_de_permissao_nao_trava_o_item(factory, tmp_path):
     op_id = setup_operation(factory, permission="")
     fake = FakeReddit(posts=[post("p1", "academia")])
     ex_id, _, _ = run(factory, op_id, fake, tmp_path, target_x=1)
-    assert items_by_external(factory, ex_id)["p1"].status == "pending_permission"
-    assert not any(c.url.host == "v.redd.it" for c in fake.calls)
+    assert items_by_external(factory, ex_id)["p1"].status != "pending_permission"
 
 
 @needs_db

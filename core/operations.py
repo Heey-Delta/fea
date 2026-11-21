@@ -205,16 +205,6 @@ def validate_graph(config: dict[str, Any]) -> list[Issue]:
             issues.append(Issue("error", "Fonte do X sem @usuario ou termo de busca.", sid))
         elif source_type == "drive" and not (cfg.get("reference") or "").strip():
             issues.append(Issue("error", "Fonte do Google Drive sem o link da pasta.", sid))
-    for sid in by_type["source"]:
-        if not (by_id[sid].get("config") or {}).get("permission_note"):
-            issues.append(
-                Issue(
-                    "warning",
-                    "Fonte sem permissão registrada: "
-                    "os itens entram como pendentes de autorização.",
-                    sid,
-                )
-            )
     return issues
 
 

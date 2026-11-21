@@ -10,7 +10,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from core import queue
-from core.models import Event, Item, Operation, Render, Source
+from core.models import Event, Item, Operation, Render
 from core.operations import OperationError, current_config
 
 
@@ -36,9 +36,6 @@ def can_approve(session: Session, item: Item) -> str | None:
     """Motivo do bloqueio, ou None se pode aprovar."""
     if item.status != "awaiting_approval":
         return "Só vídeos aguardando aprovação podem ser aprovados."
-    source = session.get(Source, item.source_id)
-    if not (source and source.permission_note):
-        return "Fonte sem permissão registrada."
     render = latest_render(session, item.id)
     if render is None or render.status != "ok":
         return "O último render não passou no controle de qualidade."

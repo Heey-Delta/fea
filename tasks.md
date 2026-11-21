@@ -411,6 +411,14 @@ Status: 1
 - Subtask 35.3: Backup e restauração dos arquivos de cada operação pelo painel; dump diário do banco no núcleo. Pendente: cópia fora da VPS (R2) depois de medir o tamanho.
 - Subtask 35.4: Verificação real do instalador numa máquina Ubuntu com Docker (`FEA_HOME`, `FEA_REPO` e `FEA_IMAGE` permitem testar sem GitHub nem build): duas execuções seguidas, agente e núcleo no ar, ambientes das operações recriados, segredos intactos (0600). Bug achado e corrigido: sem `sshd` o `pipefail` abortava o instalador. Firewall e instalação do Docker por apt não puderam ser testados aqui (rede restrita).
 
+## Task 38: Fluxo sem autorizações manuais
+Nível: 2
+Status: 1
+
+- Subtask 38.1: Trava de permissão da fonte removida: os itens não param mais em "sem permissão" e o campo saiu do editor, da aba Fontes, da revisão e do dashboard. Itens antigos parados nesse estado saem com "Liberar" na fila.
+- Subtask 38.2: Opção "Autorizar tudo" no bloco Aprovação: o que passa no controle de qualidade é aprovado para as contas da operação e a distribuição automática liga junto, sem depender de aprovação manual.
+- Responsabilidade: a origem do conteúdo e os direitos de uso continuam sendo do operador; as políticas das plataformas (direitos autorais, conteúdo reutilizado) valem igual.
+
 ## Task 36: Isolamento reforçado (fase 2)
 Nível: 4
 Status: -1

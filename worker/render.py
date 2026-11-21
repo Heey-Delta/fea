@@ -19,7 +19,7 @@ from core.editor import overlay as ov
 from core.editor import preset as pr
 from core.editor import qc
 from core.editor import render as rd
-from core.models import Event, Execution, Item, OperationConfig, Render, Source
+from core.models import Event, Execution, Item, OperationConfig, Render
 from core.operations import linked_account_ids
 from core.queue import PermanentError, RetryableError
 from core.storage import Storage, get_storage
@@ -223,9 +223,8 @@ def succeed(
             (n.get("config") or {} for n in config.get("nodes", []) if n.get("type") == "approval"),
             {},
         )
-        source = session.get(Source, item.source_id)
-        if approval.get("auto_approve") and source and source.permission_note:
-            # Aprovação automática (Task 18.5): QC ok, permissão registrada, não duplicado.
+        if approval.get("auto_approve"):
+            # "Autorizar tudo": QC ok e não duplicado já basta, sem depender de aprovação manual.
             item.status = "approved"
             item.approved_by = "auto"
             item.approved_render_id = render.id
