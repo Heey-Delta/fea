@@ -71,3 +71,57 @@ def test_plataforma_ativa_so_com_agente_no_ar(factory):  # noqa: F811
         server.disk_total_gb, server.disk_free_gb = 100, 75
         assert (view.online, view.mem_pct, view.disk_pct) == (True, 25, 25)
         s.commit()
+
+
+def logged(settings):
+    from fastapi.testclient import TestClient
+
+    from tests.conftest import fake_github, github_login
+    from web.main import create_app
+
+    app = create_app(settings)
+    app.state.http_client_factory = fake_github()
+    client = TestClient(app)
+    github_login(client)
+    return client
+
+
+def test_aba_ambiente_liga_limita_e_avisa_sem_agente(factory, settings):  # noqa: F811
+    from core import operations as ops
+
+    with factory() as s:
+        op = ops.create_operation(s, "Ambiente")
+        op.status = "active"
+        s.commit()
+        op_id = op.id
+    client = logged(settings)
+    page = client.get(f"/operacoes/{op_id}?aba=ambiente").text
+    assert "Nenhum servidor com o agente" in page and "Não criado" in page
+    done = client.post(f"/operacoes/{op_id}/ambiente/ligar")
+    assert "o agente liga em até 15 s" in done.text
+    bad = client.post(f"/operacoes/{op_id}/ambiente/limites", data={"cpu": 0.1, "memoria": 512})
+    assert "CPU entre" in bad.text
+    with factory() as s:
+        rt = s.get(m.OperationRuntime, op_id)
+        assert rt.desired_state == "running" and rt.cpu_limit == 1.0
+        s.add(m.InfraServer(name="vps", last_seen=datetime.now(UTC), versions=["abc1234"]))
+        rt.actual_state, rt.containers = (
+            "running",
+            [
+                {
+                    "service": "editor",
+                    "state": "running",
+                    "health": "healthy",
+                    "cpu": 12.5,
+                    "mem_mb": 300,
+                }
+            ],
+        )
+        rt.logs = {"editor": ["worker iniciado"]}
+        s.commit()
+    page = client.get(f"/operacoes/{op_id}?aba=ambiente").text
+    assert "Nenhum servidor com o agente" not in page
+    assert "No ar" in page and "12.5%" in page and "worker iniciado" in page and "abc1234" in page
+    assert "Parar" in page and "Reiniciar" in page
+    acessos = client.get("/contas").text
+    assert "plataforma no ar" in acessos and "1 ambiente(s)" in acessos

@@ -67,9 +67,21 @@
       <form method="post" action="/contas/vps/env"><button class="btn sm" type="submit">{{ icon('key') }} Baixar .env (meu computador)</button></form>
     </div>{% endif %}
   </div>
-  <p class="sub">Buscador, Editor, Postador e Limpeza rodam numa VPS (Oracle Always Free: Ampere A1, Ubuntu 24.04). Crie a máquina, entre por SSH e cole o comando gerado aqui: ele instala o Docker, baixa o código (pede para você adicionar uma Deploy key só de leitura no GitHub) e sobe os workers. O comando já traz o banco e a chave de criptografia; vale 30 minutos e uma única vez.</p>
+  <p class="sub">Na VPS (Hostinger, Oracle ou outra com Ubuntu), a plataforma roda <strong>um ambiente isolado por operação</strong> (busca, edição e publicação em containers próprios, com rede, pastas e limites só dela), mais o núcleo (agenda e limpeza), administrados por um agente. Crie a máquina, entre por SSH e cole o comando gerado aqui: ele instala tudo, sobe as operações ativas e os workers do celular param sozinhos. Vale 30 minutos e uma única vez. Cada operação é controlada na aba <strong>Ambiente</strong>.</p>
   <p class="sub">Sem VPS? Rode os workers no seu computador com o Docker Desktop: baixe o <code>.env</code> acima, salve como <code>deploy/.env</code> na pasta do código e siga <code>docs/workers-no-computador.md</code>. Eles só trabalham com o computador ligado.</p>
   {% if outdated %}<p class="callout" role="alert">Workers com código antigo ({{ outdated | join(', ') }}): o site está na versão <code>{{ site_version }}</code>. No celular, rode <code>fea-atualizar</code> no Termux; na VPS, rode o instalador de novo. Sem isso, recursos novos (como a chave de API do Drive) não funcionam nos workers.</p>{% endif %}
+  {% for v in servers %}
+  <div class="server-row">
+    <div class="row" style="gap:8px"><span class="dot {{ 'ok live' if v.online else 'bad' }}"></span><strong>{{ v.server.name }}</strong>
+      <span class="chip {{ 'ok' if v.online else 'bad' }}">{{ 'plataforma no ar' if v.online else 'agente fora do ar' }}</span>
+      <small class="sub" style="margin:0">{{ v.hosted }} ambiente(s) · agente <code>{{ v.server.agent_version or '—' }}</code>{% if v.server.last_seen %} · visto {{ v.server.last_seen.strftime('%d/%m %H:%M') }} UTC{% endif %}</small></div>
+    <div class="server-meters">
+      <span>CPU <strong>{{ v.server.cpu_count or '—' }}</strong> núcleos · carga {{ v.server.load1 if v.server.load1 is not none else '—' }}</span>
+      <span>Memória <strong>{{ v.mem_pct }}%</strong><span class="usage-bar {{ 'bad' if v.mem_pct >= 90 else ('warn' if v.mem_pct >= 75 else 'ok') }}"><span style="width:{{ v.mem_pct }}%"></span></span></span>
+      <span>Disco <strong>{{ v.disk_pct }}%</strong><span class="usage-bar {{ 'bad' if v.disk_pct >= 90 else ('warn' if v.disk_pct >= 75 else 'ok') }}"><span style="width:{{ v.disk_pct }}%"></span></span></span>
+    </div>
+  </div>
+  {% endfor %}
   {% if vps_cmd %}<pre style="white-space:pre-wrap;word-break:break-all" id="vps-cmd">{{ vps_cmd }}</pre>{% endif %}
   {% for w in workers %}
   <div class="kv"><span class="row"><span class="dot {{ 'ok live' if w.online else 'bad' }}"></span>{{ w.name }}</span><span>{% if w.at %}último sinal {{ w.at.strftime('%d/%m %H:%M') }} UTC{% if w.version %} · código <code>{{ w.version }}</code>{% endif %}{% else %}nunca conectou{% endif %}</span></div>

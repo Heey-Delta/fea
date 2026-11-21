@@ -110,6 +110,89 @@
 {% else %}
 <div class="empty"><strong>Nenhuma fonte ainda</strong><span class="sub">Adicione uma fonte no bloco Pesca do fluxo e salve a versão.</span></div>
 {% endif %}
+{% elif tab == 'ambiente' %}
+{% set rt = env.runtime %}
+<p class="sub">Ambiente isolado desta operação na VPS: busca, edição e publicação em containers próprios, com rede, pastas e limites só dela. Parar ou quebrar este ambiente não afeta as outras operações. O agente da VPS aplica cada pedido em até 15 s.</p>
+{% if not env.platform_online %}
+<p class="callout" role="alert">Nenhum servidor com o agente da plataforma no ar. Instale na VPS pelo comando de <a href="/contas#vps">Acessos → Workers</a>. Os pedidos feitos aqui ficam guardados e são aplicados quando o agente subir.</p>
+{% endif %}
+{% set real = rt.actual_state if rt else 'absent' %}
+<section class="card env-card env-{{ real }}">
+  <div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:10px">
+    <div class="row" style="gap:10px">
+      <h2>Ambiente</h2>
+      <span class="chip {{ 'ok' if real == 'running' else ('bad' if real in ('degraded', 'error') else ('warn' if real == 'starting' else '')) }}">
+        {% if real in ('starting',) %}<span class="spin" aria-hidden="true"></span>{% else %}<span class="dot {{ 'ok live' if real == 'running' else ('bad' if real in ('degraded', 'error') else '') }}"></span>{% endif %}
+        {{ env.state_label.get(real, real) }}</span>
+      {% if rt %}<span class="sub" style="margin:0">pedido: {{ 'ligado' if rt.desired_state == 'running' else 'parado' }}{% if rt.reported_at %} · visto {{ rt.reported_at.strftime('%d/%m %H:%M') }} UTC{% endif %}</span>{% endif %}
+    </div>
+    <div class="row">
+      {% if not rt or rt.desired_state != 'running' %}
+      <form method="post" action="/operacoes/{{ op.id }}/ambiente/ligar"><button class="btn sm pri" type="submit" {% if op.status != 'active' %}disabled title="Ative a operação no editor"{% endif %}>{{ icon('play') }} Ligar</button></form>
+      {% else %}
+      <form method="post" action="/operacoes/{{ op.id }}/ambiente/reiniciar"><button class="btn sm" type="submit">{{ icon('undo') }} Reiniciar</button></form>
+      <form method="post" action="/operacoes/{{ op.id }}/ambiente/parar" onsubmit="return confirm('Parar o ambiente desta operação? As outras seguem no ar.')"><button class="btn sm ghost danger" type="submit">{{ icon('pause') }} Parar</button></form>
+      {% endif %}
+    </div>
+  </div>
+  {% if rt and rt.error %}<p class="error" role="alert" style="margin:0">{{ rt.error }}</p>{% endif %}
+  {% if rt and rt.containers %}
+  <div class="tbl" style="margin:0;box-shadow:none"><table>
+    <thead><tr><th>Serviço</th><th>Estado</th><th>CPU</th><th>Memória</th></tr></thead>
+    <tbody>
+    {% for c in rt.containers %}
+    <tr><td><strong>{{ {'buscador': 'Busca', 'editor': 'Edição', 'postador': 'Publicação'}.get(c.service, c.service) }}</strong></td>
+      <td><span class="chip {{ 'ok' if c.state == 'running' and c.health != 'unhealthy' else 'bad' }}">{{ c.state }}{% if c.health %} · {{ c.health }}{% endif %}</span></td>
+      <td class="mono">{{ '%.1f' % c.cpu if c.cpu is not none else '—' }}%</td>
+      <td class="mono">{{ '%.0f' % c.mem_mb if c.mem_mb is not none else '—' }} MB</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% endif %}
+</section>
+
+<div class="grid-2">
+  <section class="card">
+    <h2>Limites e versão</h2>
+    <form class="form" method="post" action="/operacoes/{{ op.id }}/ambiente/limites">
+      <div class="row" style="gap:12px;flex-wrap:wrap">
+        <label class="field">CPU (núcleos)<input class="input" type="number" name="cpu" step="0.25" min="{{ env.limits.cpu_min }}" max="{{ env.limits.cpu_max }}" value="{{ rt.cpu_limit if rt else 1 }}"></label>
+        <label class="field">Memória (MB)<input class="input" type="number" name="memoria" step="128" min="{{ env.limits.mem_min }}" max="{{ env.limits.mem_max }}" value="{{ rt.memory_mb if rt else 1024 }}"></label>
+      </div>
+      <small class="sub" style="margin:0">Dividido entre os serviços: edição 60%, busca 20%, publicação 20%.</small>
+      <div><button class="btn sm" type="submit">Salvar limites</button></div>
+    </form>
+    <form class="form" method="post" action="/operacoes/{{ op.id }}/ambiente/versao">
+      <label class="field">Versão do código
+        <select class="input" name="versao">
+          <option value="" {% if not rt or not rt.version %}selected{% endif %}>Acompanhar a mais nova{% if env.versions %} ({{ env.versions[0] }}){% endif %}</option>
+          {% for v in env.versions %}<option value="{{ v }}" {% if rt and rt.version == v %}selected{% endif %}>{{ v }}{% if loop.first %} · mais nova{% endif %}</option>{% endfor %}
+        </select>
+        <small>Em uso: <code>{{ rt.actual_version if rt and rt.actual_version else '—' }}</code>. Escolher uma anterior é o rollback.</small>
+      </label>
+      <div><button class="btn sm" type="submit">Trocar versão</button></div>
+    </form>
+  </section>
+  <section class="card">
+    <div class="row" style="justify-content:space-between"><h2>Backup</h2>
+      <form method="post" action="/operacoes/{{ op.id }}/ambiente/backup"><button class="btn sm" type="submit">{{ icon('save') }} Fazer backup</button></form></div>
+    <p class="sub" style="margin:0">Arquivos do ambiente (configuração, estado e logs). O banco tem backup diário no núcleo e o histórico do próprio Neon.</p>
+    {% for b in (rt.backups if rt and rt.backups else []) %}
+    <div class="kv"><span class="mono">{{ b.name }}<br><small class="sub">{{ (b.size / 1024) | round(1) }} KB</small></span>
+      <form method="post" action="/operacoes/{{ op.id }}/ambiente/restaurar" onsubmit="return confirm('Restaurar este backup? O ambiente para, restaura e volta.')"><input type="hidden" name="backup" value="{{ b.name }}"><button class="btn sm ghost" type="submit">Restaurar</button></form></div>
+    {% else %}<p class="sub" style="margin:0">Nenhum backup ainda.</p>{% endfor %}
+  </section>
+</div>
+
+{% if rt and rt.logs %}
+<details class="card fold">
+  <summary class="row" style="justify-content:space-between"><h2>Logs recentes</h2><span class="sub" style="margin:0">sem segredos</span></summary>
+  {% for service, lines in rt.logs.items() %}
+  <h3 style="margin-top:6px">{{ {'buscador': 'Busca', 'editor': 'Edição', 'postador': 'Publicação'}.get(service, service) }}</h3>
+  <pre class="logbox">{{ lines | join('\n') }}</pre>
+  {% endfor %}
+</details>
+{% endif %}
 {% else %}
 <section class="card">
   <p class="sub">

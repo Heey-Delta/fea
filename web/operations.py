@@ -26,7 +26,7 @@ from core.models import Account, Event, Operation, Source
 from core.states import OPERATION_STATUS
 from core.storage import is_remote
 from networks import PLATFORM_LABEL, PROFILES
-from web import editing
+from web import editing, platform_views
 from web.common import db_session, render, require_user
 
 router = APIRouter(dependencies=[Depends(require_user)])
@@ -43,6 +43,7 @@ TABS = [
     ("fontes", "Fontes"),
     ("contas", "Contas"),
     ("execucoes", "Execuções"),
+    ("ambiente", "Ambiente"),
     ("historico", "Histórico de versões"),
 ]
 # Ações de estado oferecidas a partir de cada estado.
@@ -143,6 +144,7 @@ def detail_page(
         sources=src.list_sources(session, op.id),
         executions=exe.list_executions(session, op.id) if aba == "execucoes" else [],
         source_types=SOURCE_TYPES,
+        env=platform_views.context(session, op) if aba == "ambiente" else None,
         flash=request.session.pop("flash", None),
     )
 

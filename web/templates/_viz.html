@@ -65,4 +65,7 @@
 {%- else %}
 <span class="live-idle">Parada</span>
 {%- endif %}
+{%- if live and live.env %}
+<span class="env-chip" title="Ambiente isolado na VPS">{{ icon('database') }} Ambiente: {{ {'running': 'no ar', 'starting': 'subindo', 'stopped': 'parado', 'absent': 'não criado', 'degraded': 'com falha', 'error': 'erro'}.get(live.env, live.env) }}</span>
+{%- endif %}
 {%- endmacro %}

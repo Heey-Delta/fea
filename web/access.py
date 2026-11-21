@@ -191,6 +191,26 @@ def worker_status(session: Session) -> list[dict]:
         return []
 
 
+def server_status(session: Session) -> list:
+    """Servidores com o agente da plataforma (Task 34.2)."""
+    from sqlalchemy import func, select
+
+    from core import platform
+    from core.models import OperationRuntime
+
+    try:
+        views = platform.servers(session)
+        hosted = session.scalar(
+            select(func.count()).where(OperationRuntime.desired_state == "running")
+        )
+    except Exception:  # noqa: BLE001 - migração 0010 ainda não aplicada
+        session.rollback()
+        return []
+    for view in views:
+        view.hosted = int(hosted or 0)
+    return views
+
+
 @router.get("/contas", response_class=HTMLResponse)
 def page(request: Request, session: Session = Depends(db_session)) -> Response:
     settings = request.app.state.settings
@@ -214,6 +234,7 @@ def page(request: Request, session: Session = Depends(db_session)) -> Response:
         tool=tool_status(request),
         infra=[s for s in statuses if s.service.group == "infra"],
         workers=(ws := worker_status(session)),
+        servers=server_status(session),
         site_version=code_version(),
         outdated=outdated(ws, code_version()),
         vps_cmd=request.session.pop("vps_cmd", None),

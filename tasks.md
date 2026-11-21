@@ -395,11 +395,12 @@ Status: 1
 
 ## Task 34: Painel da plataforma
 Nível: 4
-Status: -1
+Status: 1
 
 - Subtask 34.1: Aba "Ambiente" na operação: estado real e desejado, iniciar, parar, reiniciar, limites, versão (atualizar e voltar), logs recentes, CPU e memória, backup e restauração.
 - Subtask 34.2: Servidor em Acessos → Workers: CPU, memória, disco, versão do agente e operações hospedadas.
 - Subtask 34.3: Estado ao vivo da operação inclui o ambiente (parado, subindo, no ar, com falha).
+- Subtask 34.4: Verificado com o agente real: clicar em Parar no painel parou só os containers daquela operação em menos de 20 s, e a tela passou a mostrar "Parado".
 
 ## Task 35: Instalador e migração em um comando
 Nível: 5

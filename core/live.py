@@ -12,7 +12,7 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from core.models import Execution, Item, Job, PublishJob, Render, Source
+from core.models import Execution, Item, Job, OperationRuntime, PublishJob, Render, Source
 
 STAGES = (
     ("busca", "Buscando", "collect"),
@@ -28,6 +28,7 @@ class OperationLive:
     stages: dict[str, str] = field(default_factory=dict)  # estágio → "running" | "queued"
     error: str = ""
     execution_id: int | None = None
+    env: str = ""  # estado do ambiente isolado na VPS (Task 34.3), se a plataforma estiver em uso
 
     @property
     def active(self) -> bool:
@@ -103,6 +104,19 @@ def operations_live(
     for ex_id, op_id in session.execute(running_ex):
         if operation_ids is None or op_id in operation_ids:
             get(op_id).execution_id = ex_id
+
+    try:
+        runtimes = list(session.scalars(select(OperationRuntime)))
+    except Exception:  # noqa: BLE001 - migração 0010 ainda não aplicada
+        session.rollback()
+        runtimes = []
+    for rt in runtimes:
+        if operation_ids is not None and rt.operation_id not in operation_ids:
+            continue
+        entry = get(rt.operation_id)
+        entry.env = rt.actual_state
+        if rt.actual_state in ("degraded", "error"):
+            entry.error = entry.error or f"Ambiente: {(rt.error or 'com falha')[:160]}"
 
     bad_sources = select(Source.operation_id, Source.last_error).where(Source.status == "error")
     for op_id, message in session.execute(bad_sources):
