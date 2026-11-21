@@ -37,7 +37,9 @@ if [ ! -d "$DIR/.git" ]; then
   git -C "$DIR" config core.sshCommand "ssh -i $KEY -o StrictHostKeyChecking=accept-new"
 else
   say "Atualizando o código…"
-  git -C "$DIR" pull --ff-only
+  # Fica igual ao main sem conflito com arquivos que o worker escreve (logs/status).
+  # .env, logs e a venv não são versionados: continuam onde estão.
+  git -C "$DIR" fetch -q origin main && git -C "$DIR" reset -q --hard origin/main
 fi
 cd "$DIR"
 
@@ -118,7 +120,7 @@ EOF
 cat > "$HOME/.local/bin/fea-atualizar" <<EOF
 #!/data/data/com.termux/files/usr/bin/bash
 # Baixa o código novo e reinicia os workers (eles não se atualizam sozinhos).
-cd "$DIR" && git pull --ff-only || exit 1
+cd "$DIR" && git fetch -q origin main && git reset -q --hard origin/main || exit 1
 source .venv/bin/activate && alembic upgrade head
 fea-desligar; fea-ligar; fea-status
 EOF

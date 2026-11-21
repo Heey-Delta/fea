@@ -11,5 +11,4 @@ storage/
 logs/*.log
 logs/*.pid
 logs/*.child
-logs/status/*.json
-!logs/status/buscador.json
+logs/status/

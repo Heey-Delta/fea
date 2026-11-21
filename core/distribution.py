@@ -471,7 +471,11 @@ def auto_distribute(session: Session, now: datetime | None = None) -> list[int]:
     for op in session.scalars(select(Operation).where(Operation.status == "active")):
         config = current_config(session, op).config
         publish = publish_config(config)
-        if not publish.get("automatic"):
+        approval = next(
+            (n.get("config") or {} for n in config.get("nodes", []) if n.get("type") == "approval"),
+            {},
+        )
+        if not (publish.get("automatic") or approval.get("auto_approve")):
             continue
         account_ids = linked_account_ids(config)
         accounts = list(session.scalars(select(Account).where(Account.id.in_(account_ids))))

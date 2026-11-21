@@ -30,6 +30,8 @@ API = "https://www.googleapis.com/drive/v3"
 TOKEN_URL = "https://oauth2.googleapis.com/token"
 SCOPE = "https://www.googleapis.com/auth/drive.readonly"
 PAGE_SIZE = 100
+FOLDER_MIME = "application/vnd.google-apps.folder"
+MAX_FOLDERS = 200  # subpastas percorridas por busca (proteção contra árvores enormes)
 FOLDER_URL = re.compile(r"/folders/([A-Za-z0-9_-]{10,})")
 FOLDER_ID = re.compile(r"^[A-Za-z0-9_-]{10,}$")
 FIELDS = (
@@ -94,6 +96,11 @@ def signed_assertion(key: dict, now: float | None = None) -> str:
         raise SourceError("Chave privada da conta de serviço ilegível.") from exc
     signature = private.sign(signing_input.encode(), padding.PKCS1v15(), hashes.SHA256())
     return f"{signing_input}.{_b64(signature)}"
+
+
+class FolderPage:
+    def __init__(self, items: list[RawItem], next_cursor: str | None, subfolders: list[str]):
+        self.items, self.next_cursor, self.subfolders = items, next_cursor, subfolders
 
 
 def parse(files: list[dict]) -> list[RawItem]:
@@ -225,18 +232,48 @@ class DriveConnector:
         )
 
     def fetch(self, source: SourceRef, cursor: str | None) -> Page:
-        fid = folder_id(source.reference)
+        """Uma página da pasta e das subpastas (largura primeiro).
+
+        O cursor guarda a fila de pastas a visitar, quantas já entraram na fila e o
+        `pageToken` da pasta atual. Cursor antigo (só o pageToken) continua valendo.
+        """
+        root = folder_id(source.reference)
+        state = {"queue": [root], "seen": 1, "token": None}
+        if cursor:
+            try:
+                parsed = json.loads(cursor)
+            except ValueError:
+                parsed = None
+            if isinstance(parsed, dict) and parsed.get("queue"):
+                state = parsed
+            else:  # cursor de versão antiga: só o pageToken da pasta principal
+                state["token"] = cursor
+        fid = state["queue"][0]
+        page = self._fetch_folder(fid, state["token"], is_root=fid == root and not cursor)
+        for sub in page.subfolders:
+            if state["seen"] < MAX_FOLDERS:
+                state["queue"].append(sub)
+                state["seen"] += 1
+        if page.next_cursor:
+            state["token"] = page.next_cursor
+        else:
+            state["queue"], state["token"] = state["queue"][1:], None
+        nxt = json.dumps(state) if state["queue"] else None
+        return Page(items=page.items, next_cursor=nxt)
+
+    def _fetch_folder(self, fid: str, token: str | None, is_root: bool):
         params = {
             "q": f"'{fid}' in parents and trashed = false and "
-            "(mimeType contains 'video/' or mimeType contains 'image/')",
+            f"(mimeType contains 'video/' or mimeType contains 'image/' "
+            f"or mimeType = '{FOLDER_MIME}')",
             "fields": FIELDS,
             "orderBy": "createdTime desc",
             "pageSize": PAGE_SIZE,
             "supportsAllDrives": "true",
             "includeItemsFromAllDrives": "true",
         }
-        if cursor:
-            params["pageToken"] = cursor
+        if token:
+            params["pageToken"] = token
         response = self._get(f"{API}/files", params=params)
         if response.status_code == 404:
             raise SourceError(f"Pasta do Drive não encontrada. {self.share_hint}")
@@ -247,10 +284,12 @@ class DriveConnector:
         if response.status_code != 200:
             raise SourceError(f"Google Drive respondeu {response.status_code}.")
         payload = response.json()
-        items = parse(payload.get("files") or [])
-        if not items and not cursor and not self._folder_visible(fid):
+        files = payload.get("files") or []
+        items = parse(files)
+        subfolders = [f["id"] for f in files if f.get("mimeType") == FOLDER_MIME]
+        if not files and is_root and not token and not self._folder_visible(fid):
             raise SourceError(f"O Google não enxerga a pasta. {self.share_hint}")
-        return Page(items=items, next_cursor=payload.get("nextPageToken"))
+        return FolderPage(items, payload.get("nextPageToken"), subfolders)
 
     def _folder_visible(self, fid: str) -> bool:
         response = self._get(

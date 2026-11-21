@@ -65,7 +65,7 @@ def test_validacao_do_preset():
     assert pr.validate({"video": {"group_images": 0}}) == []
     assert any("Agrupar imagens" in e for e in pr.validate({"video": {"group_images": 1}}))
     assert any("Agrupar imagens" in e for e in pr.validate({"video": {"group_images": 21}}))
-    assert any("Música aleatória" in e for e in pr.validate({"audio": {"mode": "random"}}))
+    assert pr.validate({"audio": {"mode": "random"}}) == []  # sem músicas: sai sem música
     ok = pr.validate({"audio": {"mode": "random", "library": ["music/a.mp3"]}})
     assert ok == []
 

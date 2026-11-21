@@ -75,7 +75,15 @@ def test_connection(
         connector = make_connector(
             source.type, settings, storage, source.operation_id, **connector_kwargs
         )
-        page = connector.fetch(SourceRef(source.id, source.type, source.reference), None)
+        ref = SourceRef(source.id, source.type, source.reference)
+        page = connector.fetch(ref, None)
+        total = len(page.items)
+        pages = 1
+        # Drive: conta a pasta inteira (com subpastas) para mostrar o que a busca vai enxergar.
+        while source.type == "drive" and page.next_cursor and pages < 50:
+            page = connector.fetch(ref, page.next_cursor)
+            total += len(page.items)
+            pages += 1
     except (SourceError, RetryableError) as exc:
         source.status = "error"
         source.last_error = str(exc)
@@ -85,9 +93,11 @@ def test_connection(
         source.status = "ok"
         source.last_error = None
         source.last_checked_at = now
-        result = ConnectionResult(
-            True, f"Conexão ok: {len(page.items)} itens na primeira página.", len(page.items)
-        )
+        if source.type == "drive":
+            message = f"Conexão ok: {total} vídeos/imagens na pasta (com subpastas)."
+        else:
+            message = f"Conexão ok: {total} itens na primeira página."
+        result = ConnectionResult(True, message, total)
     session.add(
         Event(
             entity="source",
