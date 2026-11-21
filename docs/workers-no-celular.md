@@ -29,7 +29,7 @@ bash <(curl -fsSL https://fea-rho.vercel.app/static/instalar-termux.sh)
 3. Mantenha o celular no carregador, em lugar fresco.
 
 ## 4 · Dia a dia
-- `fea-painel`: painel ao vivo. Cada worker aparece com o que está fazendo (Aguardando, Buscando, Editando, Publicando, Limpando), barra e porcentagem, e uma bolinha **verde** (no ar) ou **vermelha** (desligado ou com falha nos últimos 15 minutos). Digite `/log` (ou `/log editor`) e Enter para ver os detalhes; `/voltar` ou Esc volta; `/sair` fecha. Os workers continuam rodando depois que o painel fecha.
+- `fea-painel`: painel ao vivo, em estilo brutalista. Cada worker aparece numerado, com o que está fazendo (AGUARDANDO, BUSCANDO, EDITANDO, PUBLICANDO, LIMPANDO), barra e porcentagem, e uma etiqueta `[ OK ]` (verde), `[ERRO]` (vermelho, falha nos últimos 15 minutos) ou `[ OFF]` (desligado). Digite `/log` (ou `/log editor`) e Enter para ver os detalhes; `/voltar` ou Esc volta; `/sair` fecha. Os workers continuam rodando depois que o painel fecha.
 - `fea-status`: retrato rápido, sem ficar aberto.
 - `fea-desligar` / `fea-ligar`: parar e voltar.
 - **Atualizar o código:** `fea-atualizar` (baixa o código novo, aplica migrações e reinicia). Os workers do celular **não se atualizam sozinhos**: depois de cada mudança na ferramenta, rode esse comando. Se o `fea-atualizar` ainda não existir, rode uma vez o comando do passo 2.
