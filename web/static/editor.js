@@ -526,7 +526,8 @@
         <label class="field">Duração máxima (s)<input class="input" type="number" min="1" data-bind="fishing.max_duration_s"></label>
         <label class="toggle-row"><span>Aceitar vídeos</span><span class="switch"><input type="checkbox" data-media="video"><span></span></span></label>
         <label class="toggle-row"><span>Aceitar imagens</span><span class="switch"><input type="checkbox" data-media="image"><span></span></span></label>
-        ${toggle("fishing.reject_watermarks", "Recusar marca d'água de terceiros", "detectada por OCR", "true")}`)}
+        ${toggle("fishing.reject_watermarks", "Recusar marca d'água de terceiros", "detectada por OCR", "true")}
+        ${toggle("fishing.block_duplicates", "Bloquear repetidos", "mesmo arquivo ou imagem parecida já usados", "false")}`)}
       ${sec("Quantidade", "chart", `
         <label class="field">Meta por Play<input class="input" type="number" min="1" data-bind="fishing.target_x" data-default="10"></label>
         <label class="field">Posts examinados no máximo<input class="input" type="number" min="1" data-bind="fishing.search_budget" data-default="300"></label>

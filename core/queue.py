@@ -151,6 +151,19 @@ def fail(session: Session, job_id: int, error: str, *, retryable: bool) -> str:
     return job.status
 
 
+def release_own(session: Session, worker_prefix: str) -> int:
+    """Tarefas que este worker deixou em `running` ao ser reiniciado voltam para a fila na hora.
+
+    O id do worker é estável (papel@aparelho#thread): depois de `fea-atualizar`, sem isto a
+    tarefa ficava presa 30 minutos e a busca parecia parada ("1 examinado").
+    """
+    return session.execute(
+        update(Job)
+        .where(Job.status == "running", Job.locked_by.like(f"{worker_prefix}#%"))
+        .values(status="queued", locked_by=None, locked_at=None, run_at=func.now())
+    ).rowcount
+
+
 def requeue_stale(session: Session, older_than: timedelta) -> int:
     """Devolve à fila tarefas presas em `running` por um worker que morreu."""
     cutoff = func.now() - older_than

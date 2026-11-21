@@ -250,6 +250,14 @@ class Worker:
 
     def run_forever(self) -> None:
         activity.start(self.role)
+        try:
+            with self.session_factory() as session:
+                released = queue.release_own(session, self.id)
+                session.commit()
+            if released:
+                log.info("tarefas presas devolvidas à fila", extra={"jobs": released})
+        except Exception:  # noqa: BLE001 - sem banco agora: o requeue_stale resolve depois
+            log.exception("não consegui devolver tarefas presas")
         log.info(
             "worker iniciado",
             extra={"role": self.role, "types": self.types, "concurrency": self.concurrency},

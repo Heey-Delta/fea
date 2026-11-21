@@ -429,6 +429,15 @@ Status: 1
 - Subtask 39.4: Imagem corrompida é recusada antes do FFmpeg (ele entraria em laço sem fim).
 - Limite conhecido: o YouTube não oferece API de "músicas em alta" para Shorts, e música comercial gera reivindicação de direitos autorais. A biblioteca é de músicas que o operador envia (próprias, licenciadas ou da Biblioteca de Áudio do YouTube). Pendente, se desejado: sugerir músicas da Biblioteca de Áudio do YouTube.
 
+## Task 40: Busca no Drive sem travas (memes)
+Nível: 2
+Status: 1
+
+- Subtask 40.1: Worker reiniciado (ex.: `fea-atualizar`) devolve na hora as tarefas que deixou presas; antes ficavam 30 minutos em "rodando" e a busca parecia parada em "1 examinado".
+- Subtask 40.2: Repetidos não barram mais por padrão; opção "Bloquear repetidos" no bloco Busca para ligar depois.
+- Subtask 40.3: Fontes sem busca por texto (Drive, upload): sem tags, ordem aleatória; com tags, os que casam com elas vêm primeiro e o resto não é descartado. Arquivos já vistos na fonte continuam pulados (não repete).
+- Subtask 40.4: Com "Agrupar imagens", a meta X conta vídeos: busca X × N imagens e manda todas para a edição (antes só X entravam e saía 1 Short).
+
 ## Task 36: Isolamento reforçado (fase 2)
 Nível: 4
 Status: -1

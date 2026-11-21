@@ -12,6 +12,7 @@ Critérios:
 """
 
 import logging
+import random
 import tempfile
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
@@ -100,6 +101,10 @@ def process_raw(
             rules.get("heat_tags") or [],
             rules.get("blocked_words") or [],
         )
+        if text.reject_reason == "fora do nicho" and not connector.supports_search:
+            # Pasta do Drive ou upload: o único texto é o nome do arquivo. Tag dá prioridade,
+            # mas não descarta (a ordem já pôs os que casam com as tags primeiro).
+            text = fishing.TextResult(0, None)
         reason = text.reject_reason or fishing.check_media(
             raw.media_type,
             raw.duration_s,
@@ -174,7 +179,11 @@ def fetch_and_check(
                 set_status(session, item_id, "rejected", reason, duration_s=duration)
                 session.commit()
                 return item_id, "rejected"
-            duplicate = fishing.find_duplicate(session, sha256, phash, exclude_item_id=item_id)
+            duplicate = (
+                fishing.find_duplicate(session, sha256, phash, exclude_item_id=item_id)
+                if rules.get("block_duplicates")
+                else None
+            )
             if duplicate:
                 original_id, why = duplicate
                 set_status(
@@ -216,14 +225,15 @@ def run_collect(
         ex = session.get(Execution, execution_id)
         if ex is None or ex.status in executions.FINISHED:
             return Progress(stop_reason="execução encerrada")
-        rules = executions.fishing_config(executions.config_of(session, ex))
+        rules_config = executions.config_of(session, ex)
+        rules = executions.fishing_config(rules_config)
         query = select(Source).where(Source.operation_id == ex.operation_id, Source.status == "ok")
         if ex.source_ids:
             query = query.where(Source.id.in_(ex.source_ids))
         sources = list(session.scalars(query.order_by(Source.id)))
         session.expunge_all()
 
-    target = ex.target_x
+    target = ex.target_x * group_size(rules_config)
     limit = ex.search_budget if ex.criteria == "recent" else min(ex.search_budget, 3 * target)
     tags = (rules.get("tags") or []) + (rules.get("heat_tags") or [])
     progress = Progress()
@@ -255,7 +265,7 @@ def run_collect(
             except SourceError as exc:
                 mark_source_error(factory, source.id, str(exc))
                 break
-            for raw in page.items:
+            for raw in arrange(page.items, rules, connector.supports_search):
                 if done() or cancelled(factory, execution_id):
                     break
                 progress.examined += 1
@@ -281,8 +291,32 @@ def run_collect(
             "nenhum vídeo ou imagem encontrado nas fontes (pasta vazia, arquivo em subpasta "
             "ou atalho, ou envio ao Drive ainda não terminado)"
         )
-    finish_collect(factory, execution_id, progress)
+    finish_collect(factory, execution_id, progress, target)
     return progress
+
+
+def group_size(config: dict) -> int:
+    """Imagens por vídeo quando "Agrupar imagens" está ligado (1 = desligado)."""
+    from core.editor import preset as pr
+
+    group = int(pr.from_config(config)["video"].get("group_images") or 0)
+    return group if group >= 2 else 1
+
+
+def arrange(items: list, rules: dict, searched: bool) -> list:
+    """Ordem de exame. Fontes com busca já vêm filtradas pelas tags: mantém a ordem.
+
+    Sem busca (Drive, upload): com tags, os que casam com elas vêm primeiro; o resto (e tudo,
+    quando não há tags) em ordem aleatória.
+    """
+    if searched:
+        return list(items)
+    shuffled = list(items)
+    random.shuffle(shuffled)
+    tags, heat = rules.get("tags") or [], rules.get("heat_tags") or []
+    if not (tags or heat):
+        return shuffled
+    return sorted(shuffled, key=lambda raw: -fishing.classify_text(raw.text, tags, heat, []).score)
 
 
 def cancelled(factory: sessionmaker, execution_id: int) -> bool:
@@ -300,14 +334,18 @@ def mark_source_error(factory: sessionmaker, source_id: int, message: str) -> No
     log.warning("fonte com erro", extra={"source_id": source_id, "error": message})
 
 
-def finish_collect(factory: sessionmaker, execution_id: int, progress: Progress) -> None:
+def finish_collect(
+    factory: sessionmaker, execution_id: int, progress: Progress, target: int | None = None
+) -> None:
+    """`target`: itens a editar (com "Agrupar imagens", X vídeos × N imagens)."""
     with factory() as session:
         ex = session.get(Execution, execution_id)
+        target = target or ex.target_x
         ranked = sorted(progress.eligible, key=lambda pair: (-pair[1], pair[0]))
         if ex.criteria == "heat":
-            selected, reserve = ranked[: ex.target_x], ranked[ex.target_x :]
+            selected, reserve = ranked[:target], ranked[target:]
         else:
-            selected, reserve = progress.eligible[: ex.target_x], progress.eligible[ex.target_x :]
+            selected, reserve = progress.eligible[:target], progress.eligible[target:]
         for item_id, _ in reserve:
             session.get(Item, item_id).status_reason = "reserva"
         if ex.status != "cancelled":

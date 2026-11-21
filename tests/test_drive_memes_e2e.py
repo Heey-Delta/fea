@@ -58,7 +58,7 @@ def drive_with(images):
     return {"client": httpx.Client(transport=httpx.MockTransport(handler)), "sleep": lambda _: 0}
 
 
-def meme_operation(factory, tags=None):  # noqa: F811
+def meme_operation(factory, tags=None, target_x=10):  # noqa: F811
     with factory() as s:
         account = m.Account(platform="youtube", name="Canal", external_id="UCmeme")
         s.add(account)
@@ -90,18 +90,18 @@ def meme_operation(factory, tags=None):  # noqa: F811
         op = ops.create_operation(s, "Memes", config)
         ops.change_status(s, op, "active")
         s.commit()
-        ex = executions.start_execution(s, op, target_x=10)
+        ex = executions.start_execution(s, op, target_x=target_x)
         s.commit()
         return op.id, ex.id
 
 
-def run_pipeline(factory, tmp_path, n_images, tags=None):  # noqa: F811
+def run_pipeline(factory, tmp_path, n_images, tags=None, target_x=10):  # noqa: F811
     from worker.collect import run_collect
     from worker.render import run_render
 
     storage = LocalStorage(tmp_path / "storage")
     images = [make_meme(tmp_path / f"meme_{i}.jpg", i) for i in range(n_images)]
-    op_id, ex_id = meme_operation(factory, tags)
+    op_id, ex_id = meme_operation(factory, tags, target_x)
     progress = run_collect(factory, ex_id, key_settings(), storage, drive_with(images))
     with factory() as s:
         jobs = s.scalars(select(m.Job).where(m.Job.type == "render").order_by(m.Job.id)).all()
@@ -130,9 +130,33 @@ def test_dez_memes_viram_dois_shorts_aprovados_e_agendados(factory, tmp_path):  
     assert len(planned) == 2 and {p.status for p in planned} == {"planned"}
 
 
-def test_tag_de_nicho_descarta_os_memes_pelo_nome_do_arquivo(factory, tmp_path):  # noqa: F811
-    progress, status, reasons, _, _ = run_pipeline(factory, tmp_path, 6, tags=["academia"])
-    assert status.get("rejected") == 6 and any("fora do nicho" in (r or "") for r in reasons)
+def test_tag_no_drive_da_prioridade_sem_descartar(factory, tmp_path):  # noqa: F811
+    """Tag que não aparece no nome do arquivo não barra: os memes seguem e viram Shorts."""
+    progress, status, reasons, _, _ = run_pipeline(factory, tmp_path, 10, tags=["academia"])
+    assert "rejected" not in status and status == {"approved": 2, "grouped": 8}, status
+
+
+def test_ordem_sem_tags_e_aleatoria_e_com_tags_prioriza():
+    from core.connectors.base import RawItem
+    from worker.collect import arrange
+
+    raws = [
+        RawItem(external_id=str(i), url=None, author=None, published_at=None,
+                media_type="image", text=f"meme {i}", media_url=str(i))
+        for i in range(30)
+    ]  # fmt: skip
+    orders = {tuple(r.external_id for r in arrange(raws, {}, searched=False)) for _ in range(5)}
+    assert len(orders) > 1  # aleatória
+    tagged = [*raws, RawItem(external_id="gato", url=None, author=None, published_at=None,
+                             media_type="image", text="meme de gato", media_url="g")]  # fmt: skip
+    assert arrange(tagged, {"tags": ["gato"]}, searched=False)[0].external_id == "gato"
+    assert [r.external_id for r in arrange(raws, {}, searched=True)] == [str(i) for i in range(30)]
+
+
+def test_meta_conta_videos_quando_agrupa(factory, tmp_path):  # noqa: F811
+    """Meta X = 2 vídeos com grupo de 5: busca 10 imagens e sai com 2 Shorts."""
+    progress, status, _, _, _ = run_pipeline(factory, tmp_path, 12, target_x=2)
+    assert progress.examined == 10 and status.get("approved") == 2, (progress, status)
 
 
 @pytest.mark.parametrize("n", [3])
