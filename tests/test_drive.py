@@ -199,3 +199,115 @@ def test_acessos_considera_pronto_com_uma_das_duas_opcoes():
     none = ServiceStatus(svc, [FieldStatus(first, "", ""), FieldStatus(second, "", "")])
     one = ServiceStatus(svc, [FieldStatus(first, "", ""), FieldStatus(second, "banco", "••••1")])
     assert not none.ready and one.ready
+
+
+# --- busca de ponta a ponta: pasta do Drive → item elegível → tarefa de edição ---------
+
+from tests.test_render_job import factory  # noqa: E402,F401
+from tests.test_render_job import pytestmark as _db_marks  # noqa: E402
+
+
+@pytest.mark.skipif(not __import__("shutil").which("ffmpeg"), reason="FFmpeg não instalado")
+@_db_marks[0]
+def test_busca_no_drive_de_ponta_a_ponta(factory, tmp_path):  # noqa: F811
+    from sqlalchemy import select
+
+    import core.models as m
+    from core import executions
+    from core import operations as ops
+    from core.storage import LocalStorage
+    from tests.test_fishing import make_video
+    from worker.collect import run_collect
+
+    video = make_video(tmp_path / "meu_video.mp4", "testsrc")
+    files = [
+        {
+            "id": "vid1",
+            "name": "meu_video.mp4",
+            "mimeType": "video/mp4",
+            "createdTime": "2026-11-21T00:00:00.000Z",
+        }
+    ]
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.params.get("key") == "AIzaChaveDeTeste"
+        if request.url.path == "/drive/v3/files":
+            return httpx.Response(200, json={"files": files})
+        if request.url.path == "/drive/v3/files/vid1":
+            return httpx.Response(200, content=video.read_bytes())
+        return httpx.Response(404)
+
+    config = ops.default_config()
+    config["nodes"] += [
+        {
+            "id": "f1",
+            "type": "source",
+            "config": {
+                "type": "drive",
+                "reference": f"https://drive.google.com/drive/folders/{FOLDER}",
+                "permission_note": "vídeos próprios",
+            },
+        },
+        {"id": "c1", "type": "account", "config": {}},
+    ]
+    config["edges"] += [{"from": "f1", "to": "pesca"}, {"from": "c1", "to": "postagem"}]
+    with factory() as s:
+        op = ops.create_operation(s, "Drive", config)
+        ops.change_status(s, op, "active")
+        s.commit()
+        ex = executions.start_execution(s, op, target_x=1)
+        s.commit()
+        ex_id = ex.id
+    kwargs = {
+        "client": httpx.Client(transport=httpx.MockTransport(handler)),
+        "sleep": lambda _s: None,
+    }
+    progress = run_collect(
+        factory, ex_id, key_settings(), LocalStorage(tmp_path / "storage"), kwargs
+    )
+    assert progress.examined == 1 and len(progress.eligible) == 1
+    with factory() as s:
+        item = s.scalars(select(m.Item).where(m.Item.execution_id == ex_id)).one()
+        assert item.status == "eligible" and item.external_id == "vid1" and item.phash
+        assert s.scalars(select(m.Job).where(m.Job.type == "render")).all()
+        assert s.get(m.Execution, ex_id).status == "completed"
+
+
+@_db_marks[0]
+def test_pasta_vazia_explica_o_motivo_na_execucao(factory, tmp_path):  # noqa: F811
+    import core.models as m
+    from core import executions
+    from core import operations as ops
+    from core.storage import LocalStorage
+    from worker.collect import run_collect
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/drive/v3/files":
+            return httpx.Response(200, json={"files": []})
+        return httpx.Response(200, json={"id": FOLDER})  # a pasta existe e está visível
+
+    config = ops.default_config()
+    config["nodes"] += [
+        {
+            "id": "f1",
+            "type": "source",
+            "config": {"type": "drive", "reference": FOLDER, "permission_note": "próprios"},
+        },
+        {"id": "c1", "type": "account", "config": {}},
+    ]
+    config["edges"] += [{"from": "f1", "to": "pesca"}, {"from": "c1", "to": "postagem"}]
+    with factory() as s:
+        op = ops.create_operation(s, "Vazia", config)
+        ops.change_status(s, op, "active")
+        s.commit()
+        ex = executions.start_execution(s, op, target_x=1)
+        s.commit()
+        ex_id = ex.id
+    kwargs = {
+        "client": httpx.Client(transport=httpx.MockTransport(handler)),
+        "sleep": lambda _s: None,
+    }
+    run_collect(factory, ex_id, key_settings(), LocalStorage(tmp_path / "st"), kwargs)
+    with factory() as s:
+        ex = s.get(m.Execution, ex_id)
+        assert ex.status == "partial" and "pasta vazia" in ex.shortfall_reason
