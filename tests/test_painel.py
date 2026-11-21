@@ -70,13 +70,14 @@ def test_painel_desenha_verbos_barra_cores_e_desligado():
     }
     lines = painel.render_main(statuses, now, 60, 0)
     text = plain(lines)
-    assert "3/4 no ar" in text
-    assert "Editando" in text and " 58%" in text and "tarefa #87" in text
-    assert "Aguardando  1m10s" in text
-    assert "token recusado" in text and "há 2m00s" in text
-    assert "Limpeza   Desligado" in text
+    assert "FEA//WORKERS" in text and "3/4 NO AR" in text
+    assert "02 EDITOR    [ OK ] EDITANDO" in text and "058%" in text and "TAREFA #87" in text
+    assert "01 BUSCADOR  [ OK ] AGUARDANDO" in text and "01:10" in text
+    assert "03 POSTADOR  [ERRO]" in text and "TOKEN RECUSADO (HÁ 02:00)" in text
+    assert "04 LIMPEZA   [ OFF] DESLIGADO" in text
     raw = "\n".join(lines)
-    assert "\x1b[32m●" in raw and "\x1b[31m●" in raw  # verde no ar, vermelho com problema
+    assert painel.TAG_OK in raw and painel.TAG_ERR in raw and painel.TAG_OFF in raw
+    assert all(painel.visible(line) <= 60 for line in lines)  # nada passa da largura
 
 
 def test_comandos_e_log_formatado(tmp_path):
@@ -104,13 +105,16 @@ def test_comandos_e_log_formatado(tmp_path):
         + "\n"
     )
     out = plain(painel.read_log(tmp_path, "editor", 10, 80))
-    assert "tarefa concluída · job_type=render" in out and "RuntimeError: FFmpeg falhou" in out
+    assert "INFO tarefa concluída | job_type=render" in out
+    assert "ERRO erro | RuntimeError: FFmpeg falhou" in out
+    narrow = plain(painel.read_log(tmp_path, "editor", 10, 40))
+    assert "FFmpeg falhou" in narrow.replace("\n", "").replace(" " * 14, "")  # quebra, não corta
 
 
 def test_painel_once_sem_terminal(tmp_path, capsys):
     activity.Activity("buscador", tmp_path).idle()
     assert painel.main(["--once", "--dir", str(tmp_path)]) == 0
-    assert "Buscador  Aguardando" in ANSI.sub("", capsys.readouterr().out)
+    assert "01 BUSCADOR  [ OK ] AGUARDANDO" in ANSI.sub("", capsys.readouterr().out)
 
 
 def test_chave_de_api_na_url_nunca_vai_para_o_log():
