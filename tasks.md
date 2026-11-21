@@ -445,6 +445,15 @@ Status: 1
 
 - Subtask 41.1: `/diagnostico` (menu): migração do banco, workers (no ar, versão), tarefas das últimas 6 h com erros e presas, e por operação a configuração efetiva, fontes, últimas execuções (contadores e motivo de parada) e o destino de cada item. Texto único com botão de copiar, sem segredos.
 
+## Task 42: Workers do celular que não morrem de vez
+Nível: 2
+Status: 1
+
+- Subtask 42.1: `deploy/termux/ligar.sh`: cada worker roda num laço e religa em 10 s se o Android o derrubar (antes ficava morto e a operação parava no meio). Testado com `kill -9`: religou sozinho; `desligar.sh` não deixa processo para trás.
+- Subtask 42.2: `fea-ligar` e `fea-desligar` chamam os scripts do código, então o `fea-atualizar` passa a atualizá-los.
+- Subtask 42.3: Diagnóstico mostra as contas (estado e limite diário) e o espaço do rodízio; avisa quando nenhuma conta está conectada e a agenda automática não roda.
+- Subtask 42.4: Simulação fiel: workers como processos, Play pela rota do painel e Drive servido localmente: 10 memes viraram 2 Shorts de 5 imagens, aprovados e agendados. A publicação depende da conta conectada; com limite 3/dia por conta, o rodízio põe 8 h entre posts.
+
 ## Task 36: Isolamento reforçado (fase 2)
 Nível: 4
 Status: -1
