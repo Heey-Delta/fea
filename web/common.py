@@ -14,6 +14,7 @@ MENU = [
     {"label": "Aprovação", "icon": "approval", "href": "/aprovacao", "task": "Task 18"},
     {"label": "Publicações", "icon": "chart", "href": "/publicacoes", "task": "Task 21"},
     {"label": "Acessos", "icon": "users", "href": "/contas", "task": "Task 19"},
+    {"label": "Diagnóstico", "icon": "log", "href": "/diagnostico", "task": "Task 41"},
 ]
 
 

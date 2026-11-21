@@ -439,6 +439,12 @@ Status: 1
 - Subtask 40.4: Com "Agrupar imagens", a meta X conta vídeos: busca X × N imagens e manda todas para a edição (antes só X entravam e saía 1 Short).
 - Subtask 40.5: Itens presos de rodadas antigas ("sem permissão", "duplicado" com repetidos liberados, "fora do nicho" no Drive) voltam a ser processados em vez de contar como "já vistos" para sempre (a busca rodava, pulava tudo e parava). Quando a pasta só tem arquivos já usados, a execução diz isso.
 
+## Task 41: Tela de Diagnóstico
+Nível: 1
+Status: 1
+
+- Subtask 41.1: `/diagnostico` (menu): migração do banco, workers (no ar, versão), tarefas das últimas 6 h com erros e presas, e por operação a configuração efetiva, fontes, últimas execuções (contadores e motivo de parada) e o destino de cada item. Texto único com botão de copiar, sem segredos.
+
 ## Task 36: Isolamento reforçado (fase 2)
 Nível: 4
 Status: -1

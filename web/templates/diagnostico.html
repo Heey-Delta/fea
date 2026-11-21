@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Diagnóstico{% endblock %}
+{% block content %}
+<div class="row"><h1>Diagnóstico</h1><button class="btn sm pri" type="button" id="copy-diag">{{ icon('log') }} Copiar tudo</button></div>
+<p class="sub">Workers, tarefas, configuração e o destino de cada item de cada operação. Copie e cole no suporte. Não inclui chaves nem senhas.</p>
+<pre class="logbox" id="diag" style="white-space:pre-wrap;word-break:break-word">{{ text }}</pre>
+<script>
+  document.getElementById("copy-diag").addEventListener("click", async (e) => {
+    await navigator.clipboard.writeText(document.getElementById("diag").textContent);
+    e.target.textContent = "Copiado";
+  });
+</script>
+{% endblock %}

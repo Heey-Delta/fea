@@ -198,3 +198,22 @@ def test_meta_conta_videos_quando_agrupa(factory, tmp_path):  # noqa: F811
 def test_menos_imagens_que_o_grupo_ficam_esperando(factory, tmp_path, n):  # noqa: F811
     _, status, _, results, _ = run_pipeline(factory, tmp_path, n)
     assert status == {"eligible": n} and results == [None] * n
+
+
+def test_diagnostico_mostra_o_motivo_sem_segredos(factory, tmp_path, settings):  # noqa: F811
+    from fastapi.testclient import TestClient
+
+    from tests.conftest import fake_github, github_login
+    from web.main import create_app
+
+    run_pipeline(factory, tmp_path, 3)  # 3 imagens, grupo de 5: ficam esperando
+    app = create_app(settings)
+    app.state.http_client_factory = fake_github()
+    client = TestClient(app)
+    github_login(client)
+    page = client.get("/diagnostico")
+    assert page.status_code == 200
+    text = page.text
+    assert "OPERAÇÃO #" in text and "agrupar=5" in text and "itens eligible=3" in text
+    assert "WORKERS" in text and "execução #" in text and "fonte #" in text
+    assert "postgresql://" not in text and "AIza" not in text
