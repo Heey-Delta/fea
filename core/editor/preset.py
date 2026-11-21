@@ -11,7 +11,8 @@ FITS = ("cover", "contain", "blur")
 CROP_POSITIONS = ("center", "top", "bottom")
 TEXT_POSITIONS = ("top", "center", "bottom", "custom")
 ELEMENT_POSITIONS = ("top_left", "top_right", "bottom_left", "bottom_right", "center", "custom")
-AUDIO_MODES = ("keep", "remove", "replace")
+AUDIO_MODES = ("keep", "remove", "replace", "random")
+MAX_GROUP = 20
 
 DEFAULT_PRESET: dict[str, Any] = {
     "video": {
@@ -23,6 +24,8 @@ DEFAULT_PRESET: dict[str, Any] = {
         "background": "#000000",
         "blur": 40,
         "image_duration_s": 6,
+        # Agrupar imagens: 0 desliga; N (2 a 20) junta N imagens num só vídeo.
+        "group_images": 0,
     },
     "mask": {
         "mask_id": None,
@@ -45,6 +48,8 @@ DEFAULT_PRESET: dict[str, Any] = {
         "fade_in_s": 0.0,
         "fade_out_s": 0.0,
         "required": False,
+        # Modo "random": sorteia uma destas músicas (chaves do armazenamento) a cada vídeo.
+        "library": [],
     },
     "export": {"crf": 20, "x264_preset": "veryfast", "audio_bitrate": "128k"},
     "max_retries": 2,
@@ -124,7 +129,12 @@ def validate(preset: dict) -> list[str]:
             errors.append(f"Elemento {i}: posição inválida.")
         if not element["file_key"]:
             errors.append(f"Elemento {i}: falta o arquivo.")
+    group = int(video.get("group_images") or 0)
+    if group and not 2 <= group <= MAX_GROUP:
+        errors.append(f"Agrupar imagens: use de 2 a {MAX_GROUP} (ou 0 para desligar).")
     audio = p["audio"]
+    if audio["mode"] == "random" and not audio["library"]:
+        errors.append("Música aleatória: envie ao menos uma música para a biblioteca.")
     if audio["mode"] not in AUDIO_MODES:
         errors.append(f"Modo de áudio inválido: {audio['mode']}.")
     if audio["mode"] == "replace" and not audio["file_key"]:

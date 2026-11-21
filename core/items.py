@@ -34,6 +34,7 @@ STATUS_LABEL = {
     "needs_fix": "corrigir",
     "awaiting_approval": "aguardando aprovação",
     "approved": "aprovado",
+    "grouped": "agrupado",
 }
 PRIORITY_ORDER = case({"high": 0, "normal": 1, "low": 2}, value=Item.priority, else_=1)
 ACTIONS = {
