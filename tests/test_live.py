@@ -107,3 +107,29 @@ def test_dashboard_tem_tres_graficos_e_lista_compacta(factory, storage, tmp_path
     assert '<svg class="viz-cols"' in page and 'class="viz-stack"' in page
     assert "Mais indicadores" in page and 'class="mini' in page
     assert "Publicados (24 h)" not in page.split("Mais indicadores")[1]  # já está no gráfico
+
+
+def test_telas_abrem_sem_a_migracao_da_plataforma(factory, storage, tmp_path, settings):  # noqa: F811
+    """Produção ainda sem a 0010: o dashboard quebrava (rollback expirava as operações)."""
+    from fastapi.testclient import TestClient
+    from sqlalchemy import text
+
+    from web.main import create_app
+
+    op_id, _, _ = make_world(factory, storage, tmp_path, n_items=1, n_accounts=1)
+    with factory() as s:
+        s.execute(text("ALTER TABLE operation_runtimes RENAME TO operation_runtimes_off"))
+        s.execute(text("ALTER TABLE infra_servers RENAME TO infra_servers_off"))
+        s.commit()
+    try:
+        app = create_app(settings)
+        app.state.http_client_factory = fake_github()
+        client = TestClient(app)
+        github_login(client)
+        for path in ("/", "/operacoes", f"/operacoes/{op_id}?aba=ambiente", "/contas"):
+            assert client.get(path).status_code == 200, path
+    finally:
+        with factory() as s:
+            s.execute(text("ALTER TABLE operation_runtimes_off RENAME TO operation_runtimes"))
+            s.execute(text("ALTER TABLE infra_servers_off RENAME TO infra_servers"))
+            s.commit()

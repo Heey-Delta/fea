@@ -1,1 +1,1 @@
-{"role": "buscador", "pid": 4529, "host": "vm", "state": "idle", "label": "Aguardando", "percent": null, "detail": "", "error": "Buscando (tarefa #1): quebrou em A", "error_at": 1795237307.52037, "since": 1795237318.9009032, "updated_at": 1795237318.9009047}
+{"role": "buscador", "pid": 419, "host": "vm", "state": "idle", "label": "Aguardando", "percent": null, "detail": "", "error": "Buscando (tarefa #1): quebrou em A", "error_at": 1795273356.1390631, "since": 1795273370.6642764, "updated_at": 1795273370.664278}

@@ -185,9 +185,9 @@ def worker_status(session: Session) -> list[dict]:
     from core.workers import status
 
     try:
-        return status(session)
+        with session.begin_nested():  # savepoint: não expira o que a tela já carregou
+            return status(session)
     except Exception:  # noqa: BLE001 - tabela ainda não migrada
-        session.rollback()
         return []
 
 
@@ -199,12 +199,12 @@ def server_status(session: Session) -> list:
     from core.models import OperationRuntime
 
     try:
-        views = platform.servers(session)
-        hosted = session.scalar(
-            select(func.count()).where(OperationRuntime.desired_state == "running")
-        )
+        with session.begin_nested():  # savepoint: não expira o que a tela já carregou
+            views = platform.servers(session)
+            hosted = session.scalar(
+                select(func.count()).where(OperationRuntime.desired_state == "running")
+            )
     except Exception:  # noqa: BLE001 - migração 0010 ainda não aplicada
-        session.rollback()
         return []
     for view in views:
         view.hosted = int(hosted or 0)

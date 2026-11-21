@@ -106,9 +106,11 @@ def operations_live(
             get(op_id).execution_id = ex_id
 
     try:
-        runtimes = list(session.scalars(select(OperationRuntime)))
+        # Savepoint: se a tabela não existir, desfaz só esta consulta. Um rollback da sessão
+        # expiraria os objetos já carregados pela tela (o dashboard quebrava com isso).
+        with session.begin_nested():
+            runtimes = list(session.scalars(select(OperationRuntime)))
     except Exception:  # noqa: BLE001 - migração 0010 ainda não aplicada
-        session.rollback()
         runtimes = []
     for rt in runtimes:
         if operation_ids is not None and rt.operation_id not in operation_ids:
