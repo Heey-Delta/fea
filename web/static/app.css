@@ -530,3 +530,15 @@ tr.op-live-row.run td:first-child { box-shadow: inset 3px 0 0 var(--ink); }
   .kv.op-live-row { flex-wrap: wrap; }
   .kv.op-live-row > div { flex: 1 1 100%; }
 }
+
+/* ---- Plataforma: ambiente da operação e servidor -------------------------------------------- */
+.logbox { margin: 4px 0 10px; max-height: 260px; overflow: auto; background: #0f0f10; color: #e8e8e8; font: 11.5px/1.5 var(--mono); padding: 10px 12px; border-radius: var(--r-sm); white-space: pre-wrap; word-break: break-all; }
+.env-card.env-degraded, .env-card.env-error { box-shadow: inset 4px 0 0 var(--error), var(--shadow); }
+.env-card.env-running { box-shadow: inset 4px 0 0 var(--ok), var(--shadow); }
+.server-row { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--r); background: var(--surface-2); }
+.server-meters { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 8px 16px; font-size: 12px; color: var(--muted); }
+.server-meters > span { display: flex; flex-direction: column; gap: 4px; }
+.server-meters strong { color: var(--ink); }
+.server-meters .usage-bar { width: 100%; }
+.env-chip { font-size: 11px; font-weight: 700; color: var(--muted); display: inline-flex; align-items: center; gap: 5px; }
+.env-chip svg { width: 12px; height: 12px; }

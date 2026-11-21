@@ -19,6 +19,16 @@ from worker.health import run_checks
 ROLES = tuple(ROLE_TYPES)
 
 
+def worker_scope() -> int | str | None:
+    """OPERATION_ID=<n> → só a operação n; FEA_SCOPE=nucleo → só tarefas sem operação."""
+    op = os.environ.get("OPERATION_ID", "").strip()
+    if op:
+        if not op.isdigit():
+            raise SystemExit(f"OPERATION_ID inválido: {op!r}")
+        return int(op)
+    return "nucleo" if os.environ.get("FEA_SCOPE", "").strip() == "nucleo" else None
+
+
 def main(argv: list[str]) -> int:
     settings = get_settings()
     configure_logging(settings.log_level)
@@ -48,6 +58,7 @@ def main(argv: list[str]) -> int:
     from worker.runner import Worker
 
     concurrency = int(os.environ.get("WORKER_CONCURRENCY", ROLE_CONCURRENCY[command]))
+    scope = worker_scope()
     worker = Worker(
         command,
         handlers,
@@ -55,7 +66,10 @@ def main(argv: list[str]) -> int:
         concurrency=concurrency,
         listen_dsn=settings.database_url if settings.worker_listen else None,
         idle_max=settings.worker_idle_max_s,
-        periodic=ROLE_PERIODIC.get(command),
+        # Rotinas periódicas (agenda, automação, limpeza) só no núcleo ou na instalação única:
+        # um ambiente de operação só trabalha nas tarefas da própria operação.
+        periodic=None if isinstance(scope, int) else ROLE_PERIODIC.get(command),
+        scope=scope,
     )
     for sig in (signal.SIGTERM, signal.SIGINT):
         signal.signal(sig, lambda *_: worker.stop.set())

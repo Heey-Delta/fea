@@ -97,6 +97,15 @@ def due_jobs(session: Session, now: datetime) -> list[PublishJob]:
     )
 
 
+def operation_of(session: Session, job: PublishJob) -> int | None:
+    """Operação dona do envio (envio → render → item), para a fila separada (Task 31.1)."""
+    return session.scalar(
+        select(Item.operation_id)
+        .join(Render, Render.item_id == Item.id)
+        .where(Render.id == job.render_id)
+    )
+
+
 def enqueue_publish(
     session: Session, job: PublishJob, *, check: bool = False, run_at: datetime | None = None
 ) -> None:
@@ -107,6 +116,7 @@ def enqueue_publish(
         "publish",
         f"{kind}:{job.id}:{job.attempts}:{stamp}",
         ref_id=job.id,
+        operation_id=operation_of(session, job),
         priority="high" if check else "normal",
         run_at=run_at,
         max_attempts=1,
@@ -384,6 +394,7 @@ def enqueue_status(session: Session, job: PublishJob, run_at: datetime) -> None:
         "publish",
         f"status:{job.id}:{int(run_at.timestamp()) // 60}",
         ref_id=job.id,
+        operation_id=operation_of(session, job),
         run_at=run_at,
         max_attempts=1,
         payload={"status": True},

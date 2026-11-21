@@ -94,7 +94,10 @@ def automation_tick(session: Session, now: datetime | None = None) -> list[int]:
     now = now or datetime.now(UTC)
     started: list[int] = []
     for op in session.scalars(select(Operation).where(Operation.status == "active")):
-        auto, tz = settings_of(current_config(session, op).config)
+        config = current_config(session, op)
+        if config is None:  # operação sem fluxo salvo: nada a automatizar (e não trava as outras)
+            continue
+        auto, tz = settings_of(config.config)
         if has_open_execution(session, op.id):
             continue
         if daily_play_due(session, op, auto, tz, now):
