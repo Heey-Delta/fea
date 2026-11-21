@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "_viz.html" as viz with context %}
 {% block title %}Dashboard{% endblock %}
 {% block content %}
 <div class="top">
@@ -10,32 +11,65 @@
 </div>
 {% if kpis is none %}<p class="error" role="alert">Banco de dados indisponível: confira o DATABASE_URL.</p>{% endif %}
 {% if pending %}<p class="callout">Acessos ainda não preenchidos: {{ pending | join(', ') }}. Só precisa das redes que você vai usar. <a href="/contas">Abrir Acessos</a>.</p>{% endif %}
-<div class="grid">
-  {% for k in kpis or [] %}
-  <a class="card kpi{% if k.alert and k.value %} alert{% endif %}" href="{{ k.href }}"><span class="lbl">{{ k.label }}</span><span class="num">{{ k.value }}</span></a>
-  {% endfor %}
+{% if kpis is not none %}
+<div class="hero">
+  <a class="card hero-card" href="/publicacoes?status=published">
+    <div class="hero-head"><h3>Publicados</h3><span class="hero-sub">últimos 14 dias</span></div>
+    <div class="hero-num"><span class="num">{{ series[-1].count }}</span><span class="unit">hoje</span>
+      <span class="delta">{{ series | sum(attribute='count') }} no período</span></div>
+    {{ viz.columns(series) }}
+  </a>
+  <section class="card hero-card">
+    <div class="hero-head"><h3>Funil de vídeos</h3><span class="hero-sub">onde cada vídeo está</span></div>
+    <div class="hero-num"><span class="num">{{ funnel | sum(attribute='count') }}</span><span class="unit">em andamento</span></div>
+    {{ viz.stacked(funnel) }}
+  </section>
+  <a class="card hero-card" href="/contas#vps">
+    <div class="hero-head"><h3>Saúde</h3><span class="hero-sub">workers e falhas</span></div>
+    <div class="hero-num"><span class="num">{{ health.online }}<small>/{{ health.workers | length or 4 }}</small></span><span class="unit">workers no ar</span></div>
+    <div class="workers-row">
+      {% for w in health.workers %}
+      <span class="wk {{ 'ok' if w.online else 'off' }}" title="{{ w.name }}: {{ 'no ar' if w.online else 'fora do ar' }}"><span class="dot {{ 'ok live' if w.online else 'bad' }}"></span>{{ w.name }}</span>
+      {% else %}<span class="sub">Nenhum worker conectou ainda.</span>{% endfor %}
+    </div>
+    <div class="hero-foot">
+      <span class="{{ 'bad' if health.failures_24h else '' }}">{{ icon('alert') if health.failures_24h else icon('check') }} {{ health.failures_24h }} falha{{ '' if health.failures_24h == 1 else 's' }} em 24 h</span>
+      {% if health.accounts_error %}<span class="bad">{{ icon('account') }} {{ health.accounts_error }} conta{{ '' if health.accounts_error == 1 else 's' }} com erro</span>{% endif %}
+    </div>
+  </a>
 </div>
-<div class="grid-2" style="margin-top:16px">
+
+<section class="card mini-card">
+  <h3>Mais indicadores</h3>
+  <div class="mini-list">
+    {% for k in more %}
+    <a class="mini{% if k.alert and k.value %} alert{% endif %}" href="{{ k.href }}"><span>{{ k.label }}</span><strong class="num">{{ k.value }}</strong></a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<div class="grid-2">
   <section class="card">
     <div class="row" style="justify-content:space-between"><h2>Operações ativas</h2><a class="btn sm ghost" href="/operacoes?status=active">Ver todas {{ icon('chevron-right') }}</a></div>
     {% for op in active_ops %}
-    <div class="kv"><a class="op-name" href="/operacoes/{{ op.id }}/fluxo"><span class="ico">{{ icon('operations') }}</span><strong>{{ op.name }}</strong></a><span class="chip ok"><span class="dot ok live"></span>Ativa</span></div>
+    <div class="kv op-live-row{% if live.get(op.id) and live[op.id].error %} err{% endif %}" data-live-row="{{ op.id }}"><a class="op-name" href="/operacoes/{{ op.id }}/fluxo"><span class="ico">{{ icon('operations') }}</span><strong>{{ op.name }}</strong></a><div data-live="{{ op.id }}">{{ viz.op_live(live.get(op.id)) }}</div></div>
     {% else %}<p class="sub">Nenhuma operação ativa.</p>{% endfor %}
   </section>
   <section class="card">
     <div class="row" style="justify-content:space-between"><h2>Publicações recentes</h2><a class="btn sm ghost" href="/publicacoes?status=published">Ver todas {{ icon('chevron-right') }}</a></div>
-    {% for j, a in recent %}
+    {% for j, a in recent[:5] %}
     <div class="kv"><span>{% if j.url %}<a href="{{ j.url }}" target="_blank" rel="noopener">{{ (j.title or 'Vídeo')[:60] }}</a>{% else %}{{ (j.title or 'Vídeo')[:60] }}{% endif %}<br><small class="sub">{{ a.name }} · {{ j.published_at.strftime('%d/%m %H:%M') if j.published_at else '' }}</small></span>
       {% if j.metrics %}<span class="metrics">{% if j.metrics.get('views') is not none %}<span>{{ j.metrics['views'] }} views</span>{% endif %}</span>{% endif %}</div>
     {% else %}<p class="sub">Nada publicado ainda.</p>{% endfor %}
   </section>
 </div>
 {% if r2_usage %}
-<section class="card" id="uso">
-  <div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px">
+<details class="card fold" id="uso"{% if r2_usage.blocked %} open{% endif %}>
+  <summary class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px">
     <h2>Limite de uso do R2 · {{ r2_usage.month }}</h2>
     <span class="chip {{ 'bad' if r2_usage.blocked else 'ok' }}">{{ 'travado até o mês que vem' if r2_usage.blocked else 'dentro do grátis' }}</span>
-  </div>
+  </summary>
   <p class="sub" style="margin:0">A Cloudflare não tem teto de gastos: passou da franquia grátis, cobra. Por isso a ferramenta conta o que faz no bucket e para sozinha ao chegar em {{ r2_usage.pct }}% da franquia. Nada é cobrado; o que ficar parado volta no mês seguinte.</p>
   {% for r in r2_usage.rows %}
   <div class="usage-row">
@@ -52,10 +86,10 @@
     <button class="btn sm" type="submit">Salvar</button>
     <small class="sub" style="margin:0">Armazenamento medido {{ r2_usage.measured_at.strftime('%d/%m %H:%M') ~ ' UTC' if r2_usage.measured_at else 'quando os workers estiverem no ar' }} (de hora em hora).</small>
   </form>
-</section>
+</details>
 {% endif %}
-<section class="card">
-  <h2>Falhas e alertas recentes</h2>
+<details class="card fold">
+  <summary class="row" style="justify-content:space-between"><h2>Falhas e alertas recentes</h2><span class="chip {{ 'bad' if errors else 'ok' }}">{{ errors | length }}</span></summary>
   {% if errors %}
   <div class="tbl" style="margin:0;box-shadow:none"><table>
     <thead><tr><th>Quando</th><th>Onde</th><th>O quê</th><th>Detalhe</th></tr></thead>
@@ -66,5 +100,7 @@
     </tbody>
   </table></div>
   {% else %}<p class="sub">Nenhuma falha registrada.</p>{% endif %}
-</section>
+</details>
+<div class="viz-tip" id="viz-tip" role="tooltip" hidden></div>
+<script src="{{ url_for('static', path='live.js') }}" defer></script>
 {% endblock %}

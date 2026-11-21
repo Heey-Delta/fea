@@ -358,6 +358,7 @@ Status: 1
 - Subtask 28.11: Workers no celular Android (Termux): instalador `web/static/instalar-termux.sh` e guia `docs/workers-no-celular.md`. Não testado em aparelho real.
 - Subtask 28.12: Versão do código nos workers: cada worker informa o commit que roda; a tela Acessos avisa quando difere do site e manda rodar `fea-atualizar` (Termux) ou o instalador (VPS). A tela Executar mostra o motivo do erro de cada fonte e testa a conexão ali mesmo.
 - Subtask 28.13: Painel dos workers no terminal (`fea-painel`, também na VPS): tela que se redesenha no lugar, verbo de cada worker no gerúndio, barra e porcentagem reais (FFmpeg e busca), bolinha verde ou vermelha, `/log` com os detalhes. A chave de API do Google em URLs não vai mais para os logs.
+- Subtask 28.14: Dashboard com 3 indicadores em gráfico (publicações por dia, funil de vídeos, saúde dos workers) e o resto numa lista compacta. Operações com estado ao vivo (rodinha, estágios Buscando/Editando/Publicando com ícones, barra em andamento, vermelho em caso de erro), atualizado a cada 5 s sem recarregar. Lista de operações em cartões no celular.
 
 ## Task 29: Decisões
 Nível: 4

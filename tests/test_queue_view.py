@@ -81,5 +81,5 @@ def test_dashboard_counts_link_to_filtered_queues(factory, logged_client, tmp_pa
     run(factory, op_id, reddit_with({}, [("p1", "academia", None)]), tmp_path, target_x=1)
     page = logged_client.get("/").text
     block = page.split('href="/fila?estado=pending_permission"')[1][:200]
-    assert '<span class="num">1</span>' in block
+    assert '<strong class="num">1</strong>' in block
     assert "Operações ativas" in page and "Falhas e alertas recentes" in page

@@ -23,7 +23,7 @@ from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import sessionmaker
 from starlette.middleware.sessions import SessionMiddleware
 
-from core import credentials, usage
+from core import credentials, live, usage
 from core import dashboard as dash
 from core.config import Settings, get_settings
 from core.db import sqlalchemy_url
@@ -185,10 +185,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 pending = [
                     st.service.name for st in credentials.status(session, settings) if not st.ready
                 ]
+                series = dash.published_by_day(session)
+                funnel = dash.pipeline(session)
+                health = dash.health(session)
+                live_state = live.operations_live(session, [op.id for op in active_ops])
         except OperationalError:
             # Sem banco, o painel abre com o aviso (as outras telas mostram a página de erro).
             log.exception("banco indisponível no dashboard")
             kpis, errors, pending, active_ops, recent = None, [], [], [], []
+            series, funnel, health, live_state = [], [], {}, {}
         r2_usage = None
         if kpis is not None:
             try:
@@ -207,6 +212,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             recent=recent,
             r2_usage=r2_usage,
             link_for=dash.link_for,
+            series=series,
+            funnel=funnel,
+            health=health,
+            more=dash.secondary(kpis or []),
+            live=live_state,
         )
 
     @app.post("/uso/limite")
