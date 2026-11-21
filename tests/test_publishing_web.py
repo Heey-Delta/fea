@@ -215,3 +215,37 @@ def test_worker_heartbeat_status(factory):  # noqa: F811
         by_role = {w["role"]: w for w in workers.status(s, now)}
     assert by_role["editor"]["online"] and not by_role["postador"]["online"]
     assert by_role["buscador"]["at"] is None
+
+
+def test_outdated_workers_are_flagged(client, factory, monkeypatch):  # noqa: F811
+    """Worker com commit diferente do site: a tela Acessos manda rodar fea-atualizar."""
+    from datetime import UTC, datetime
+
+    from core import workers
+
+    now = datetime.now(UTC)
+    with factory() as s:
+        workers.beat(s, "buscador", "celular", now, version="aaaaaaa")
+        workers.beat(s, "editor", "celular", now, version="bbbbbbb")
+        workers.beat(s, "postador", "celular", now)  # código antigo: não informa versão
+        s.commit()
+        statuses = workers.status(s, now)
+    assert workers.outdated(statuses, "bbbbbbb") == ["Buscador"]
+    assert workers.outdated(statuses, "") == []  # site sem versão: não acusa nada
+    monkeypatch.setattr("web.access.code_version", lambda: "bbbbbbb")
+    page = client.get("/contas").text
+    assert "Workers com código antigo (Buscador)" in page and "fea-atualizar" in page
+    assert "código <code>aaaaaaa</code>" in page
+
+
+def test_code_version_prefers_env(monkeypatch):
+    from core import version
+
+    version.code_version.cache_clear()
+    monkeypatch.setenv("FEA_VERSION", "1234567890abcdef")
+    assert version.code_version() == "1234567"
+    version.code_version.cache_clear()
+    monkeypatch.delenv("FEA_VERSION")
+    monkeypatch.setenv("VERCEL_GIT_COMMIT_SHA", "")
+    assert len(version.code_version()) in (0, 7)  # commit do checkout, se houver Git
+    version.code_version.cache_clear()

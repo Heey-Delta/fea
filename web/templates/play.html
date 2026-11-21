@@ -21,7 +21,13 @@
   <fieldset>
     <legend class="field">Fontes</legend>
     {% for s in sources %}
-    <label class="check"><input type="checkbox" name="source_ids" value="{{ s.id }}" {% if s.status == 'ok' %}checked{% else %}disabled{% endif %}> {{ s.reference or s.node_id }} ({{ s.type }}){% if s.status == 'error' %}: com erro, teste a conexão na aba Fontes{% endif %}</label>
+    <label class="check"><input type="checkbox" name="source_ids" value="{{ s.id }}" {% if s.status == 'ok' %}checked{% else %}disabled{% endif %}> {{ s.reference or s.node_id }} ({{ s.type }}){% if s.status == 'error' %}: <strong>com erro</strong>{% endif %}</label>
+    {% if s.status == 'error' %}
+    <div class="callout" style="margin:4px 0 10px">
+      <span>{{ s.last_error or 'Erro sem detalhe.' }}</span>
+      <button class="btn sm" type="submit" formaction="/operacoes/{{ op.id }}/fontes/{{ s.id }}/testar" formnovalidate name="voltar" value="/operacoes/{{ op.id }}/play">Testar conexão agora</button>
+    </div>
+    {% endif %}
     {% else %}
     <p class="error">Nenhuma fonte. Adicione uma no bloco Pesca do fluxo.</p>
     {% endfor %}

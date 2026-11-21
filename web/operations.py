@@ -256,6 +256,7 @@ def test_source(
     request: Request,
     operation_id: int,
     source_id: int,
+    voltar: str = Form(""),
     session: Session = Depends(db_session),
 ):
     source = session.get(Source, source_id)
@@ -267,7 +268,8 @@ def test_source(
     if "application/json" in request.headers.get("accept", ""):
         return JSONResponse({"ok": result.ok, "message": result.message})
     flash(request, "ok" if result.ok else "error", result.message)
-    return RedirectResponse(f"/operacoes/{operation_id}?aba=fontes", status_code=303)
+    back = voltar if voltar.startswith(f"/operacoes/{operation_id}/") else ""
+    return RedirectResponse(back or f"/operacoes/{operation_id}?aba=fontes", status_code=303)
 
 
 CONTENT_TYPES = {

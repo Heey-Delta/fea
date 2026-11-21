@@ -69,9 +69,10 @@
   </div>
   <p class="sub">Buscador, Editor, Postador e Limpeza rodam numa VPS (Oracle Always Free: Ampere A1, Ubuntu 24.04). Crie a máquina, entre por SSH e cole o comando gerado aqui: ele instala o Docker, baixa o código (pede para você adicionar uma Deploy key só de leitura no GitHub) e sobe os workers. O comando já traz o banco e a chave de criptografia; vale 30 minutos e uma única vez.</p>
   <p class="sub">Sem VPS? Rode os workers no seu computador com o Docker Desktop: baixe o <code>.env</code> acima, salve como <code>deploy/.env</code> na pasta do código e siga <code>docs/workers-no-computador.md</code>. Eles só trabalham com o computador ligado.</p>
+  {% if outdated %}<p class="callout" role="alert">Workers com código antigo ({{ outdated | join(', ') }}): o site está na versão <code>{{ site_version }}</code>. No celular, rode <code>fea-atualizar</code> no Termux; na VPS, rode o instalador de novo. Sem isso, recursos novos (como a chave de API do Drive) não funcionam nos workers.</p>{% endif %}
   {% if vps_cmd %}<pre style="white-space:pre-wrap;word-break:break-all" id="vps-cmd">{{ vps_cmd }}</pre>{% endif %}
   {% for w in workers %}
-  <div class="kv"><span class="row"><span class="dot {{ 'ok live' if w.online else 'bad' }}"></span>{{ w.name }}</span><span>{% if w.at %}último sinal {{ w.at.strftime('%d/%m %H:%M') }} UTC{% else %}nunca conectou{% endif %}</span></div>
+  <div class="kv"><span class="row"><span class="dot {{ 'ok live' if w.online else 'bad' }}"></span>{{ w.name }}</span><span>{% if w.at %}último sinal {{ w.at.strftime('%d/%m %H:%M') }} UTC{% if w.version %} · código <code>{{ w.version }}</code>{% endif %}{% else %}nunca conectou{% endif %}</span></div>
   {% endfor %}
 </section>
 
