@@ -18,7 +18,7 @@ from datetime import timedelta
 import psycopg
 from sqlalchemy.orm import Session, sessionmaker
 
-from core import queue, workers
+from core import activity, queue, workers
 from core.queue import NOTIFY_CHANNEL, PermanentError, RetryableError
 from core.version import code_version
 
@@ -144,6 +144,11 @@ class Worker:
             session.commit()
 
         extra = {"job_id": ctx.id, "job_type": ctx.type, "attempt": ctx.attempts}
+        act = activity.current()
+        if act is not None:
+            act.busy(
+                ctx.type, f"tarefa #{ctx.id}" + (f" · item #{ctx.ref_id}" if ctx.ref_id else "")
+            )
         try:
             self.handlers[ctx.type](ctx)
         except RetryableError as exc:
@@ -158,9 +163,14 @@ class Worker:
                 queue.complete(session, ctx.id)
                 session.commit()
             log.info("tarefa concluída", extra=extra)
+            if act is not None:
+                act.idle()
         return True
 
     def _fail(self, ctx: JobContext, error: str, *, retryable: bool, extra: dict) -> None:
+        act = activity.current()
+        if act is not None:
+            act.failed(f"{activity.VERBS.get(ctx.type, ctx.type)} (tarefa #{ctx.id}): {error}")
         with self.session_factory() as session:
             status = queue.fail(session, ctx.id, error, retryable=retryable)
             session.commit()
@@ -210,9 +220,13 @@ class Worker:
                     except Exception:  # noqa: BLE001
                         log.exception("falha na rotina periódica", extra={"routine": name})
             beat()
+            act = activity.current()
+            if act is not None:
+                act.touch()
             self.stop.wait(1.0)
 
     def run_forever(self) -> None:
+        activity.start(self.role)
         log.info(
             "worker iniciado",
             extra={"role": self.role, "types": self.types, "concurrency": self.concurrency},
@@ -226,4 +240,7 @@ class Worker:
             t.start()
         for t in threads:
             t.join()
+        act = activity.current()
+        if act is not None:
+            act.stopped()
         log.info("worker parado", extra={"role": self.role})

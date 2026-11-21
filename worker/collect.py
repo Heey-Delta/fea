@@ -21,7 +21,7 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session, sessionmaker
 
-from core import credentials, executions, fishing, queue, watermark
+from core import activity, credentials, executions, fishing, queue, watermark
 from core.config import Settings, get_settings
 from core.connectors import RawItem, SourceRef, make_connector
 from core.connectors.base import SourceError
@@ -276,6 +276,10 @@ def run_collect(
                 if done() or cancelled(factory, execution_id):
                     break
                 progress.examined += 1
+                activity.report_progress(
+                    100 * progress.examined / max(limit, 1),
+                    f"{progress.examined} examinados · {len(progress.eligible)} elegíveis",
+                )
                 item_id, status = process_raw(factory, ex, source, raw, rules, connector, storage)
                 if status == "already_seen":
                     progress.already_seen += 1

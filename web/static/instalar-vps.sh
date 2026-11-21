@@ -58,4 +58,6 @@ $DOCKER compose -f docker-compose.vps.yml run --rm migrar
 say "Subindo Buscador, Editor, Postador, Limpeza e backup…"
 $DOCKER compose -f docker-compose.vps.yml up -d --build
 $DOCKER compose -f docker-compose.vps.yml ps
-say "Pronto. Em 1 minuto os workers aparecem como healthy. Logs: cd $DIR/deploy && $DOCKER compose -f docker-compose.vps.yml logs -f"
+say "Pronto. Em 1 minuto os workers aparecem como healthy.
+  Painel ao vivo: cd $DIR && python3 worker/painel.py --dir deploy/status
+  Logs:           cd $DIR/deploy && $DOCKER compose -f docker-compose.vps.yml logs -f"
