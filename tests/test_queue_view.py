@@ -1,6 +1,5 @@
 """Fila (Task 8): filtros, liberação de permissão em lote com resumo e Dashboard (Task 25)."""
 
-import httpx
 from sqlalchemy import select
 
 import core.models as m
@@ -30,29 +29,21 @@ def give_permission(factory, op_id):
         s.commit()
 
 
-def test_release_pending_permission_downloads_and_renders(factory, media, tmp_path):  # noqa: F811
-    from worker.collect import run_release
-
+def test_itens_antigos_sem_permissao_podem_ser_liberados(factory, media, tmp_path):  # noqa: F811
+    """Itens parados antes da remoção da trava saem com "Liberar", sem exigir nota."""
     op_id = setup_operation(factory, permission="")
     fake = reddit_with(media, [("p1", "academia supino", media["a"])])
-    ex_id, _, storage = run(factory, op_id, fake, tmp_path, target_x=1)
+    ex_id, _, _ = run(factory, op_id, fake, tmp_path, target_x=1)
     item = items_by_external(factory, ex_id)["p1"]
-    assert item.status == "pending_permission"
     with factory() as s:
-        summary = it.summary(s, [item.id], "release")
-        assert summary["skipped"] and "permissão registrada" in summary["skipped"][0][1]
-    give_permission(factory, op_id)
+        s.get(m.Item, item.id).status = "pending_permission"
+        s.commit()
     with factory() as s:
+        assert it.summary(s, [item.id], "release")["skipped"] == []
         assert it.apply(s, [item.id], "release") == (1, 0)
         s.commit()
         job = s.scalars(select(m.Job).where(m.Job.idempotency_key == f"release:{item.id}")).one()
         assert job.type == "collect" and job.payload == {"release_item": item.id}
-    kwargs = {"client": httpx.Client(transport=httpx.MockTransport(fake)), "sleep": lambda s: None}
-    assert run_release(factory, item.id, SETTINGS, storage, kwargs) == "eligible"
-    with factory() as s:
-        item = s.get(m.Item, item.id)
-        assert item.status == "eligible" and storage.exists(item.original_file)
-        assert s.scalars(select(m.Job).where(m.Job.type == "render")).one().ref_id == item.id
 
 
 def test_queue_page_filters_and_confirms(factory, logged_client, tmp_path):  # noqa: F811
@@ -60,8 +51,11 @@ def test_queue_page_filters_and_confirms(factory, logged_client, tmp_path):  # n
     fake = reddit_with({}, [("p1", "academia", None), ("p2", "academia nsfw", None)])
     ex_id, _, _ = run(factory, op_id, fake, tmp_path, target_x=2)
     items = items_by_external(factory, ex_id)
+    with factory() as s:  # p1 na pesca (antes ficava parado sem permissão; sem mídia é descartado)
+        s.get(m.Item, items["p1"].id).status = "eligible"
+        s.commit()
     page = logged_client.get(f"/fila?op={op_id}&etapa=pesca")
-    assert "sem permissão" in page.text and f'value="{items["p1"].id}"' in page.text
+    assert f'value="{items["p1"].id}"' in page.text
     assert f'value="{items["p2"].id}"' not in page.text  # rejeitado não está na pesca
     confirm = logged_client.post(
         "/fila/lote", data={"acao": "priority_high", "item_ids": [items["p1"].id, items["p2"].id]}
@@ -80,6 +74,5 @@ def test_dashboard_counts_link_to_filtered_queues(factory, logged_client, tmp_pa
     op_id = setup_operation(factory, permission="")
     run(factory, op_id, reddit_with({}, [("p1", "academia", None)]), tmp_path, target_x=1)
     page = logged_client.get("/").text
-    block = page.split('href="/fila?estado=pending_permission"')[1][:200]
-    assert '<strong class="num">1</strong>' in block
+    assert 'href="/fila?estado=pending_permission"' not in page  # trava de permissão removida
     assert "Operações ativas" in page and "Falhas e alertas recentes" in page

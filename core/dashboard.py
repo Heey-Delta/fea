@@ -36,11 +36,6 @@ def kpis(session: Session, now: datetime | None = None) -> list[dict]:
             "value": count(items.where(Item.status.in_(("discovered", "eligible", "rendering")))),
         },
         {
-            "label": "Sem permissão",
-            "href": "/fila?estado=pending_permission",
-            "value": count(items.where(Item.status == "pending_permission")),
-        },
-        {
             "label": "Aguardando aprovação",
             "href": "/aprovacao",
             "value": count(items.where(Item.status == "awaiting_approval")),

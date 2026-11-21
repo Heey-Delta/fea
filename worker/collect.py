@@ -110,23 +110,6 @@ def process_raw(
             set_status(session, item_id, "rejected", reason, score=text.score)
             session.commit()
             return item_id, "rejected"
-        if not source.permission_note:
-            # Sem permissão registrada: nem baixa (REQ-UI-004). Liberado depois, na fila.
-            set_status(
-                session, item_id, "pending_permission", "fonte sem permissão", score=text.score
-            )
-            # Guarda o post para baixar depois, se a permissão for liberada na fila (Task 8).
-            session.add(
-                Event(
-                    entity="item",
-                    entity_id=item_id,
-                    operation_id=ex.operation_id,
-                    action="pending_permission",
-                    detail={"raw": raw_to_dict(raw)},
-                )
-            )
-            session.commit()
-            return item_id, "pending_permission"
         session.commit()
     return fetch_and_check(
         factory, ex.operation_id, item_id, raw, rules, connector, storage, text.score
@@ -367,7 +350,7 @@ def run_release(
             .limit(1)
         )
         ex = session.get(Execution, item.execution_id) if item.execution_id else None
-        if event is None or ex is None or not source.permission_note:
+        if event is None or ex is None:
             set_status(session, item_id, "pending_permission", "post sem dados para baixar")
             session.commit()
             return "pending_permission"

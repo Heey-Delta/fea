@@ -133,7 +133,6 @@ def test_configure_all_modules_and_save(page, server, factory):
     page.click('.node[data-id="busca"]')
     page.click("#add-source")
     page.fill('[data-source="0"] [data-src="reference"]', "r/teste")
-    page.fill('[data-source="0"] [data-src="permission_note"]', "autorizado")
     page.click('[data-pop="library"]')
     page.click('[data-add-source="x"]')
     page.fill('[data-source="1"] [data-src="reference"]', "@criador")
@@ -152,6 +151,8 @@ def test_configure_all_modules_and_save(page, server, factory):
     page.click('.node[data-id="dest:youtube_shorts"]')
     page.check(f'[data-account="{youtube}"]')
     page.check('input[name="approval"][value="auto"]')
+    assert "Autorizar tudo" in page.inner_text("#ins-body")
+    assert page.is_checked('[data-bind="publish.automatic"]')  # liga a agenda junto
     page.click("summary:has-text('Título e descrição')")
     page.fill('[data-bind="publish.titles.hashtags"]', "shorts, academia")
     assert page.inner_text("#val-title") == "Fluxo válido" or "aviso" in page.inner_text("#val-msg")
@@ -170,6 +171,7 @@ def test_configure_all_modules_and_save(page, server, factory):
     preset = by_type["edit"][0]["config"]["preset"]
     assert (preset["video"]["width"], preset["video"]["fit"]) == (720, "cover")
     assert by_type["approval"][0]["config"]["auto_approve"] is True
+    assert by_type["publish"][0]["config"]["automatic"] is True
     assert by_type["publish"][0]["config"]["titles"]["hashtags"] == ["shorts", "academia"]
     assert "dest:tiktok" in config["layout"]
     # Remover o destino leva a conta dele junto.

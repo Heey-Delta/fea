@@ -410,7 +410,7 @@ def test_connection_test_from_sources_tab(settings, session):
     client = TestClient(app)
     github_login(client)
     tab = client.get(f"/operacoes/{op.id}?aba=fontes")
-    assert "r/GymMemes" in tab.text and "itens ficam pendentes" in tab.text
+    assert "r/GymMemes" in tab.text and "itens ficam pendentes" not in tab.text
     from core.sources import list_sources
 
     source_id = list_sources(session, op.id)[0].id

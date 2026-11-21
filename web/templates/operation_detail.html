@@ -83,13 +83,12 @@
 {% if sources %}
 <div class="tbl">
   <table>
-    <thead><tr><th>Fonte</th><th>Tipo</th><th>Permissão registrada</th><th>Estado</th><th>Última checagem</th><th>Erro</th><th></th></tr></thead>
+    <thead><tr><th>Fonte</th><th>Tipo</th><th>Estado</th><th>Última checagem</th><th>Erro</th><th></th></tr></thead>
     <tbody>
     {% for s in sources %}
       <tr>
         <td>{{ s.reference or s.node_id }}</td>
         <td>{{ source_types.get(s.type, s.type) }}</td>
-        <td>{% if s.permission_note %}Sim{% else %}<strong>Não</strong>: itens ficam pendentes{% endif %}</td>
         <td><span class="chip">{{ s.status }}</span></td>
         <td>{{ s.last_checked_at.strftime('%d/%m %H:%M') if s.last_checked_at else '—' }}</td>
         <td>{{ s.last_error or '—' }}</td>

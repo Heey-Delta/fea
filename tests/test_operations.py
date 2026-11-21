@@ -80,12 +80,10 @@ def test_unknown_block_and_dangling_edge():
     assert any(msg.startswith("Ligação com bloco inexistente") for msg in found)
 
 
-def test_source_without_permission_is_only_a_warning():
+def test_fonte_sem_nota_de_permissao_nao_gera_aviso():
     config = complete_config()
     config["nodes"][-2]["config"] = {"type": "reddit", "reference": "r/teste"}
-    issues = ops.validate_graph(config)
-    assert [i.level for i in issues] == ["warning"]
-    assert issues[0].node_id == "reddit"
+    assert ops.validate_graph(config) == []
 
 
 def test_cycle_detection():

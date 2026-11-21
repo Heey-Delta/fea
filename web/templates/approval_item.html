@@ -15,11 +15,10 @@
   </section>
   <div class="panel-col">
     <section class="card">
-      <h2>Origem e permissão</h2>
+      <h2>Origem</h2>
       <div class="kv"><span>Fonte</span><strong>{{ source.reference if source else '—' }}</strong></div>
       <div class="kv"><span>Autor</span><strong>{{ c.item.author or '—' }}</strong></div>
       <div class="kv"><span>Original</span>{% if c.item.url %}<a href="{{ c.item.url }}" target="_blank" rel="noopener">abrir</a>{% else %}<strong>upload</strong>{% endif %}</div>
-      <div class="kv"><span>Permissão</span><strong>{{ 'registrada' if source and source.permission_note else 'não registrada' }}</strong></div>
       <div class="kv"><span>Score</span><strong>{{ c.item.score }}</strong></div>
       <p class="sub">{{ c.item.text or '' }}</p>
     </section>

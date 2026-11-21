@@ -17,7 +17,7 @@
       <input class="input" id="search_budget" name="search_budget" type="number" min="1" value="{{ fishing.search_budget or 300 }}" required>
     </label>
   </div>
-  <p class="sub">X é uma meta: duplicados, rejeitados e sem permissão não contam. Se faltar conteúdo, a execução termina com o total real e o motivo.</p>
+  <p class="sub">X é uma meta: duplicados e rejeitados não contam. Se faltar conteúdo, a execução termina com o total real e o motivo.</p>
   <fieldset>
     <legend class="field">Fontes</legend>
     {% for s in sources %}

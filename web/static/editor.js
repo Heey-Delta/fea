@@ -510,7 +510,6 @@
       <div class="row"><strong>${icon(SOURCE_ICON[s.type || "reddit"] || "search")} Fonte ${i + 1}</strong>${RO ? "" : `<button class="btn sm ghost danger" type="button" data-remove-source="${i}">${icon("trash")} Remover</button>`}</div>
       <label class="field">Rede<select class="input" data-src="type">${types}</select></label>
       <label class="field">Onde buscar<input class="input" data-src="reference" value="${esc(s.reference)}" placeholder="${esc(ph)}"></label>
-      <label class="field">Permissão de uso<input class="input" data-src="permission_note" value="${esc(s.permission_note)}" placeholder="licença ou autorização do criador"></label>
       ${dbId ? `<button class="btn sm" type="button" data-test-source="${dbId}">${icon("link")} Testar conexão</button>` : '<small class="sub">Salve a versão para testar a conexão.</small>'}
     </div>`;
   }
@@ -601,8 +600,8 @@
       <label class="field">Privacidade<select class="input" data-bind="publish.privacy" data-default="public">${opt("public", "Público")}${opt("unlisted", "Não listado")}${opt("private", "Privado")}</select><small>vale para todos os destinos</small></label>
       <p class="sub" style="margin:0">As regras abaixo valem para todos os destinos da operação.</p>
       ${sec("Aprovação", "approval", `<div class="opt-grid">
-        <label class="opt"><input type="radio" name="approval" value="manual" ${model.approval.auto_approve ? "" : "checked"} ${RO ? "disabled" : ""}><span><strong>Manual</strong><small>você aprova cada vídeo</small></span></label>
-        <label class="opt"><input type="radio" name="approval" value="auto" ${model.approval.auto_approve ? "checked" : ""} ${RO ? "disabled" : ""}><span><strong>Automática</strong><small>quem passa no QC e tem permissão</small></span></label></div>`, true)}
+        <label class="opt"><input type="radio" name="approval" value="manual" ${model.approval.auto_approve ? "" : "checked"} ${RO ? "disabled" : ""}><span><strong>Manual</strong><small>você revisa e aprova cada vídeo</small></span></label>
+        <label class="opt"><input type="radio" name="approval" value="auto" ${model.approval.auto_approve ? "checked" : ""} ${RO ? "disabled" : ""}><span><strong>Autorizar tudo</strong><small>sem depender de você: passou no controle de qualidade, vai para a agenda</small></span></label></div>`, true)}
       ${sec("Agendamento", "calendar", `
         ${toggle("publish.automatic", "Distribuir automaticamente", "os aprovados entram na agenda sozinhos")}
         <label class="field">Modo<select class="input" data-bind="publish.mode" data-default="rotation">${opt("rotation", "Rodízio entre contas")}${opt("all", "Todas as contas")}</select></label>
@@ -732,7 +731,10 @@
     }));
     $$('input[name="approval"]', insBody).forEach((el) => el.addEventListener("change", () => {
       model.approval.auto_approve = el.value === "auto";
+      // "Autorizar tudo" também liga a distribuição automática: o fluxo segue sozinho até publicar.
+      if (model.approval.auto_approve) model.publish.automatic = true;
       changed();
+      if (model.approval.auto_approve) renderInspector();
     }));
     const rm = $("#remove-dest", insBody);
     if (rm) rm.addEventListener("click", () => removeDest(selected.slice(5)));
@@ -829,7 +831,6 @@
     model.sources.forEach((s, i) => {
       const type = s.type || "reddit";
       if (type !== "upload" && !(s.reference || "").trim()) out.push({ level: "error", block: "busca", message: `Fonte ${i + 1}: informe onde buscar.` });
-      if (!(s.permission_note || "").trim()) out.push({ level: "warning", block: "busca", message: `Fonte ${i + 1}: sem permissão registrada (itens ficam pendentes).` });
     });
     new Set(model.sources.map((s) => s.type || "reddit")).forEach((t) => {
       if (t !== "upload" && !boot.ready[t]) out.push({ level: "warning", block: "busca", message: `${boot.sourceTypes[t]}: chaves não preenchidas em Acessos.` });
