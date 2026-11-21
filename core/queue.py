@@ -86,20 +86,32 @@ def enqueue(
     return Enqueued(job_id, created=True)
 
 
-def claim(session: Session, types: list[str], worker_id: str) -> Job | None:
+NUCLEO = "nucleo"
+
+
+def claim(
+    session: Session, types: list[str], worker_id: str, scope: int | str | None = None
+) -> Job | None:
     """Pega a próxima tarefa: maior prioridade, depois a mais antiga (Task 3.2 e 3.9).
 
-    Tarefas de execuções pausadas ficam na fila (Task 3.8).
+    Tarefas de execuções pausadas ficam na fila (Task 3.8). O escopo separa as filas por
+    operação (Task 31): um número = só as tarefas daquela operação; "nucleo" = só as que
+    não pertencem a nenhuma (agenda, limpeza, renovação); None = todas (instalação única).
     """
     paused = select(Execution.id).where(Execution.status == "paused")
+    conditions = [
+        Job.status == "queued",
+        Job.type.in_(types),
+        Job.run_at <= func.now(),
+        or_(Job.execution_id.is_(None), Job.execution_id.not_in(paused)),
+    ]
+    if scope == NUCLEO:
+        conditions.append(Job.operation_id.is_(None))
+    elif scope is not None:
+        conditions.append(Job.operation_id == int(scope))
     stmt = (
         select(Job)
-        .where(
-            Job.status == "queued",
-            Job.type.in_(types),
-            Job.run_at <= func.now(),
-            or_(Job.execution_id.is_(None), Job.execution_id.not_in(paused)),
-        )
+        .where(*conditions)
         .order_by(Job.priority.desc(), Job.run_at, Job.id)
         .limit(1)
         .with_for_update(skip_locked=True)

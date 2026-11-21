@@ -108,6 +108,7 @@ class Worker:
         idle_max: float = 60.0,
         stale_after: timedelta = timedelta(minutes=30),
         periodic: Mapping[str, tuple[float, Periodic]] | None = None,
+        scope: int | str | None = None,
     ):
         if not handlers:
             raise ValueError(f"Nenhum handler para o worker {role}")
@@ -120,6 +121,7 @@ class Worker:
         self.idle_max = idle_max
         self.stale_after = stale_after
         self.periodic = dict(periodic or {})
+        self.scope = scope  # operação (int), "nucleo" ou None (todas): Task 31
         self.stop = threading.Event()
         self.id = f"{role}@{socket.gethostname()}"
 
@@ -127,7 +129,7 @@ class Worker:
         """Processa no máximo uma tarefa. Devolve True se havia tarefa."""
         worker_id = f"{self.id}#{thread_name}"
         with self.session_factory() as session:
-            job = queue.claim(session, self.types, worker_id)
+            job = queue.claim(session, self.types, worker_id, self.scope)
             if job is None:
                 session.commit()
                 return False
@@ -207,6 +209,9 @@ class Worker:
                 lambda s: workers.beat(s, self.role, socket.gethostname(), version=code_version()),
             ),
         }
+        if self.scope is None:
+            # Instalação única (celular, computador): para sozinha quando a VPS assume (35.2).
+            jobs["platform_check"] = (60.0, self._check_platform)
         jobs.update(self.periodic)
         while not self.stop.is_set():
             now = time.monotonic()
@@ -225,6 +230,24 @@ class Worker:
                 act.touch()
             self.stop.wait(1.0)
 
+    def _check_platform(self, session) -> None:
+        from core import platform
+
+        try:
+            active = platform.platform_active(session)
+        except Exception:  # noqa: BLE001 - banco sem a migração 0010: segue como antes
+            session.rollback()
+            return
+        if active:
+            log.warning(
+                "migrado para a VPS: a plataforma assumiu as operações; este worker vai parar",
+                extra={"role": self.role},
+            )
+            act = activity.current()
+            if act is not None:
+                act._set(state="stopped", label="Migrado para a VPS", percent=None, detail="")
+            self.stop.set()
+
     def run_forever(self) -> None:
         activity.start(self.role)
         log.info(
@@ -241,6 +264,6 @@ class Worker:
         for t in threads:
             t.join()
         act = activity.current()
-        if act is not None:
+        if act is not None and act.data.get("label") != "Migrado para a VPS":
             act.stopped()
         log.info("worker parado", extra={"role": self.role})

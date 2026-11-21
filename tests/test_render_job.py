@@ -39,7 +39,7 @@ def factory():
         conn.execute(
             text(
                 "TRUNCATE operations, accounts, jobs, events, app_credentials, worker_heartbeats,"
-                " r2_usage, app_settings"
+                " infra_servers, r2_usage, app_settings"
                 " RESTART IDENTITY CASCADE"
             )
         )

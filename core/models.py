@@ -12,6 +12,7 @@ from sqlalchemy import (
     Boolean,
     CheckConstraint,
     DateTime,
+    Float,
     ForeignKey,
     Index,
     Integer,
@@ -420,3 +421,58 @@ class AppSetting(Base):
 
     name: Mapped[str] = mapped_column(String(60), primary_key=True)
     value: Mapped[str] = mapped_column(Text)
+
+
+class OperationRuntime(Base):
+    """Ambiente isolado de uma operação na VPS (Task 32): o que o painel pede e o que o agente vê.
+
+    O painel grava o estado desejado (ligado ou parado, limites, versão, pedidos de reinício,
+    backup e restauração). O agente da VPS lê, aplica com Docker Compose e devolve o estado
+    real (containers, uso de recursos, logs recentes sem segredos, erro).
+    """
+
+    __tablename__ = "operation_runtimes"
+
+    operation_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("operations.id", ondelete="CASCADE"), primary_key=True
+    )
+    desired_state: Mapped[str] = mapped_column(String(20), server_default="stopped")
+    cpu_limit: Mapped[float] = mapped_column(Float, server_default="1")
+    memory_mb: Mapped[int] = mapped_column(Integer, server_default="1024")
+    version: Mapped[str] = mapped_column(String(40), server_default="")  # "" = a mais nova
+    actual_state: Mapped[str] = mapped_column(String(20), server_default="absent")
+    actual_version: Mapped[str | None] = mapped_column(String(40))
+    containers: Mapped[list[Any] | None] = mapped_column(JSONB)
+    usage: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    logs: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    error: Mapped[str | None] = mapped_column(Text)
+    restart_requested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    restart_done_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    backup_requested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    backup_done_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    backups: Mapped[list[Any] | None] = mapped_column(JSONB)
+    restore_request: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    restore_done_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    reported_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = created_at()
+    updated_at: Mapped[datetime] = updated_at()
+
+
+class InfraServer(Base):
+    """Servidor com o agente da plataforma (hoje uma VPS; preparado para várias, Task 37)."""
+
+    __tablename__ = "infra_servers"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    name: Mapped[str] = mapped_column(String(100), unique=True)
+    agent_version: Mapped[str | None] = mapped_column(String(40))
+    cpu_count: Mapped[int | None] = mapped_column(Integer)
+    mem_total_mb: Mapped[int | None] = mapped_column(Integer)
+    mem_used_mb: Mapped[int | None] = mapped_column(Integer)
+    disk_total_gb: Mapped[float | None] = mapped_column(Float)
+    disk_free_gb: Mapped[float | None] = mapped_column(Float)
+    load1: Mapped[float | None] = mapped_column(Float)
+    versions: Mapped[list[Any] | None] = mapped_column(JSONB)  # imagens disponíveis
+    info: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    last_seen: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = created_at()

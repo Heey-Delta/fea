@@ -17,7 +17,7 @@ Fontes:
 |---|---|---|
 | Interface | Vercel (FastAPI + Jinja2 + HTMX) | Telas, fluxo, aprovação, Acessos, retorno do OAuth |
 | Banco | Neon (Postgres, via Vercel Marketplace) | Dados, versões e fila de tarefas |
-| Processamento | VPS (Oracle Always Free) com Docker | Buscador, Editor, Postador e Limpeza |
+| Processamento | VPS com Docker: um ambiente isolado por operação + núcleo, administrados por um agente (Tasks 30 a 35) | Buscador, Editor, Postador e Limpeza |
 | Arquivos | Cloudflare R2 | Originais, renders e máscaras |
 
 Fluxo: Buscador → fila de pesca → Editor → fila de editados → (aprovação manual ou automática) → Postador → fila de exclusão → Limpeza (X minutos após a publicação, padrão 30).
@@ -359,6 +359,71 @@ Status: 1
 - Subtask 28.12: Versão do código nos workers: cada worker informa o commit que roda; a tela Acessos avisa quando difere do site e manda rodar `fea-atualizar` (Termux) ou o instalador (VPS). A tela Executar mostra o motivo do erro de cada fonte e testa a conexão ali mesmo.
 - Subtask 28.13: Painel dos workers no terminal (`fea-painel`, também na VPS): tela que se redesenha no lugar, verbo de cada worker no gerúndio, barra e porcentagem reais (FFmpeg e busca), bolinha verde ou vermelha, `/log` com os detalhes. A chave de API do Google em URLs não vai mais para os logs.
 - Subtask 28.14: Dashboard com 3 indicadores em gráfico (publicações por dia, funil de vídeos, saúde dos workers) e o resto numa lista compacta. Operações com estado ao vivo (rodinha, estágios Buscando/Editando/Publicando com ícones, barra em andamento, vermelho em caso de erro), atualizado a cada 5 s sem recarregar. Lista de operações em cartões no celular.
+
+## Task 30: Plataforma — análise e decisões
+Nível: 4
+Status: 1
+
+- Subtask 30.1: Análise do "Manual de Implantação: Operations Infrastructure Platform v1.0" e adaptação viável em `docs/plataforma.md`: mantém o painel FastAPI (Control Plane), o Neon e a fila no Postgres; troca Docker Controller exposto por um agente *pull* na VPS; Redis/BullMQ, Grafana e RLS ficam para fases seguintes, com o motivo de cada um.
+- Subtask 30.2: Isolamento para segurança, organização e continuidade, não anonimato: sem IP por operação, sem proxies.
+
+## Task 31: Escopo por operação na fila e nos workers
+Nível: 4
+Status: 1
+
+- Subtask 31.1: Toda tarefa de publicação carrega o `operation_id` (envio → render → item), como as de busca e edição.
+- Subtask 31.2: Worker com `OPERATION_ID` só pega tarefas da sua operação; worker do núcleo (`FEA_SCOPE=nucleo`) só pega as sem operação (agenda, limpeza, renovação); sem nada definido, pega tudo (celular e instalação antiga continuam funcionando).
+- Subtask 31.3: Uma falha numa operação nunca cancela tarefas de outra (filas separadas por escopo).
+
+## Task 32: Estado desejado e estado real
+Nível: 4
+Status: 1
+
+- Subtask 32.1: Tabelas `operation_runtimes` (estado desejado, limites de CPU e memória, versão, estado real, containers, uso de recursos, erro, logs recentes, pedidos de reinício e backup) e `infra_servers` (servidor, versão do agente, CPU, memória, disco, carga, último sinal, versões disponíveis).
+- Subtask 32.2: Regras em `core/platform.py`: iniciar, parar, reiniciar, limites válidos, versão, pedido de backup e restauração, auditoria em `events`.
+
+## Task 33: Agente da VPS (Operations Manager, Docker Controller, Resource Manager, Health Monitor, Version Manager)
+Nível: 5
+Status: 1
+
+- Subtask 33.1: Gera `/opt/fea/operations/op-<id>/compose.yml` a partir do modelo: serviços busca, edição e publicação, `OPERATION_ID`, limites, rede própria, sem portas, `no-new-privileges`, sem capabilities, raiz só de leitura, volumes exclusivos, healthcheck e logs com rotação.
+- Subtask 33.2: Reconciliação a cada 15 s: sobe, para e recria cada operação conforme o estado desejado; o núcleo sempre no ar; idempotente.
+- Subtask 33.3: Coleta e reporta estado dos containers, CPU, memória e disco (servidor e operação), logs recentes sem segredos e falhas.
+- Subtask 33.4: Versões: imagem `fea-worker:<commit>`; cada operação fixa uma versão ou acompanha a mais nova; rollback para uma versão anterior disponível.
+- Subtask 33.5: Socket do Docker só local; nenhuma porta aberta para a internet.
+- Subtask 33.6: Verificado com Docker real (núcleo + duas operações): cada tarefa executada pelo ambiente da própria operação; operação 1 não alcança a 2 pela rede; raiz só de leitura, sem capabilities, sem portas, com limites; parar uma não afeta a outra; backup e restauração; versão inexistente vira erro sem derrubar; nenhum segredo nos logs; worker solto (celular) para sozinho em segundos.
+
+## Task 34: Painel da plataforma
+Nível: 4
+Status: -1
+
+- Subtask 34.1: Aba "Ambiente" na operação: estado real e desejado, iniciar, parar, reiniciar, limites, versão (atualizar e voltar), logs recentes, CPU e memória, backup e restauração.
+- Subtask 34.2: Servidor em Acessos → Workers: CPU, memória, disco, versão do agente e operações hospedadas.
+- Subtask 34.3: Estado ao vivo da operação inclui o ambiente (parado, subindo, no ar, com falha).
+
+## Task 35: Instalador e migração em um comando
+Nível: 5
+Status: -1
+
+- Subtask 35.1: Instalador idempotente: verifica distribuição, arquitetura e recursos; instala Docker e Compose; firewall (só SSH); `/opt/fea` com permissões; segredos em arquivo 0600; constrói a imagem; sobe núcleo e agente; verifica a saúde.
+- Subtask 35.2: Migração do celular: o agente marca a plataforma como ativa e cria o ambiente de cada operação ativa; os workers do celular param sozinhos ("migrado para a VPS").
+- Subtask 35.3: Backup e restauração dos arquivos de cada operação pelo painel; dump diário do banco no núcleo. Pendente: cópia fora da VPS (R2) depois de medir o tamanho.
+
+## Task 36: Isolamento reforçado (fase 2)
+Nível: 4
+Status: -1
+
+- Subtask 36.1: Papel de banco por operação com Row-Level Security nas tabelas com `operation_id`.
+- Subtask 36.2: Credenciais por operação (chaves de fontes e contas separadas por ambiente).
+- Subtask 36.3: Banco ou armazenamento próprio para operações que pedirem isolamento adicional.
+
+## Task 37: Escala e observabilidade (futuro)
+Nível: 3
+Status: -1
+
+- Subtask 37.1: Vários servidores: `infra_servers` já existe; atribuir operações a servidores e um agente por VPS.
+- Subtask 37.2: Prometheus e Grafana opcionais, quando a VPS tiver memória sobrando.
+- Subtask 37.3: Avaliar Redis/BullMQ só se a fila no Postgres virar gargalo (medido).
 
 ## Task 29: Decisões
 Nível: 4

@@ -432,3 +432,16 @@ def test_failed_job_goes_back_to_the_agenda_without_duplicate(factory, storage, 
             request_key="k3",
             now=NOW,
         )
+
+
+def test_tarefa_de_publicacao_leva_a_operacao(factory, storage, tmp_path):  # noqa: F811
+    """Task 31.1: a fila de publicação também é separada por operação."""
+    op_id, _, accounts = make_world(factory, storage, tmp_path, n_items=1, n_accounts=1)
+    batch(factory, op_id, accounts, interval_min=0)
+    with factory() as s:
+        job = s.scalars(select(m.PublishJob)).one()
+        pub.enqueue_publish(s, job)
+        pub.enqueue_status(s, job, NOW)
+        s.commit()
+        tasks = s.scalars(select(m.Job).where(m.Job.type == "publish")).all()
+    assert len(tasks) == 2 and {t.operation_id for t in tasks} == {op_id}

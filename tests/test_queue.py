@@ -340,3 +340,69 @@ def test_scheduler_tick_once_per_minute(factory):
         s.commit()
         total = s.execute(select(m.Job).where(m.Job.type == "scheduler")).scalars().all()
     assert len(total) == 1
+
+
+# --- Task 31: filas separadas por operação ----------------------------------------------
+
+
+def make_operation(factory, name) -> int:
+    with factory() as s:
+        op = m.Operation(name=name)
+        s.add(op)
+        s.commit()
+        return op.id
+
+
+def test_escopo_separa_operacoes_e_nucleo(factory):
+    a, b = make_operation(factory, "A"), make_operation(factory, "B")
+    ja = add_job(factory, "collect", operation_id=a)
+    jb = add_job(factory, "collect", operation_id=b)
+    jn = add_job(factory, "scheduler")  # sem operação: núcleo
+    with factory() as s:
+        assert queue.claim(s, ["collect", "scheduler"], "w", scope=b).id == jb
+        assert queue.claim(s, ["collect", "scheduler"], "w", scope=b) is None  # nada mais de B
+        assert queue.claim(s, ["collect", "scheduler"], "w", scope="nucleo").id == jn
+        assert queue.claim(s, ["collect", "scheduler"], "w", scope="nucleo") is None
+        assert queue.claim(s, ["collect"], "w", scope=a).id == ja
+        s.commit()
+
+
+def test_sem_escopo_pega_tudo_como_antes(factory):
+    a = make_operation(factory, "A")
+    ids = {add_job(factory, "collect", operation_id=a), add_job(factory, "collect")}
+    with factory() as s:
+        got = {queue.claim(s, ["collect"], "w").id, queue.claim(s, ["collect"], "w").id}
+        s.commit()
+    assert got == ids
+
+
+def test_falha_numa_operacao_nao_toca_a_outra(factory):
+    a, b = make_operation(factory, "A"), make_operation(factory, "B")
+    calls = []
+
+    def handler(ctx):
+        calls.append(ctx.operation_id)
+        if ctx.operation_id == a:
+            raise PermanentError("quebrou em A")
+
+    ja = add_job(factory, "collect", operation_id=a)
+    jb = add_job(factory, "collect", operation_id=b)
+    Worker("buscador", {"collect": handler}, factory, scope=a).run_once()
+    assert job(factory, ja).status == "failed" and job(factory, jb).status == "queued"
+    Worker("buscador", {"collect": handler}, factory, scope=b).run_once()
+    assert job(factory, jb).status == "done" and calls == [a, b]
+
+
+def test_worker_le_o_escopo_do_ambiente(monkeypatch):
+    from worker.__main__ import worker_scope
+
+    monkeypatch.delenv("OPERATION_ID", raising=False)
+    monkeypatch.delenv("FEA_SCOPE", raising=False)
+    assert worker_scope() is None
+    monkeypatch.setenv("FEA_SCOPE", "nucleo")
+    assert worker_scope() == "nucleo"
+    monkeypatch.setenv("OPERATION_ID", "7")
+    assert worker_scope() == 7
+    monkeypatch.setenv("OPERATION_ID", "x; rm -rf")
+    with pytest.raises(SystemExit):
+        worker_scope()

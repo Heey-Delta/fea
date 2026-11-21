@@ -36,6 +36,8 @@ TABLES = {
     "worker_heartbeats",
     "r2_usage",
     "app_settings",
+    "operation_runtimes",
+    "infra_servers",
 }
 
 
