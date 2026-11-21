@@ -10,6 +10,9 @@ x-worker: &worker
     dockerfile: docker/worker.Dockerfile
   env_file: .env
   restart: unless-stopped
+  # O que cada worker está fazendo agora, para o painel: python3 worker/painel.py --dir deploy/status
+  volumes:
+    - ./status:/srv/fea/logs/status
   healthcheck:
     test: ["CMD", "python", "-m", "worker", "alive"]
     interval: 60s

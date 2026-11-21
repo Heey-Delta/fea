@@ -13,7 +13,7 @@ from pathlib import Path
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, sessionmaker
 
-from core import masks
+from core import activity, masks
 from core.config import Settings, get_settings
 from core.editor import overlay as ov
 from core.editor import preset as pr
@@ -104,7 +104,7 @@ def produce(
         replacement_audio=music,
         max_duration_s=profile.max_duration_s,
     )
-    rd.run(plan)
+    rd.run(plan, on_progress=lambda p: activity.report_progress(p, f"{p:.0f}% do vídeo"))
     report = qc.check_render(
         out,
         preset,

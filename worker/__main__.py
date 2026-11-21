@@ -2,6 +2,7 @@
 
 python -m worker check                              # verifica FFmpeg, ffprobe e banco
 python -m worker alive                              # healthcheck: o worker deu sinal de vida?
+python -m worker painel                             # painel dos workers no terminal
 python -m worker buscador|editor|postador|limpeza   # roda o worker do papel
 """
 
@@ -22,6 +23,10 @@ def main(argv: list[str]) -> int:
     settings = get_settings()
     configure_logging(settings.log_level)
     command = argv[1] if len(argv) > 1 else ""
+    if command == "painel":
+        from worker import painel
+
+        return painel.main(argv[2:])
     if command == "check":
         return 0 if run_checks() else 1
     if command == "alive":

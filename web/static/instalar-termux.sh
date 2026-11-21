@@ -117,12 +117,13 @@ termux-wake-unlock 2>/dev/null || true
 EOF
 cat > "$HOME/.local/bin/fea-status" <<EOF
 #!/data/data/com.termux/files/usr/bin/bash
-cd "$DIR"
-for r in buscador editor postador limpeza; do
-  if [ -f logs/\$r.pid ] && kill -0 "\$(cat logs/\$r.pid)" 2>/dev/null; then echo "\$r: rodando"; else echo "\$r: parado"; fi
-done
-echo; echo "Últimas linhas dos logs (sem dados sensíveis):"
-tail -n 3 logs/*.log 2>/dev/null | cut -c1-200
+# Retrato rápido dos workers (o painel ao vivo é o fea-painel).
+cd "$DIR" && exec python worker/painel.py --once
+EOF
+cat > "$HOME/.local/bin/fea-painel" <<EOF
+#!/data/data/com.termux/files/usr/bin/bash
+# Painel ao vivo: verbo de cada worker, barra, porcentagem e /log para os detalhes.
+cd "$DIR" && exec python worker/painel.py
 EOF
 cat > "$HOME/.local/bin/fea-atualizar" <<EOF
 #!/data/data/com.termux/files/usr/bin/bash
@@ -145,10 +146,12 @@ python -m worker check
 say "Aplicando migrações do banco…"
 alembic upgrade head
 
-say "Ligando os workers…"
+say "Ligando os workers (reinicia os que já rodavam, para carregar o código novo)…"
+fea-desligar >/dev/null 2>&1 || true
 fea-ligar
 say "Pronto. Em 1 minuto, Acessos → Workers mostra 4/4 no ar.
-  fea-status     como estão os workers
+  fea-painel     painel ao vivo (digite /log para os detalhes, /sair para fechar)
+  fea-status     retrato rápido dos workers
   fea-desligar   parar
   fea-ligar      voltar
   fea-atualizar  baixar o código novo e reiniciar (faça isso depois de cada atualização)

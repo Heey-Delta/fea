@@ -175,7 +175,47 @@ def plan_render(
     )
 
 
-def run(plan: RenderPlan, timeout_s: int = 900) -> None:
-    result = subprocess.run(plan.command, capture_output=True, text=True, timeout=timeout_s)
-    if result.returncode != 0:
-        raise RuntimeError(f"FFmpeg falhou: {result.stderr.strip()[-500:]}")
+def progress_percent(line: str, duration: float) -> float | None:
+    """Porcentagem a partir de uma linha do `-progress` do FFmpeg (`out_time_us=…`)."""
+    key, _, value = line.strip().partition("=")
+    if key == "progress" and value == "end":
+        return 100.0
+    if key not in ("out_time_us", "out_time_ms") or duration <= 0:
+        return None
+    try:
+        seconds = int(value) / 1_000_000  # as duas chaves vêm em microssegundos
+    except ValueError:
+        return None
+    return max(0.0, min(100.0, 100 * seconds / duration))
+
+
+def run(plan: RenderPlan, timeout_s: int = 900, on_progress=None) -> None:
+    """Roda o FFmpeg. Com `on_progress`, informa a porcentagem enquanto edita."""
+    if on_progress is None:
+        result = subprocess.run(plan.command, capture_output=True, text=True, timeout=timeout_s)
+        if result.returncode != 0:
+            raise RuntimeError(f"FFmpeg falhou: {result.stderr.strip()[-500:]}")
+        return
+    import tempfile
+    import time
+
+    cmd = [plan.command[0], "-progress", "pipe:1", "-nostats", *plan.command[1:]]
+    started = time.monotonic()
+    with tempfile.TemporaryFile(mode="w+") as errors:
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=errors, text=True)
+        try:
+            for line in proc.stdout:
+                percent = progress_percent(line, plan.duration)
+                if percent is not None:
+                    on_progress(percent)
+                if time.monotonic() - started > timeout_s:
+                    proc.kill()
+                    raise subprocess.TimeoutExpired(cmd, timeout_s)
+            proc.wait(timeout=max(1, timeout_s - (time.monotonic() - started)))
+        finally:
+            if proc.poll() is None:
+                proc.kill()
+                proc.wait()
+        if proc.returncode != 0:
+            errors.seek(0)
+            raise RuntimeError(f"FFmpeg falhou: {errors.read().strip()[-500:]}")

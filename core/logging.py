@@ -14,6 +14,8 @@ _SENSITIVE_KEY = re.compile(
 _PATTERNS = [
     # Authorization: Bearer <token>
     (re.compile(r"(?i)(bearer\s+)[A-Za-z0-9._~+/=-]+"), r"\1" + REDACTED),
+    # ?key=… / &key=… em URLs (chave de API do Google)
+    (re.compile(r"(?i)([?&](?:key|api_key|apikey|access_token)=)[^&\s\"']+"), r"\1" + REDACTED),
     # postgresql://user:senha@host
     (re.compile(r"(://[^:/@\s]+:)[^@\s]+(@)"), r"\1" + REDACTED + r"\2"),
     # token=..., "password": "...", access_token: ...

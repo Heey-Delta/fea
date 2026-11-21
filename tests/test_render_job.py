@@ -200,7 +200,7 @@ def test_process_error_retries_then_needs_fix(factory, storage, tmp_path, monkey
 
     _, item_id, _ = setup(factory, storage, tmp_path)
 
-    def broken(plan, timeout_s=900):
+    def broken(plan, timeout_s=900, **_):
         raise RuntimeError("FFmpeg falhou: memória")
 
     monkeypatch.setattr(rd, "run", broken)
