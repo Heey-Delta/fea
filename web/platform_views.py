@@ -19,12 +19,18 @@ ACTIONS = ("ligar", "parar", "reiniciar", "limites", "versao", "backup", "restau
 
 def context(session: Session, op: Operation) -> dict:
     """Dados da aba Ambiente (sem criar registro só por abrir a tela)."""
-    views = pf.servers(session)
+    try:
+        with session.begin_nested():  # savepoint: migração 0010 pode não estar aplicada
+            views = pf.servers(session)
+            runtime = session.get(OperationRuntime, op.id)
+            versions = pf.available_versions(session)
+    except Exception:  # noqa: BLE001 - sem as tabelas da plataforma, a aba fica vazia
+        views, runtime, versions = [], None, []
     return {
-        "runtime": session.get(OperationRuntime, op.id),
+        "runtime": runtime,
         "servers": views,
         "platform_online": any(v.online for v in views),
-        "versions": pf.available_versions(session),
+        "versions": versions,
         "state_label": pf.STATE_LABEL,
         "limits": {
             "cpu_min": pf.CPU_MIN,

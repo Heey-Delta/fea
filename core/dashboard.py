@@ -209,9 +209,9 @@ def health(session: Session, now: datetime | None = None) -> dict:
     now = now or datetime.now(UTC)
     day = now - timedelta(hours=24)
     try:
-        roles = workers.status(session, now)
+        with session.begin_nested():  # savepoint: não expira o que a tela já carregou
+            roles = workers.status(session, now)
     except Exception:  # noqa: BLE001 - migração ainda não aplicada
-        session.rollback()
         roles = []
     failures = session.scalar(
         select(func.count()).where(
